@@ -1,5 +1,11 @@
 # 🛒 Shopping das Ferramentas - Hub Omni-channel
 
+[![Next.js](https://img.shields.io/badge/Next.js-14+-black?logo=next.js)](https://nextjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![Prisma](https://img.shields.io/badge/Prisma-5.15-2D3748?logo=prisma)](https://prisma.io)
+[![NextAuth](https://img.shields.io/badge/NextAuth-v5-orange)](https://next-auth.js.org)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38bdf8?logo=tailwind-css)](https://tailwindcss.com)
+
 Plataforma e-commerce proprietária construída com **Next.js 14+**, **TypeScript**, **Prisma ORM** e **NextAuth v5**. Sistema completo de loja virtual profissional com RBAC (Role-Based Access Control), painel administrativo moderno, integração com Mercado Livre e Hiper, e APIs seguras para workers externos.
 
 ---
@@ -32,14 +38,19 @@ Criar um **E-commerce Completo** que:
 - ✅ Vitrine profissional de produtos (Homepage, Listagem, Detalhes)
 - ✅ Sistema de autenticação robusto (Google OAuth + Email/Senha)
 - ✅ Área do usuário (Perfil, Pedidos, Endereços)
+- ✅ **Pagamento simulado** com PIX QR Code, Boleto e Cartão
+- ✅ **Auto-cancelamento** de pedidos após 15 minutos
 - ✅ Painel administrativo moderno com RBAC
 - ✅ Dashboard com estatísticas em tempo real
+- ✅ **Sistema de Picking** com localização de estoque
+- ✅ **Painel de Pedidos Enviados** com rastreamento
+- ✅ **Webhooks n8n** para notificações de status
+- ✅ **Interface 100% PT-BR** com labels localizados
 - ✅ APIs de integração protegidas
 - ✅ Módulo financeiro exclusivo para OWNER
-- ✅ Sistema de separação de pedidos (Picking)
 - ✅ Animações Framer Motion em todas as páginas
 - ✅ Design responsivo e moderno
-- ✅ 13 páginas completas (Públicas, Admin, Institucionais)
+- ✅ 15+ páginas completas (Públicas, Admin, Institucionais)
 
 ### Regra de Ouro
 
@@ -251,8 +262,10 @@ Apenas OWNER acessa /admin/financial/*
 |------|-----------|----------|
 | `/minha-conta` | Dashboard do usuário com tabs | Redirect se não autenticado |
 | `/minha-conta?tab=perfil` | Editar dados pessoais | Session required |
-| `/minha-conta?tab=pedidos` | Histórico de pedidos | Session required |
+| `/minha-conta?tab=pedidos` | Histórico de pedidos com status PT-BR | Session required |
 | `/minha-conta?tab=enderecos` | Gerenciar endereços | Session required |
+| `/pagamento/[id]` | Página de pagamento com QR PIX e timer | Session required |
+| `/checkout/pagamento` | Pagamento alternativo via query params | Session required |
 
 ### **Painel Administrativo (RBAC)**
 
@@ -260,8 +273,9 @@ Apenas OWNER acessa /admin/financial/*
 |------|-----------|-----------------|
 | `/admin/dashboard` | Dashboard com stats e gráficos | ADMIN, OWNER |
 | `/admin/products` | CRUD de produtos | ADMIN, OWNER |
-| `/admin/orders` | Gestão de pedidos | ADMIN, OWNER |
-| `/admin/picking` | Lista de separação otimizada | ADMIN, OWNER |
+| `/admin/orders` | Gestão de pedidos com status PT-BR | ADMIN, OWNER |
+| `/admin/picking` | **Separação**: itens, localização, cliente | ADMIN, OWNER |
+| `/admin/orders/enviados` | **Enviados**: SHIPPED/DELIVERED com tracking | ADMIN, OWNER |
 | `/admin/financial` | Configuração de juros e relatórios | **OWNER ONLY** |
 | `/admin/settings` | Configurações gerais | ADMIN, OWNER |
 
@@ -276,13 +290,20 @@ GET /api/financial/config        # Config pública (juros, parcelas)
 
 #### **APIs Autenticadas (Session)**
 ```
-POST /api/auth/register          # Criar conta
-GET  /api/user/orders            # Pedidos do usuário logado
-GET  /api/admin/stats            # Estatísticas do dashboard (ADMIN/OWNER)
-GET  /api/admin/products         # Listar produtos (ADMIN/OWNER)
-POST /api/admin/products         # Criar produto (ADMIN/OWNER)
-GET  /api/admin/financial/config # Config financeira (OWNER only)
-PUT  /api/admin/financial/config # Atualizar config (OWNER only)
+POST /api/auth/register                        # Criar conta
+GET  /api/user/orders                          # Pedidos (auto-cancela expirados)
+GET  /api/user/orders/[id]                     # Detalhe do pedido
+POST /api/user/orders/[id]/confirm-delivery    # Confirmar entrega (→ webhook)
+POST /api/orders/[id]/payment                  # Processar pagamento (→ webhook)
+GET  /api/admin/stats                          # Estatísticas do dashboard
+GET  /api/admin/products                       # Listar produtos (ADMIN/OWNER)
+POST /api/admin/products                       # Criar produto (ADMIN/OWNER)
+GET  /api/admin/orders                         # Listar pedidos (auto-cancela expirados)
+GET  /api/admin/orders/shipped                 # Listar enviados/entregues/cancelados
+GET  /api/admin/picking                        # Lista de separação (CONFIRMED/PROCESSING)
+PATCH /api/admin/picking/[id]                  # Atualizar status (→ webhook)
+GET  /api/admin/financial/config               # Config financeira (OWNER only)
+PUT  /api/admin/financial/config               # Atualizar config (OWNER only)
 ```
 
 #### **APIs de Integração (X-API-KEY)**
@@ -309,6 +330,8 @@ GET  /api/integrations/marketing/abandoned-carts # Carrinhos abandonados (Bot)
 - **Animações**: Framer Motion
 - **Notificações**: React Sonner
 - **Forms**: React Hook Form + Zod
+- **QR Code**: qrcode (PIX payment)
+- **i18n**: Custom PT-BR helpers
 
 ### Backend
 - **HTTP Client**: Axios (Singleton com Interceptors)
@@ -342,6 +365,38 @@ GET  /api/integrations/marketing/abandoned-carts # Carrinhos abandonados (Bot)
 - ✅ Cálculo automático de frete e parcelamento
 - ✅ Status tracking (PENDING → CONFIRMED → SHIPPED → DELIVERED)
 - ✅ Integração com transportadoras via webhook
+
+### 💳 Sistema de Pagamentos (Simulado)
+- ✅ **PIX**: QR Code funcional gerado via `qrcode` library
+- ✅ **Boleto**: Linha digitável e link para PDF mockado
+- ✅ **Cartão**: Simulação de aprovação instantânea
+- ✅ **Timer de 15 minutos**: Barra de progresso com contagem regressiva
+- ✅ **Auto-cancelamento**: Backend cancela pedidos PENDING expirados
+- ✅ **UX refinada**: Botão "Refazer pedido" ao expirar, desabilita ações
+- ✅ Confirmação automática local (sem gateway real)
+
+### 📦 Logística e Picking
+- ✅ **Painel de Separação** (`/admin/picking`): Lista pedidos CONFIRMED/PROCESSING
+- ✅ **Localização de estoque**: Corredor/Coluna/Altura para cada item
+- ✅ **Dados do cliente**: Nome, telefone, endereço de entrega
+- ✅ **Ações rápidas**: "Marcar em separação" (PROCESSING) e "Enviar ao ponto" (SHIPPED)
+- ✅ **Rastreamento**: Campos trackingCode e trackingUrl
+- ✅ **Painel de Enviados** (`/admin/orders/enviados`): SHIPPED/DELIVERED/CANCELLED/REFUNDED
+- ✅ **Specs dos itens**: SKU, voltagem, cor, dimensões
+
+### 🔔 Notificações (n8n Webhooks)
+- ✅ **Helper centralizado** (`src/lib/webhooks.ts`)
+- ✅ Notifica em: CONFIRMED (pagamento), PROCESSING, SHIPPED, DELIVERED
+- ✅ Payload completo: orderId, status, user, trackingCode, timestamps
+- ✅ **Best-effort**: Não quebra fluxo se webhook falhar
+- ✅ Configurável via `N8N_ORDERS_WEBHOOK_URL` no .env
+
+### 🌍 Internacionalização PT-BR
+- ✅ **Status traduzidos**: PENDING → "Pendente", SHIPPED → "Enviado"
+- ✅ **Badges coloridos**: Classes Tailwind por status (yellow, green, blue, gray)
+- ✅ **Métodos de pagamento**: PIX → "PIX", CREDIT_CARD → "Cartão de Crédito"
+- ✅ Aplicado em: Admin Dashboard, Pedidos, Picking, Enviados, Minha Conta
+- ✅ Helpers: `statusToPt()`, `statusBadgeClass()`, `paymentToPt()` em `src/lib/i18n.ts`
 
 ### 💰 Módulo Financeiro (Exclusivo OWNER)
 - ✅ Configuração de juros (cartão de crédito/débito)
@@ -381,11 +436,23 @@ cp .env.example .env
 
 Edite o arquivo `.env`:
 ```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/shopping_ferramentas?schema=public"
+DATABASE_URL="file:./dev.db"
+NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="gere-uma-chave-secreta-forte-com-32-chars"
 GOOGLE_CLIENT_ID="seu-google-client-id"
 GOOGLE_CLIENT_SECRET="seu-google-client-secret"
 X_INTERNAL_API_KEY="chave-para-integrações-externas"
+
+# Webhook n8n (opcional - deixe vazio para desabilitar)
+N8N_ORDERS_WEBHOOK_URL="https://seu-n8n.app.n8n.cloud/webhook/pedidos"
+
+# Email (Mailpit para dev)
+SMTP_HOST="localhost"
+SMTP_PORT="1025"
+
+# App
+NEXT_PUBLIC_APP_NAME="Shopping das Ferramentas"
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
 ```
 
 ### 3. Inicie os Serviços (Docker)
@@ -597,6 +664,46 @@ X-INTERNAL-API-KEY: sua-chave-secreta
 ```
 
 **Caso de Uso:** Bot de WhatsApp consome esta API e dispara mensagens de lembrete.
+
+### 🔔 Webhooks n8n (Notificações)
+
+**Configuração:**
+1. Crie workflow no n8n com trigger Webhook
+2. Copie a URL gerada
+3. Adicione ao `.env.local`:
+```env
+N8N_ORDERS_WEBHOOK_URL="https://seu-n8n.app.n8n.cloud/webhook/pedidos"
+```
+
+**Eventos Enviados:**
+- ✅ Pagamento confirmado (`CONFIRMED`)
+- ✅ Em separação (`PROCESSING`)
+- ✅ Enviado (`SHIPPED`) com trackingCode
+- ✅ Entregue (`DELIVERED`)
+- ✅ Atualização externa via webhook de transportadora
+
+**Payload Exemplo:**
+```json
+{
+  "type": "order.status.update",
+  "timestamp": "2025-12-20T15:30:00.000Z",
+  "orderId": "clx123",
+  "orderNumber": "ORD-2025-000001",
+  "status": "SHIPPED",
+  "total": 1899.00,
+  "user": {
+    "name": "João Silva",
+    "email": "joao@email.com",
+    "phone": "(71) 99999-0000"
+  },
+  "trackingCode": "BR123456789",
+  "trackingUrl": "https://rastreio.com.br/...",
+  "paidAt": "2025-12-20T15:00:00.000Z",
+  "shippedAt": "2025-12-20T16:00:00.000Z"
+}
+```
+
+**Arquivo:** [src/lib/webhooks.ts](src/lib/webhooks.ts)
 
 ---
 
@@ -976,21 +1083,74 @@ Confira o status completo do projeto:
 📄 **[Mapa de Páginas](./docs/PAGINAS.md)** - Todas as 13 páginas documentadas
 
 ### Resumo Rápido
-- ✅ **13 páginas** implementadas (Públicas, Admin, Institucionais)
-- ✅ **11 componentes UI** customizados
-- ✅ **5 APIs** criadas
-- ✅ **12 documentos** de documentação (12.000+ linhas)
+- ✅ **15+ páginas** implementadas (Públicas, Admin, Pagamento, Picking)
+- ✅ **Pagamento simulado** com PIX QR Code e auto-cancelamento (15min)
+- ✅ **Sistema de Picking** com localização e rastreio
+- ✅ **Webhooks n8n** para notificações de status
+- ✅ **Interface 100% PT-BR** (status, badges, labels)
+- ✅ **15+ APIs** criadas (autenticadas e integração)
+- ✅ **12+ documentos** de documentação (15.000+ linhas)
 - ✅ **Framer Motion** em todas as páginas
 - ✅ **Design responsivo** mobile-first
 - ✅ **Autenticação completa** (Google OAuth + Credentials)
-- ✅ **RBAC** implementado
-- ✅ **16.000+ linhas de código**
+- ✅ **RBAC** implementado (CUSTOMER/ADMIN/OWNER)
+- ✅ **20.000+ linhas de código**
 
 ---
 
 ## 📄 Licença
 
 Proprietary - Shopping das Ferramentas © 2025
+
+---
+
+## 🎯 Destaques Técnicos
+
+### 💳 Sistema de Pagamentos
+**Arquivos principais:**
+- [src/app/pagamento/[id]/page.tsx](src/app/pagamento/[id]/page.tsx) - Página de pagamento com timer
+- [src/app/api/orders/[id]/payment/route.ts](src/app/api/orders/[id]/payment/route.ts) - API de processamento
+- [src/lib/pix.ts](src/lib/pix.ts) - Helper de geração de QR Code
+
+**Features:**
+- QR Code PIX funcional (gerado via `qrcode` library)
+- Countdown de 15 minutos com barra de progresso
+- Auto-cancelamento no backend (múltiplos endpoints)
+- UX polida: horário de expiração, botão "Refazer pedido"
+
+### 📦 Sistema de Picking
+**Arquivos principais:**
+- [src/app/admin/picking/page.tsx](src/app/admin/picking/page.tsx) - Dashboard de separação
+- [src/app/api/admin/picking/route.ts](src/app/api/admin/picking/route.ts) - Lista de itens
+- [src/app/api/admin/picking/[id]/route.ts](src/app/api/admin/picking/[id]/route.ts) - Transição de status
+- [src/app/admin/orders/enviados/page.tsx](src/app/admin/orders/enviados/page.tsx) - Pedidos enviados
+
+**Features:**
+- Lista otimizada por localização de estoque
+- Dados do cliente (nome, telefone, endereço completo)
+- Ações: "Marcar em separação" e "Enviar ao ponto de coleta"
+- Rastreamento com código e URL
+
+### 🔔 Webhooks n8n
+**Arquivo:** [src/lib/webhooks.ts](src/lib/webhooks.ts)
+
+**Integrações:**
+- Pagamento confirmado → notifica
+- Status atualizado (PROCESSING, SHIPPED, DELIVERED) → notifica
+- Entrega confirmada → notifica
+- Atualização externa (transportadora) → notifica
+
+**Payload completo:** orderId, status, user, tracking, timestamps
+
+### 🌍 PT-BR Global
+**Arquivo:** [src/lib/i18n.ts](src/lib/i18n.ts)
+
+**Funções:**
+- `statusToPt(status)` - Traduz status para português
+- `statusBadgeClass(status)` - Retorna classes Tailwind por status
+- `paymentToPt(method)` - Traduz métodos de pagamento
+
+**Aplicado em:** Admin Dashboard, Orders, Picking, Enviados, Minha Conta
 
 ---
 
@@ -1001,13 +1161,20 @@ Proprietary - Shopping das Ferramentas © 2025
 - [x] Produtos (Listagem) com filtros avançados
 - [x] Produto (Detalhe) com Buy Box
 - [x] Carrinho de Compras
+- [x] **Pagamento simulado** (PIX QR Code, Boleto, Cartão)
+- [x] **Auto-cancelamento** após 15 minutos
+- [x] **Timer visual** com barra de progresso
 - [x] Ofertas
 - [x] Login/Registro (OAuth + Credentials)
-- [x] Minha Conta (3 abas)
-- [x] Admin Dashboard modernizado
+- [x] Minha Conta (3 abas) com status PT-BR
+- [x] Admin Dashboard modernizado com badges PT-BR
+- [x] **Painel de Picking** (separação de pedidos)
+- [x] **Painel de Enviados** (rastreamento)
+- [x] **Webhooks n8n** para notificações
+- [x] **Interface 100% PT-BR**
 - [x] Sobre, Contato, Privacidade
 - [x] Animações Framer Motion
-- [x] 12 documentos de documentação
+- [x] 12+ documentos de documentação
 
 ### 🔮 Próximos Passos (Opcional)
 - [ ] FAQ
