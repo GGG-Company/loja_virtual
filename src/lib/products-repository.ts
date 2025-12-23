@@ -59,7 +59,7 @@ export async function listProducts(params: ListProductsParams) {
   }
 
   // Local Prisma fallback
-  const where: any = {};
+  const where: any = { isActive: true };
   if (featured) where.isFeatured = true;
   if (categorySlug) where.category = { slug: categorySlug };
 
@@ -93,7 +93,10 @@ export async function getProduct(idOrSlug: string) {
 
   // Local Prisma fallback
   const product = await prisma.product.findFirst({
-    where: { OR: [{ slug: idOrSlug }, { id: idOrSlug }] },
+    where: {
+      OR: [{ slug: idOrSlug }, { id: idOrSlug }],
+      isActive: true,
+    },
     include: {
       category: { select: { id: true, name: true, slug: true } },
       variants: { select: { id: true, price: true, name: true, stock: true, attributes: true } },

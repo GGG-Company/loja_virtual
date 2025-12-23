@@ -177,7 +177,7 @@ export default function NewProductPage() {
               value={formData.categoryId}
               onChange={handleChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full h-10 rounded-lg border border-gray-300 px-3 text-sm shadow-sm bg-white font-sans focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
             >
               <option value="">Selecione uma categoria</option>
               <option value="1">Ferramentas Elétricas</option>

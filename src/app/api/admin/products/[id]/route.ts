@@ -66,6 +66,8 @@ export async function PUT(
       return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 });
     }
 
+    const normalizedImage = imageUrl === '' || imageUrl === null ? null : imageUrl;
+
     const updateData: any = {
       name,
       description,
@@ -74,7 +76,7 @@ export async function PUT(
       isFeatured: isFeatured ?? false,
       stock,
       isActive: status === 'ACTIVE' ? true : status === 'INACTIVE' ? false : existing.isActive,
-      ...(imageUrl !== undefined && { imageUrl }),
+      ...(imageUrl !== undefined && { imageUrl: normalizedImage }),
     };
 
     const product = await prisma.product.update({
@@ -105,11 +107,15 @@ export async function DELETE(
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
 
-    await prisma.product.delete({
+    const product = await prisma.product.update({
       where: { id: params.id },
+      data: {
+        isActive: false,
+        isFeatured: false,
+      },
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, id: product.id, softDeleted: true });
   } catch (error) {
     console.error('[ADMIN_PRODUCT_DELETE]', error);
     return NextResponse.json({ error: 'Erro ao excluir produto' }, { status: 500 });

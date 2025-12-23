@@ -78,6 +78,8 @@ export default function EditProductPage() {
     e.preventDefault();
     setSaving(true);
 
+    const imageToSend = formData.imageUrl && formData.imageUrl.trim() !== '' ? formData.imageUrl : null;
+
     try {
       const response = await fetch(`/api/admin/products/${productId}`, {
         method: 'PUT',
@@ -87,6 +89,7 @@ export default function EditProductPage() {
           price: parseFloat(formData.price),
           promotionalPrice: formData.promotionalPrice ? parseFloat(formData.promotionalPrice) : null,
           stock: parseInt(formData.stock),
+          imageUrl: imageToSend,
         }),
       });
 
@@ -102,6 +105,11 @@ export default function EditProductPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleRemoveImage = () => {
+    setImagePreview('/placeholder.svg');
+    setFormData((prev) => ({ ...prev, imageUrl: '' }));
   };
 
   const handleDelete = async () => {
@@ -183,12 +191,21 @@ export default function EditProductPage() {
             <Label htmlFor="image">Imagem do Produto</Label>
             <div className="mt-2">
               <div className="flex items-center gap-4">
-                <div className="relative w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden">
+                <div className="relative w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden group">
                   <img
                     src={imagePreview}
                     alt="Preview"
                     className="w-full h-full object-cover"
                   />
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    className="absolute top-2 right-2 hidden group-hover:flex items-center gap-1 rounded-md bg-black/60 px-2 py-1 text-xs text-white"
+                    title="Remover imagem"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    Remover
+                  </button>
                 </div>
                 <div className="flex-1">
                   <Input
@@ -299,7 +316,7 @@ export default function EditProductPage() {
               value={formData.categoryId}
               onChange={handleChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full h-10 rounded-lg border border-gray-300 px-3 text-sm shadow-sm bg-white font-sans focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
             >
               <option value="">Selecione uma categoria</option>
               <option value="1">Ferramentas Elétricas</option>
