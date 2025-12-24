@@ -5,7 +5,8 @@ export type OrderStatus =
   | 'SHIPPED'
   | 'DELIVERED'
   | 'CANCELLED'
-  | 'REFUNDED';
+  | 'REFUNDED'
+  | 'QUOTE';
 
 export type UserRole = 'CUSTOMER' | 'ADMIN' | 'OWNER';
 
@@ -24,6 +25,7 @@ export const statusPt: Record<OrderStatus, string> = {
   DELIVERED: 'Entregue',
   CANCELLED: 'Cancelado',
   REFUNDED: 'Reembolsado',
+  QUOTE: 'Orçamento',
 };
 
 export const rolePt: Record<UserRole, string> = {
@@ -57,6 +59,8 @@ export function paymentToPt(method?: string) {
 
 export function statusBadgeClass(status?: string) {
   switch (status) {
+    case 'QUOTE':
+      return 'bg-sky-100 text-sky-800';
     case 'CONFIRMED':
       return 'bg-green-100 text-green-800';
     case 'PENDING':

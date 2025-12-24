@@ -20,6 +20,9 @@ export default function RegisterPage() {
     password: '',
     confirmPassword: '',
     phone: '',
+    cpf: '',
+    cnpj: '',
+    stateRegistration: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,12 +35,21 @@ export default function RegisterPage() {
       return;
     }
 
+    if (!formData.cpf && !formData.cnpj) {
+      toast.error('Informe CPF ou CNPJ');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       await apiClient.post('/api/auth/register', {
         name: formData.name,
         email: formData.email,
         password: formData.password,
         phone: formData.phone,
+        cpf: formData.cpf || undefined,
+        cnpj: formData.cnpj || undefined,
+        stateRegistration: formData.stateRegistration || undefined,
       });
 
       toast.success('Conta criada com sucesso!');
@@ -115,6 +127,53 @@ export default function RegisterPage() {
                 }
                 className="h-12"
               />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="cpf">CPF (PF)</Label>
+                <Input
+                  id="cpf"
+                  type="text"
+                  placeholder="000.000.000-00"
+                  value={formData.cpf}
+                  onChange={(e) =>
+                    setFormData({ ...formData, cpf: e.target.value })
+                  }
+                  className="h-12"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cnpj">CNPJ (PJ)</Label>
+                <Input
+                  id="cnpj"
+                  type="text"
+                  placeholder="00.000.000/0000-00"
+                  value={formData.cnpj}
+                  onChange={(e) =>
+                    setFormData({ ...formData, cnpj: e.target.value })
+                  }
+                  className="h-12"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="stateRegistration">Inscrição Estadual (PJ)</Label>
+              <Input
+                id="stateRegistration"
+                type="text"
+                placeholder="ISENTO ou número"
+                value={formData.stateRegistration}
+                onChange={(e) =>
+                  setFormData({ ...formData, stateRegistration: e.target.value })
+                }
+                className="h-12"
+              />
+              <p className="text-xs text-metallic-600">
+                Obrigatório para B2B; PF pode deixar em branco.
+              </p>
             </div>
 
             <div className="space-y-2">

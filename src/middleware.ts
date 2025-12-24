@@ -38,6 +38,15 @@ export async function middleware(request: NextRequest) {
   
   // APIs de integração: requer X-INTERNAL-API-KEY
   if (pathname.startsWith('/api/integrations')) {
+    // Whitelist para fluxo OAuth do Melhor Envio (não usa API key)
+    const oauthWhitelist = [
+      '/api/integrations/melhor-envio/authorize',
+      '/api/integrations/melhor-envio/callback',
+    ];
+    if (oauthWhitelist.includes(pathname)) {
+      return NextResponse.next();
+    }
+
     const apiKey = request.headers.get('X-INTERNAL-API-KEY');
     const validKey = process.env.X_INTERNAL_API_KEY;
 

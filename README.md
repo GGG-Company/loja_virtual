@@ -28,7 +28,7 @@ Plataforma e-commerce proprietária construída com **Next.js 14+**, **TypeScrip
 ## 🎯 Visão Geral
 
 A empresa **Shopping das Ferramentas** opera em **3 frentes**:
-1. **Loja Física** (Salvador, BA)
+1. **Loja Física** (Feira de Santana, BA)
 2. **Mercado Livre** (vendas online)
 3. **Loja Virtual** (este projeto) - **Vitrine Oficial + Hub Centralizador**
 
@@ -286,6 +286,8 @@ Apenas OWNER acessa /admin/financial/*
 GET /api/products                # Listar produtos
 GET /api/products/[id]           # Detalhe do produto
 GET /api/financial/config        # Config pública (juros, parcelas)
+POST /api/shipping/quote         # Cálculo de frete (CEP + peso/dimensões)
+POST /api/assistant              # Chat RAG seguro (somente dados públicos)
 ```
 
 #### **APIs Autenticadas (Session)**
@@ -295,6 +297,7 @@ GET  /api/user/orders                          # Pedidos (auto-cancela expirados
 GET  /api/user/orders/[id]                     # Detalhe do pedido
 POST /api/user/orders/[id]/confirm-delivery    # Confirmar entrega (→ webhook)
 POST /api/orders/[id]/payment                  # Processar pagamento (→ webhook)
+POST /api/orders/quote                         # Criar orçamento (status QUOTE) + PDF
 GET  /api/admin/stats                          # Estatísticas do dashboard
 GET  /api/admin/products                       # Listar produtos (ADMIN/OWNER)
 POST /api/admin/products                       # Criar produto (ADMIN/OWNER)
@@ -383,6 +386,30 @@ GET  /api/integrations/marketing/abandoned-carts # Carrinhos abandonados (Bot)
 - ✅ **Rastreamento**: Campos trackingCode e trackingUrl
 - ✅ **Painel de Enviados** (`/admin/orders/enviados`): SHIPPED/DELIVERED/CANCELLED/REFUNDED
 - ✅ **Specs dos itens**: SKU, voltagem, cor, dimensões
+
+### 🧾 Fiscal + B2B
+- ✅ Campos fiscais em usuário: CPF/CNPJ + Inscrição Estadual (cadastro exige um doc fiscal)
+- ✅ Campos fiscais em produto: NCM e Origem (cálculo de imposto / ERP)
+- ✅ Orçamentos B2B: gera PDF timbrado e salva pedido com status `QUOTE` (não baixa estoque)
+- ✅ Botão **Baixar Orçamento (PDF)** no carrinho com validade configurável e dados bancários
+- ✅ Webhook `QUOTE` pronto para n8n/ERP receber orçamentos aprovados
+
+### 🚚 Frete em Tempo Real
+### 🚚 Frete em Tempo Real
+ ✅ Service `ShippingCalculator` com peso/dimensões do catálogo
+ ✅ Endpoint `POST /api/shipping/quote` retornando opções (Melhor Envio) + Retirada Feira de Santana
+ ✅ Integração Melhor Envio (sandbox por padrão) com fallback local
+ ✅ Seleção de frete no carrinho com CEP + cálculo dinâmico
+ ✅ Opção padrão “Retirada na Loja (Feira de Santana)” com frete zero
+
+### 🧭 SEO / Google Shopping
+- ✅ Structured Data JSON-LD nos produtos (`/produtos/[id]`) com SKU, EAN, preço e estoque
+- ✅ Disponibilidade `InStock/OutOfStock` e preço BRL expostos no `<head>`
+
+### 🤖 Assistente RAG Seguro
+- ✅ Endpoint `POST /api/assistant` com RAG leve em cima do catálogo (name/price/stock/sku/ean/specs)
+- ✅ Guardrails anti-vazamento: somente SELECT de campos públicos, leitura read-only
+- ✅ Prompt de escopo fechado (ferramentas/obras) e recusa automática de jailbreak/off-topic
 
 ### 🔔 Notificações (n8n Webhooks)
 - ✅ **Helper centralizado** (`src/lib/webhooks.ts`)
@@ -1179,17 +1206,17 @@ Proprietary - Shopping das Ferramentas © 2025
 ### 🔮 Próximos Passos (Opcional)
 - [ ] FAQ
 - [ ] Blog
-- [ ] Checkout (fluxo completo)
+- [x] Checkout (fluxo completo)
 - [ ] Wishlist (Lista de Desejos)
 - [ ] Comparação de produtos
 - [ ] Reviews e avaliações
 - [ ] Adicionar testes E2E (Playwright)
 - [ ] Implementar Swagger para documentação de APIs
 - [ ] Dashboard de Analytics (Vendas, Conversão)
-- [ ] Módulo de Relatórios (PDF/Excel)
+- [x] Módulo de Relatórios (PDF/Excel)
 - [ ] Integração com Gateway de Pagamento (Mercado Pago)
 - [ ] App Mobile (React Native)
-- [ ] Chat de Atendimento (AI-powered)
+- [x] Chat de Atendimento (AI-powered)
 - [ ] PWA (Progressive Web App)
 - [ ] Dark Mode
 - [ ] Internacionalização (i18n)

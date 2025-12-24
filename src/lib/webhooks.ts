@@ -5,7 +5,8 @@ type OrderStatus =
   | "SHIPPED"
   | "DELIVERED"
   | "CANCELLED"
-  | "REFUNDED";
+  | "REFUNDED"
+  | "QUOTE";
 
 export async function sendOrderStatusUpdate(payload: {
   orderId?: string | number;

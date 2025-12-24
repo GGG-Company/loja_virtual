@@ -8,6 +8,13 @@ const RegisterSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(8, 'Senha deve ter no mínimo 8 caracteres'),
   phone: z.string().optional(),
+  cpf: z.string().optional(),
+  cnpj: z.string().optional(),
+  stateRegistration: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (!data.cpf && !data.cnpj) {
+    ctx.addIssue({ code: 'custom', message: 'Informe CPF ou CNPJ' });
+  }
 });
 
 export async function POST(request: Request) {
@@ -22,7 +29,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { name, email, password, phone } = parsed.data;
+    const { name, email, password, phone, cpf, cnpj, stateRegistration } = parsed.data;
 
     // Verificar se email já existe
     const existingUser = await prisma.user.findUnique({
@@ -46,6 +53,9 @@ export async function POST(request: Request) {
         email,
         password: hashedPassword,
         phone,
+        cpf: cpf || null,
+        cnpj: cnpj || null,
+        stateRegistration: stateRegistration || null,
         role: 'CUSTOMER', // Novo usuário sempre começa como CUSTOMER
       },
       select: {

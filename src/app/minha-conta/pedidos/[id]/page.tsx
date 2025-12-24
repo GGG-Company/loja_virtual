@@ -38,6 +38,13 @@ type Order = {
   items: OrderItem[];
 };
 
+type TrackingInfo = {
+  code: string;
+  lastStatus?: string;
+  updatedAt?: string;
+  events?: { status: string; description?: string; date?: string; }[];
+};
+
 const statusConfig = {
   PENDING: { label: 'Aguardando Pagamento', color: 'bg-yellow-100 text-yellow-800', icon: Package },
   CONFIRMED: { label: 'Confirmado', color: 'bg-blue-100 text-blue-800', icon: CheckCircle },
@@ -46,6 +53,7 @@ const statusConfig = {
   DELIVERED: { label: 'Entregue', color: 'bg-green-100 text-green-800', icon: CheckCircle },
   CANCELLED: { label: 'Cancelado', color: 'bg-red-100 text-red-800', icon: XCircle },
   REFUNDED: { label: 'Reembolsado', color: 'bg-gray-100 text-gray-800', icon: XCircle },
+  QUOTE: { label: 'Orçamento', color: 'bg-sky-100 text-sky-800', icon: Package },
 };
 
 const paymentMethodToPt: Record<string, string> = {
@@ -62,6 +70,8 @@ export default function PedidoDetalhePage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [trackingInfo, setTrackingInfo] = useState<TrackingInfo | null>(null);
+  const [isTrackingLoading, setIsTrackingLoading] = useState(false);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -80,6 +90,26 @@ export default function PedidoDetalhePage() {
       fetchOrder();
     }
   }, [params.id]);
+
+  const handleTrackingRefresh = async () => {
+    if (!order?.trackingCode) return;
+    setIsTrackingLoading(true);
+    try {
+      const res = await apiClient.post('/api/shipping/track', {
+        trackingCodes: [order.trackingCode],
+      });
+      const info = Array.isArray(res.data) ? res.data[0] : null;
+      setTrackingInfo(info || null);
+      if (info?.lastStatus) {
+        toast.success('Status de rastreio atualizado');
+      }
+    } catch (error) {
+      console.error('[TRACK]', error);
+      toast.error('Não foi possível consultar o rastreio agora');
+    } finally {
+      setIsTrackingLoading(false);
+    }
+  };
 
   const handleConfirmDelivery = async () => {
     if (!confirm('Confirmar que você recebeu este pedido?')) return;
@@ -220,9 +250,29 @@ export default function PedidoDetalhePage() {
                       </p>
                     )}
                     {order.trackingCode && (
-                      <p className="text-sm text-primary-600 font-mono">
-                        Código de rastreio: {order.trackingCode}
-                      </p>
+                      <div className="mt-2 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2 text-sm text-metallic-600">
+                          <span className="font-mono">Código de rastreio: {order.trackingCode}</span>
+                          <Button size="sm" variant="outline" onClick={handleTrackingRefresh} disabled={isTrackingLoading}>
+                            {isTrackingLoading ? 'Atualizando...' : 'Atualizar status'}
+                          </Button>
+                        </div>
+                        {trackingInfo?.lastStatus && (
+                          <div className="text-sm text-metallic-700">
+                            <p className="font-semibold">{trackingInfo.lastStatus}</p>
+                            {trackingInfo.updatedAt && (
+                              <p className="text-xs text-metallic-600">Atualizado em {new Date(trackingInfo.updatedAt).toLocaleString('pt-BR')}</p>
+                            )}
+                          </div>
+                        )}
+                        {trackingInfo?.events?.slice(0, 3).map((ev, idx) => (
+                          <div key={idx} className="text-xs text-metallic-600">
+                            <span className="font-semibold">{ev.status}</span>
+                            {ev.description && <span className="ml-1">- {ev.description}</span>}
+                            {ev.date && <span className="ml-1 text-[11px]">({new Date(ev.date).toLocaleString('pt-BR')})</span>}
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
                 </div>

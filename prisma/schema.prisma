@@ -25,6 +25,7 @@ enum OrderStatus {
   DELIVERED        // Entregue
   CANCELLED        // Cancelado
   REFUNDED         // Reembolsado
+  QUOTE            // Orçamento (não reserva estoque)
 }
 
 enum PaymentMethod {
@@ -68,6 +69,8 @@ model User {
   image         String?   // URL da foto (Google OAuth)
   phone         String?
   cpf           String?
+  cnpj          String?
+  stateRegistration String?
   addressZip    String?
   addressStreet String?
   addressNumber String?
@@ -168,6 +171,10 @@ model Product {
   compareAtPrice  Float?   // Preço "de" (riscado)
   promotionalPrice Float?  // Preço promocional (ativo quando preenchido)
   cost            Float?   // Custo (visível apenas para OWNER)
+
+  // Fiscal
+  ncm             String?  // Código NCM
+  origin          String?  // Origem da mercadoria (0-8)
   
   // Estoque
   stock           Int      @default(0)
@@ -522,4 +529,20 @@ model ActivityLog {
   @@index([action])
   @@index([createdAt])
   @@map("activity_logs")
+}
+
+// ============================================
+// INTEGRATIONS TOKENS (Melhor Envio OAuth)
+// ============================================
+
+model MelhorEnvioToken {
+  id            String   @id @default("singleton")
+  accessToken   String?
+  refreshToken  String?
+  expiresAt     DateTime?
+  scope         String?
+  environment   String   @default("sandbox") // "sandbox" ou "production"
+  updatedAt     DateTime @updatedAt
+
+  @@map("melhor_envio_token")
 }

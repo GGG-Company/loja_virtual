@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { statusBadgeClass, statusToPt, paymentToPt } from '@/lib/i18n';
-import { Package, Truck, User, Mail, Phone, MapPin } from 'lucide-react';
+import { Package, Truck, User, Mail, Phone, MapPin, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
+import { apiClient } from '@/lib/api-client';
+import { toast } from 'sonner';
 
 interface OrderItem {
   id: string;
@@ -39,6 +41,8 @@ interface Order {
 export default function ShippedOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [trackingStatus, setTrackingStatus] = useState<Record<string, { status?: string; updatedAt?: string }>>({});
+  const [trackingLoadingId, setTrackingLoadingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/admin/orders/shipped')
@@ -46,6 +50,27 @@ export default function ShippedOrdersPage() {
       .then((data) => setOrders(data))
       .finally(() => setLoading(false));
   }, []);
+
+  const refreshTracking = async (orderId: string, code?: string | null) => {
+    if (!code) return;
+    setTrackingLoadingId(orderId);
+    try {
+      const res = await apiClient.post('/api/shipping/track', { trackingCodes: [code] });
+      const info = Array.isArray(res.data) ? res.data[0] : null;
+      setTrackingStatus((prev) => ({
+        ...prev,
+        [orderId]: { status: info?.lastStatus, updatedAt: info?.updatedAt },
+      }));
+      if (info?.lastStatus) {
+        toast.success('Status atualizado');
+      }
+    } catch (err) {
+      console.error('[ADMIN][TRACK]', err);
+      toast.error('Erro ao consultar rastreio');
+    } finally {
+      setTrackingLoadingId(null);
+    }
+  };
 
   const formatAddress = (address: any) => {
     if (!address) return 'Endereço não informado';
@@ -111,7 +136,25 @@ export default function ShippedOrdersPage() {
                     <p className="font-semibold text-metallic-900">Entrega</p>
                     <p>{formatAddress(order.shippingAddress)}</p>
                     {order.trackingCode && (
-                      <p className="text-xs text-metallic-600 mt-1">Rastreio: {order.trackingCode}</p>
+                      <div className="mt-1 space-y-1">
+                        <p className="text-xs text-metallic-600">Rastreio: {order.trackingCode}</p>
+                        <button
+                          onClick={() => refreshTracking(order.id, order.trackingCode)}
+                          className="inline-flex items-center gap-1 text-xs text-primary-700 hover:underline"
+                          disabled={trackingLoadingId === order.id}
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                          {trackingLoadingId === order.id ? 'Atualizando...' : 'Atualizar status'}
+                        </button>
+                        {trackingStatus[order.id]?.status && (
+                          <p className="text-xs text-metallic-700">
+                            {trackingStatus[order.id]?.status}
+                            {trackingStatus[order.id]?.updatedAt && (
+                              <span className="text-[11px] text-metallic-500"> — {new Date(trackingStatus[order.id]?.updatedAt || '').toLocaleString('pt-BR')}</span>
+                            )}
+                          </p>
+                        )}
+                      </div>
                     )}
                     {order.trackingUrl && (
                       <a

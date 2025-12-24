@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { usePrice } from '@/hooks/use-price';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
+import Script from 'next/script';
 
 type ProductVariant = {
   id: string;
@@ -21,15 +22,25 @@ type ProductVariant = {
 
 type ProductDetail = {
   id: string;
+  sku?: string | null;
+  ean?: string | null;
+  slug?: string;
   name: string;
   description?: string | null;
   price: number;
+  promotionalPrice?: number | null;
+  compareAtPrice?: number | null;
   imageUrl?: string | null;
   images?: { url: string; alt?: string | null }[];
   category?: {
     name?: string;
   };
   variants?: ProductVariant[];
+  stock?: number;
+  weight?: number | null;
+  dimensions?: Record<string, unknown> | null;
+  ncm?: string | null;
+  origin?: string | null;
   specs?: Record<string, unknown>;
 };
 
@@ -42,7 +53,8 @@ export default function ProductDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedVoltage, setSelectedVoltage] = useState('');
   const [quantity, setQuantity] = useState(1);
-  const { bestInstallment } = usePrice(product?.price || 0);
+  const displayPrice = product?.promotionalPrice ?? product?.price ?? 0;
+  const { bestInstallment } = usePrice(displayPrice);
 
   const fetchProduct = useCallback(async () => {
     try {
@@ -78,6 +90,8 @@ export default function ProductDetailPage() {
 
     if (!product) return;
 
+    const unitPrice = product.promotionalPrice ?? product.price;
+
     // Adiciona ao carrinho no localStorage
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
     const existingItem = cart.find((item: any) => item.id === product.id);
@@ -87,11 +101,15 @@ export default function ProductDetailPage() {
     } else {
       cart.push({
         id: product.id,
+        sku: product.sku,
+        ean: product.ean,
         name: product.name,
-        price: product.price,
+        price: unitPrice,
         imageUrl: product.imageUrl || product.images?.[0]?.url || '/placeholder.jpg',
         quantity: quantity,
         selectedVoltage: selectedVoltage,
+        weightKg: product.weight ?? undefined,
+        dimensions: product.dimensions ?? undefined,
       });
     }
     
@@ -128,6 +146,34 @@ export default function ProductDetailPage() {
 
   return (
     <>
+      {product && (
+        <Script
+          id="product-structured-data"
+          type="application/ld+json"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org/',
+              '@type': 'Product',
+              name: product.name,
+              image: product.imageUrl || product.images?.[0]?.url || undefined,
+              description: product.description,
+              sku: product.sku,
+              gtin13: product.ean,
+              productID: product.id,
+              category: product.category?.name,
+              brand: 'Shopping das Ferramentas',
+              offers: {
+                '@type': 'Offer',
+                priceCurrency: 'BRL',
+                price: displayPrice,
+                availability: (product.stock ?? 0) > 0 ? 'http://schema.org/InStock' : 'http://schema.org/OutOfStock',
+                url: typeof window !== 'undefined' ? window.location.href : undefined,
+              },
+            }),
+          }}
+        />
+      )}
       {!searchParams.get('embed') && <Header />}
       <main className="min-h-screen bg-white py-12">
         <div className="container mx-auto px-4">
@@ -180,11 +226,13 @@ export default function ProductDetailPage() {
 
               {/* Price */}
               <div className="border-t border-b border-metallic-200 py-6 space-y-2">
-                <p className="text-sm text-metallic-600 line-through">
-                  De R$ {(product.price * 1.3).toFixed(2)}
-                </p>
+                {product.compareAtPrice && (
+                  <p className="text-sm text-metallic-600 line-through">
+                    De R$ {product.compareAtPrice.toFixed(2)}
+                  </p>
+                )}
                 <p className="text-4xl font-bold text-primary-600">
-                  R$ {product.price.toFixed(2)}
+                  R$ {displayPrice.toFixed(2)}
                 </p>
                 {bestInstallment && (
                   <p className="text-sm text-metallic-600">

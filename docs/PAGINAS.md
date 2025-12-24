@@ -282,7 +282,7 @@
 - **Contatos:**
   - Telefone: (71) 3333-4444
   - Email: contato@shopferramentas.com.br
-  - Endereço: Av. Principal, 1234 - Salvador, BA
+  - Endereço: Av. Principal, 1234 - Feira de Santana, BA
 
 ---
 

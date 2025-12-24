@@ -20,6 +20,7 @@ function mapExternalProduct(p: any) {
   return {
     id: p.id ?? p.uuid ?? String(p.id || ''),
     sku: p.sku ?? null,
+    ean: p.ean ?? p.gtin ?? null,
     slug: p.slug ?? p.id ?? '',
     name: p.name ?? p.titulo ?? '',
     description: p.description ?? p.descricao ?? null,
@@ -29,6 +30,8 @@ function mapExternalProduct(p: any) {
     promotionalPrice: p.promotionalPrice ? Number(p.promotionalPrice) : null,
     compareAtPrice: p.compareAtPrice ?? null,
     stock: typeof p.stock === 'number' ? p.stock : Number(p.stock ?? 0),
+    ncm: p.ncm ?? null,
+    origin: p.origin ?? p.origem ?? null,
     isFeatured: !!(p.isFeatured ?? p.destaque),
     category: p.category ?? p.categoria ?? null,
     images: Array.isArray(p.images) ? p.images : (p.imagens || []).map((url: string, i: number) => ({ url, alt: p.name || '', order: i })),
