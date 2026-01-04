@@ -306,6 +306,7 @@ model Order {
   paymentMethod   PaymentMethod
   installments    Int           @default(1)
   paymentId       String?       // ID externo (Mercado Pago, etc)
+  paymentStatus   String?       // Status do gateway (approved, pending, rejected, etc)
   paidAt          DateTime?
   
   // Shipping
@@ -545,4 +546,15 @@ model MelhorEnvioToken {
   updatedAt     DateTime @updatedAt
 
   @@map("melhor_envio_token")
+}
+model MercadoPagoConfig {
+  id            String   @id @default("singleton")
+  publicKey     String?
+  accessToken   String?
+  environment   String   @default("sandbox") // "sandbox" ou "production"
+  webhookSecret String?
+  active        Boolean  @default(false)
+  updatedAt     DateTime @updatedAt
+
+  @@map("mercado_pago_config")
 }

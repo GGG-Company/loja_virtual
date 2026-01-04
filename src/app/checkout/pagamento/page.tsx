@@ -1,21 +1,22 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense, useMemo, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { Check, CreditCard, Barcode, Smartphone, FileText } from 'lucide-react';
+import { Check, CreditCard, Barcode, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/api-client';
-import { buildPixCode, generateQrDataUrl } from '@/lib/pix';
+import { MercadoPagoProvider } from '@/components/mercadopago-provider';
+import { MercadoPagoPaymentBrick } from '@/components/mercadopago-payment-brick';
 
-export default function CheckoutPagamentoPage() {
+function CheckoutPagamentoContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { status } = useSession();
+  const { data: session, status } = useSession();
 
   const orderId = searchParams?.get('orderId');
   const method = searchParams?.get('method') || 'pix';
@@ -24,9 +25,30 @@ export default function CheckoutPagamentoPage() {
 
   const [pixCode, setPixCode] = useState<string>('');
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
+  const [boletoUrl, setBoletoUrl] = useState<string>('');
+  const [boletoBarcode, setBoletoBarcode] = useState<string>('');
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [expired, setExpired] = useState<boolean>(false);
+  const [loadingPayment, setLoadingPayment] = useState(false);
   const TOTAL_SECONDS = 15 * 60;
+
+  // Memoizar dados do usuário para evitar re-renderizações
+  const userEmail = useMemo(() => session?.user?.email || '', [session?.user?.email]);
+  const userFirstName = useMemo(() => session?.user?.name?.split(' ')[0] || '', [session?.user?.name]);
+  const userLastName = useMemo(() => session?.user?.name?.split(' ').slice(1).join(' ') || '', [session?.user?.name]);
+  const amountNumber = useMemo(() => Number(total.replace(',', '.')), [total]);
+
+  // Callbacks estáveis
+  const handlePaymentSuccess = useCallback((paymentId: string) => {
+    toast.success('Pagamento aprovado!');
+    setTimeout(() => {
+      router.push(`/checkout/confirmacao?orderId=${orderId}&paymentId=${paymentId}`);
+    }, 1500);
+  }, [orderId, router]);
+
+  const handlePaymentError = useCallback((error: any) => {
+    console.error('Erro no pagamento:', error);
+  }, []);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -35,27 +57,80 @@ export default function CheckoutPagamentoPage() {
     }
   }, [status, router]);
 
-  // Gerar QR Code PIX simulado baseado no valor e número do pedido
+  // Gerar PIX via Mercado Pago
   useEffect(() => {
-    const generatePixQr = async () => {
-      if (method !== 'pix') {
-        setQrDataUrl('');
-        setPixCode('');
-        return;
-      }
-      const cents = total ? Math.round(Number(total.replace(',', '.')) * 100) : 0;
-      const code = buildPixCode(cents);
-      setPixCode(code);
+    const generatePixMercadoPago = async () => {
+      if (method !== 'pix' || !orderId) return;
+      
+      setLoadingPayment(true);
       try {
-        const dataUrl = await generateQrDataUrl(code, 256);
-        setQrDataUrl(dataUrl);
-      } catch (e) {
-        console.error('[PIX_QR_GENERATION_ERROR]', e);
-        setQrDataUrl('');
+        const response = await fetch('/api/payments/mercadopago/pix', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId,
+            amount: Number(total.replace(',', '.')),
+            userEmail: session?.user?.email,
+            userName: session?.user?.name,
+          }),
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+          setPixCode(data.qrCode || '');
+          setQrDataUrl(data.qrCodeBase64 ? `data:image/png;base64,${data.qrCodeBase64}` : '');
+        } else {
+          toast.error(data.error || 'Erro ao gerar PIX');
+        }
+      } catch (error) {
+        console.error('Erro ao gerar PIX:', error);
+        toast.error('Erro ao gerar PIX');
+      } finally {
+        setLoadingPayment(false);
       }
     };
-    generatePixQr();
-  }, [method, total, number]);
+
+    generatePixMercadoPago();
+  }, [method, orderId, total, session]);
+
+  // Gerar Boleto via Mercado Pago
+  useEffect(() => {
+    const generateBoletoMercadoPago = async () => {
+      if (method !== 'boleto' || !orderId) return;
+      
+      setLoadingPayment(true);
+      try {
+        const response = await fetch('/api/payments/mercadopago/boleto', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId,
+            amount: Number(total.replace(',', '.')),
+            userEmail: session?.user?.email,
+            userName: session?.user?.name,
+            userCpf: session?.user?.cpf || '12345678909',
+          }),
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+          setBoletoUrl(data.boletoUrl || '');
+          setBoletoBarcode(data.barcode || '');
+        } else {
+          toast.error(data.error || 'Erro ao gerar Boleto');
+        }
+      } catch (error) {
+        console.error('Erro ao gerar Boleto:', error);
+        toast.error('Erro ao gerar Boleto');
+      } finally {
+        setLoadingPayment(false);
+      }
+    };
+
+    generateBoletoMercadoPago();
+  }, [method, orderId, total, session]);
 
   // Buscar createdAt do pedido para contagem regressiva (15min)
   useEffect(() => {
@@ -189,33 +264,49 @@ export default function CheckoutPagamentoPage() {
                   <div className="p-3 rounded-full bg-primary-100 text-primary-700">
                     <Smartphone className="h-5 w-5" />
                   </div>
-                  <div className="space-y-2">
-                    <p className="font-semibold">PIX</p>
-                    <p className="text-sm text-gray-600">Aqui entra o QR Code / copia e cola do gateway.</p>
-                    {qrDataUrl ? (
+                  <div className="space-y-2 w-full">
+                    <div className="flex items-center gap-2 mb-2">
+                      <p className="font-semibold">PIX</p>
+                      <span className="text-xs text-gray-500">via</span>
+                      <img src="https://http2.mlstatic.com/frontend-assets/mp-web-navigation/ui-navigation/5.21.11/mercadopago/logo__large@2x.png" alt="Mercado Pago" className="h-5" />
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      {loadingPayment ? 'Gerando QR Code PIX...' : 'Escaneie o QR Code ou copie o código PIX.'}
+                    </p>
+                    {loadingPayment ? (
+                      <div className="w-full h-48 bg-metallic-100 border border-metallic-300 rounded-lg flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                      </div>
+                    ) : qrDataUrl ? (
                       <div className="flex justify-center">
-                        <img src={qrDataUrl} alt="QR Code PIX" className="w-48 h-48 border rounded-lg bg-white p-2" />
+                        <img src={qrDataUrl} alt="QR Code PIX" className="w-64 h-64 border rounded-lg bg-white p-2" />
                       </div>
                     ) : (
-                      <div className="w-full h-40 bg-metallic-100 border border-dashed border-metallic-300 rounded-lg flex items-center justify-center text-gray-500 text-sm">
-                        QR Code do gateway PIX
+                      <div className="w-full h-48 bg-red-50 border border-red-300 rounded-lg flex items-center justify-center text-red-600 text-sm">
+                        Erro ao gerar QR Code PIX
                       </div>
                     )}
-                    <div className="bg-metallic-100 border border-metallic-300 rounded-lg p-3 text-xs font-mono break-all">
-                      {pixCode || 'Código PIX não disponível'}
-                    </div>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        if (pixCode) {
-                          navigator.clipboard.writeText(pixCode);
-                          toast.success('Código PIX copiado');
-                        }
-                      }}
-                      disabled={expired}
-                    >
-                      Copiar código PIX
-                    </Button>
+                    {pixCode && (
+                      <>
+                        <div className="bg-metallic-100 border border-metallic-300 rounded-lg p-3 text-xs font-mono break-all max-h-32 overflow-y-auto">
+                          {pixCode}
+                        </div>
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => {
+                            navigator.clipboard.writeText(pixCode);
+                            toast.success('Código PIX copiado!');
+                          }}
+                          disabled={expired || loadingPayment}
+                        >
+                          Copiar código PIX
+                        </Button>
+                        <p className="text-xs text-gray-500 text-center">
+                          Pagamento identificado automaticamente. Após pagar, aguarde a confirmação.
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -228,15 +319,51 @@ export default function CheckoutPagamentoPage() {
                     <Barcode className="h-5 w-5" />
                   </div>
                   <div className="space-y-2 w-full">
-                    <p className="font-semibold">Boleto Bancário</p>
-                    <p className="text-sm text-gray-600">Linha digitável e PDF gerados pelo gateway entram aqui.</p>
-                    <div className="w-full bg-metallic-100 border border-dashed border-metallic-300 rounded-lg p-3 text-sm text-gray-600">
-                      00000.00000 00000.000000 00000.000000 0 00000000000000
+                    <div className="flex items-center gap-2 mb-2">
+                      <p className="font-semibold">Boleto Bancário</p>
+                      <span className="text-xs text-gray-500">via</span>
+                      <img src="https://http2.mlstatic.com/frontend-assets/mp-web-navigation/ui-navigation/5.21.11/mercadopago/logo__large@2x.png" alt="Mercado Pago" className="h-5" />
                     </div>
-                    <div className="flex gap-3">
-                      <Button variant="outline">Copiar linha digitável</Button>
-                      <Button variant="outline">Baixar PDF</Button>
-                    </div>
+                    <p className="text-sm text-gray-600">
+                      {loadingPayment ? 'Gerando boleto...' : 'Pague até o vencimento (3 dias úteis).'}
+                    </p>
+                    {loadingPayment ? (
+                      <div className="w-full h-32 bg-metallic-100 border border-metallic-300 rounded-lg flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                      </div>
+                    ) : boletoBarcode ? (
+                      <>
+                        <div className="w-full bg-metallic-100 border border-metallic-300 rounded-lg p-3 text-sm font-mono break-all">
+                          {boletoBarcode}
+                        </div>
+                        <div className="flex gap-3">
+                          <Button 
+                            variant="outline"
+                            onClick={() => {
+                              navigator.clipboard.writeText(boletoBarcode);
+                              toast.success('Linha digitável copiada!');
+                            }}
+                          >
+                            Copiar linha digitável
+                          </Button>
+                          {boletoUrl && (
+                            <Button 
+                              variant="outline"
+                              onClick={() => window.open(boletoUrl, '_blank')}
+                            >
+                              Abrir/Imprimir Boleto
+                            </Button>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          Após o pagamento, a confirmação pode levar até 2 dias úteis.
+                        </p>
+                      </>
+                    ) : (
+                      <div className="w-full h-32 bg-red-50 border border-red-300 rounded-lg flex items-center justify-center text-red-600 text-sm">
+                        Erro ao gerar boleto
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -249,12 +376,29 @@ export default function CheckoutPagamentoPage() {
                     <CreditCard className="h-5 w-5" />
                   </div>
                   <div className="space-y-2 w-full">
-                    <p className="font-semibold">Cartão de Crédito</p>
-                    <p className="text-sm text-gray-600">Aqui você conecta o redirect ou iframe do gateway.</p>
-                    <div className="w-full h-32 bg-metallic-100 border border-dashed border-metallic-300 rounded-lg flex items-center justify-center text-gray-500 text-sm">
-                      Placeholder do checkout do gateway
+                    <div className="flex items-center gap-2 mb-2">
+                      <p className="font-semibold">Cartão de Crédito/Débito</p>
+                      <span className="text-xs text-gray-500">via</span>
+                      <img src="https://http2.mlstatic.com/frontend-assets/mp-web-navigation/ui-navigation/5.21.11/mercadopago/logo__large@2x.png" alt="Mercado Pago" className="h-5" />
                     </div>
-                    <Button className="w-full">Pagar no gateway</Button>
+                    <p className="text-sm text-gray-600">Preencha os dados do cartão abaixo.</p>
+                    {orderId ? (
+                      <div className="mt-4">
+                        <MercadoPagoPaymentBrick
+                          amount={amountNumber}
+                          orderId={orderId}
+                          userEmail={userEmail}
+                          userFirstName={userFirstName}
+                          userLastName={userLastName}
+                          onPaymentSuccess={handlePaymentSuccess}
+                          onPaymentError={handlePaymentError}
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-full h-32 bg-metallic-100 border border-dashed border-metallic-300 rounded-lg flex items-center justify-center text-gray-500 text-sm">
+                        Carregando checkout do Mercado Pago...
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -274,5 +418,22 @@ export default function CheckoutPagamentoPage() {
       </main>
       <Footer />
     </>
+  );
+}
+export default function CheckoutPagamentoPage() {
+  return (
+    <MercadoPagoProvider>
+      <Suspense fallback={
+        <>
+          <Header />
+          <div className="min-h-screen flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+          </div>
+          <Footer />
+        </>
+      }>
+        <CheckoutPagamentoContent />
+      </Suspense>
+    </MercadoPagoProvider>
   );
 }

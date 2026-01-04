@@ -20,6 +20,13 @@ const steps = [
   { icon: Check, label: 'Confirmação', href: '/checkout/confirmacao' },
 ];
 
+type ShippingOption = {
+  id: string;
+  name: string;
+  price: number;
+  delivery_time: number;
+};
+
 export default function CheckoutEntregaPage() {
   const router = useRouter();
   const { status } = useSession();
@@ -32,6 +39,9 @@ export default function CheckoutEntregaPage() {
     cidade: '',
     estado: '',
   });
+  const [selectedShipping, setSelectedShipping] = useState<ShippingOption | null>(null);
+  const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
+  const [loadingShipping, setLoadingShipping] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -47,11 +57,41 @@ export default function CheckoutEntregaPage() {
     }
   }, [status, router]);
 
+  // Calcular frete quando CEP for preenchido
+  const calculateShipping = async (cep: string) => {
+    if (cep.replace(/\D/g, '').length !== 8) return;
+    
+    setLoadingShipping(true);
+    try {
+      // Simular opções de frete (substitua pela API real do Melhor Envio)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const options: ShippingOption[] = [
+        { id: 'pac', name: 'PAC - Correios', price: 15.90, delivery_time: 10 },
+        { id: 'sedex', name: 'SEDEX - Correios', price: 25.50, delivery_time: 5 },
+        { id: 'transportadora', name: 'Transportadora', price: 35.00, delivery_time: 7 },
+      ];
+      
+      setShippingOptions(options);
+      toast.success('Opções de frete calculadas!');
+    } catch (error) {
+      toast.error('Erro ao calcular frete');
+    } finally {
+      setLoadingShipping(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!selectedShipping) {
+      toast.error('Selecione uma opção de frete para continuar!');
+      return;
+    }
+    
     localStorage.setItem('checkoutEntrega', JSON.stringify(formData));
-    toast.success('Endereço de entrega salvo!');
+    localStorage.setItem('checkoutFrete', JSON.stringify(selectedShipping));
+    toast.success('Endereço e frete salvos!');
     router.push('/checkout/pagamento');
   };
 
@@ -111,10 +151,17 @@ export default function CheckoutEntregaPage() {
                 <Input
                   id="cep"
                   value={formData.cep}
-                  onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData({ ...formData, cep: value });
+                    if (value.replace(/\D/g, '').length === 8) {
+                      calculateShipping(value);
+                    }
+                  }}
                   placeholder="00000-000"
                   required
                 />
+                <p className="text-xs text-gray-500 mt-1">Digite o CEP para calcular o frete</p>
               </div>
 
               <div>
@@ -182,12 +229,79 @@ export default function CheckoutEntregaPage() {
                 </div>
               </div>
 
+              {/* Opções de Frete */}
+              <div className="pt-6 border-t">
+                <Label className="text-lg font-semibold mb-4 block">Escolha o Frete *</Label>
+                
+                {loadingShipping && (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                    <span className="ml-3 text-gray-600">Calculando opções de frete...</span>
+                  </div>
+                )}
+
+                {!loadingShipping && shippingOptions.length === 0 && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
+                    Digite um CEP válido para calcular as opções de frete
+                  </div>
+                )}
+
+                {!loadingShipping && shippingOptions.length > 0 && (
+                  <div className="space-y-3">
+                    {shippingOptions.map((option) => (
+                      <div
+                        key={option.id}
+                        onClick={() => setSelectedShipping(option)}
+                        className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                          selectedShipping?.id === option.id
+                            ? 'border-primary-600 bg-primary-50 ring-2 ring-primary-600'
+                            : 'border-gray-300 hover:border-primary-400'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                              selectedShipping?.id === option.id
+                                ? 'border-primary-600 bg-primary-600'
+                                : 'border-gray-300'
+                            }`}>
+                              {selectedShipping?.id === option.id && (
+                                <div className="w-2 h-2 bg-white rounded-full" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-gray-900">{option.name}</p>
+                              <p className="text-sm text-gray-600">
+                                Entrega em até {option.delivery_time} dias úteis
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-primary-700">
+                              R$ {option.price.toFixed(2).replace('.', ',')}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {!selectedShipping && shippingOptions.length > 0 && (
+                  <p className="text-sm text-red-600 mt-2">* Selecione uma opção de frete para continuar</p>
+                )}
+              </div>
+
               <div className="flex gap-4 pt-6">
                 <Button type="button" variant="outline" onClick={() => router.push('/checkout/dados')}>
                   Voltar
                 </Button>
-                <Button type="submit" className="flex-1">
-                  Continuar para Pagamento
+                <Button 
+                  type="submit" 
+                  className="flex-1"
+                  disabled={!selectedShipping}
+                >
+                  {!selectedShipping ? 'Selecione o frete para continuar' : 'Continuar para Pagamento'}
                 </Button>
               </div>
             </form>

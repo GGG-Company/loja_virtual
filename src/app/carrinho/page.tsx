@@ -371,11 +371,13 @@ export default function CartPage() {
 
               <div className="lg:col-span-1 space-y-6">
                 <motion.div
+                  id="shipping-section"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   className="bg-white rounded-lg shadow p-6"
                 >
-                  <h2 className="text-xl font-bold mb-4">Frete em tempo real</h2>
+                  <h2 className="text-xl font-bold mb-4">Frete em tempo real *</h2>
+                  <p className="text-sm text-gray-600 mb-4">Calcule e selecione o frete para continuar</p>
                   <div className="flex gap-2 mb-4">
                     <input
                       type="text"
@@ -389,11 +391,15 @@ export default function CartPage() {
                     </Button>
                   </div>
 
+                  {shippingOptions.length > 0 && (
+                    <p className="text-sm font-semibold text-gray-700 mb-2">Selecione uma opção:</p>
+                  )}
+                  
                   <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
                     {shippingOptions.map((option) => (
                       <label
                         key={option.id}
-                        className={`flex items-start gap-3 border rounded-lg p-3 cursor-pointer ${selectedShipping?.id === option.id ? 'border-primary-500 bg-primary-50' : 'border-gray-200'}`}
+                        className={`flex items-start gap-3 border rounded-lg p-3 cursor-pointer transition-all ${selectedShipping?.id === option.id ? 'border-primary-600 bg-primary-50 ring-2 ring-primary-600' : 'border-gray-200 hover:border-primary-400'}`}
                       >
                         <input
                           type="radio"
@@ -419,6 +425,14 @@ export default function CartPage() {
                       </label>
                     ))}
                   </div>
+
+                  {!selectedShipping && shippingOptions.length > 0 && (
+                    <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-sm text-yellow-800 font-medium">
+                        ⚠️ Selecione uma opção de frete para continuar com a compra
+                      </p>
+                    </div>
+                  )}
 
                   <div className="mt-4 border-t pt-4 space-y-2">
                     <div className="flex items-center justify-between">
@@ -476,9 +490,31 @@ export default function CartPage() {
                     <span className="text-primary-600">R$ {total.toFixed(2)}</span>
                   </div>
 
-                  <Button className="w-full" size="lg" onClick={() => router.push('/checkout')}>
-                    Finalizar Compra
+                  <Button 
+                    className="w-full" 
+                    size="lg" 
+                    onClick={() => {
+                      if (!selectedShipping) {
+                        toast.error('Selecione uma opção de frete para continuar!');
+                        // Scroll para a seção de frete
+                        document.getElementById('shipping-section')?.scrollIntoView({ behavior: 'smooth' });
+                        return;
+                      }
+                      
+                      // Salvar frete selecionado no localStorage
+                      localStorage.setItem('checkoutFrete', JSON.stringify(selectedShipping));
+                      router.push('/checkout');
+                    }}
+                    disabled={!selectedShipping}
+                  >
+                    {!selectedShipping ? 'Calcule o frete para continuar' : 'Finalizar Compra'}
                   </Button>
+
+                  {!selectedShipping && shippingZip && shippingOptions.length > 0 && (
+                    <p className="text-sm text-red-600 text-center mt-2">
+                      ⚠️ Selecione uma opção de frete acima
+                    </p>
+                  )}
 
                   <Link href="/produtos">
                     <Button variant="outline" className="w-full mt-3">

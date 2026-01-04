@@ -58,6 +58,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: user.name,
           image: user.image,
           role: user.role,
+          cpf: user.cpf,
         };
       },
     }),
@@ -68,6 +69,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.id = user.id;
         token.role = (user as any).role || 'CUSTOMER';
+        token.cpf = (user as any).cpf || null;
       }
 
       // Update manual (ex: mudar nome)
@@ -82,6 +84,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (token && session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as UserRole;
+        session.user.cpf = token.cpf as string | null;
       }
       return session;
     },

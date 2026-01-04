@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Header } from '@/components/header';
@@ -9,9 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, Package, Check, Truck, CreditCard, Barcode, CheckCircle } from 'lucide-react';
+import { ShoppingCart, Package, Check, Truck, CreditCard, Barcode, CheckCircle, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
 import Image from 'next/image';
+import { MercadoPagoProvider } from '@/components/mercadopago-provider';
+import { MercadoPagoPaymentBrick } from '@/components/mercadopago-payment-brick';
 
 const steps = [
   { id: 1, icon: Package, label: 'Dados' },
@@ -47,6 +49,14 @@ export default function CheckoutPage() {
 
   const [paymentMethod, setPaymentMethod] = useState('pix');
   const [loadingCep, setLoadingCep] = useState(false);
+  const [showPaymentBrick, setShowPaymentBrick] = useState(false);
+  const [pixCode, setPixCode] = useState('');
+  const [qrDataUrl, setQrDataUrl] = useState('');
+  const [boletoUrl, setBoletoUrl] = useState('');
+  const [boletoBarcode, setBoletoBarcode] = useState('');
+  const [loadingPayment, setLoadingPayment] = useState(false);
+  const [paymentProcessed, setPaymentProcessed] = useState(false);
+  const [orderId, setOrderId] = useState<string | null>(null);
 
   // Persistência do progresso do checkout
   useEffect(() => {
@@ -223,6 +233,71 @@ export default function CheckoutPage() {
     setCurrentStep(currentStep + 1);
   };
 
+  const generatePixPayment = async (orderId: string, amount: number) => {
+    setLoadingPayment(true);
+    try {
+      const response = await fetch('/api/payments/mercadopago/pix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId,
+          amount: amount,
+          userEmail: dadosForm.email,
+          userName: dadosForm.nome,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        setPixCode(data.qrCode || '');
+        setQrDataUrl(data.qrCodeBase64 ? `data:image/png;base64,${data.qrCodeBase64}` : '');
+        setShowPaymentBrick(true);
+        toast.success('PIX gerado com sucesso!');
+      } else {
+        toast.error(data.error || 'Erro ao gerar PIX');
+      }
+    } catch (error) {
+      console.error('Erro ao gerar PIX:', error);
+      toast.error('Erro ao gerar PIX');
+    } finally {
+      setLoadingPayment(false);
+    }
+  };
+
+  const generateBoletoPayment = async (orderId: string, amount: number) => {
+    setLoadingPayment(true);
+    try {
+      const response = await fetch('/api/payments/mercadopago/boleto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId,
+          amount: amount,
+          userEmail: dadosForm.email,
+          userName: dadosForm.nome,
+          userCpf: dadosForm.cpf || '12345678909',
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        setBoletoUrl(data.boletoUrl || '');
+        setBoletoBarcode(data.barcode || '');
+        setShowPaymentBrick(true);
+        toast.success('Boleto gerado com sucesso!');
+      } else {
+        toast.error(data.error || 'Erro ao gerar Boleto');
+      }
+    } catch (error) {
+      console.error('Erro ao gerar Boleto:', error);
+      toast.error('Erro ao gerar Boleto');
+    } finally {
+      setLoadingPayment(false);
+    }
+  };
+
   const handleConfirmarPedido = async () => {
     setLoading(true);
 
@@ -285,7 +360,7 @@ export default function CheckoutPage() {
   }, [currentStep, dadosForm, entregaForm, paymentMethod, cartItems]);
 
   return (
-    <>
+    <MercadoPagoProvider>
       <Header />
       <main className="min-h-screen bg-metallic-50 py-12">
         <div className="container mx-auto px-4 max-w-6xl">
@@ -555,7 +630,7 @@ export default function CheckoutPage() {
                           onChange={(e) => setPaymentMethod(e.target.value)}
                           className="mr-4"
                         />
-                        <Barcode className="h-6 w-6 mr-3 text-primary-600" />
+                        <Smartphone className="h-6 w-6 mr-3 text-primary-600" />
                         <div className="flex-1">
                           <p className="font-semibold">PIX</p>
                           <p className="text-sm text-gray-600">Aprovação imediata</p>
@@ -672,7 +747,16 @@ export default function CheckoutPage() {
                       {/* Pagamento */}
                       <div>
                         <h3 className="font-semibold mb-2">Forma de Pagamento</h3>
-                        <p className="text-sm text-gray-600 capitalize">{paymentMethod}</p>
+                        <div className="flex items-center gap-2 p-3 bg-primary-50 rounded-lg border border-primary-200">
+                          {paymentMethod === 'pix' && <Smartphone className="h-5 w-5 text-primary-600" />}
+                          {paymentMethod === 'boleto' && <Barcode className="h-5 w-5 text-primary-600" />}
+                          {paymentMethod === 'cartao' && <CreditCard className="h-5 w-5 text-primary-600" />}
+                          <span className="font-medium text-primary-700">
+                            {paymentMethod === 'pix' && 'PIX - Aprovação imediata'}
+                            {paymentMethod === 'boleto' && 'Boleto Bancário - Vencimento em 3 dias'}
+                            {paymentMethod === 'cartao' && 'Cartão de Crédito - Parcelamento em até 12x'}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
@@ -735,6 +819,6 @@ export default function CheckoutPage() {
         </div>
       </main>
       <Footer />
-    </>
+    </MercadoPagoProvider>
   );
 }
