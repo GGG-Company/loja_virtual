@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { statusBadgeClass, statusToPt, paymentToPt } from '@/lib/i18n';
-import { Package, Truck, User, Mail, Phone, MapPin, RefreshCw } from 'lucide-react';
+import { Package, Truck, User, Mail, Phone, MapPin, RefreshCw, Search } from 'lucide-react';
 import Link from 'next/link';
 import { apiClient } from '@/lib/api-client';
 import { toast } from 'sonner';
+import { Input } from '@/components/ui/input';
 
 interface OrderItem {
   id: string;
@@ -41,15 +42,29 @@ interface Order {
 export default function ShippedOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
   const [trackingStatus, setTrackingStatus] = useState<Record<string, { status?: string; updatedAt?: string }>>({});
   const [trackingLoadingId, setTrackingLoadingId] = useState<string | null>(null);
 
+  const fetchOrders = async (currentPage: number, term: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/orders/shipped?page=${currentPage}&limit=10&search=${encodeURIComponent(term)}`);
+      const data = await res.json();
+      setOrders(data.orders || []);
+      setTotalPages(data.pagination?.pages || 1);
+    } catch (error) {
+      console.error('[ADMIN][ORDERS][SHIPPED]', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    fetch('/api/admin/orders/shipped')
-      .then((res) => res.json())
-      .then((data) => setOrders(data))
-      .finally(() => setLoading(false));
-  }, []);
+    fetchOrders(page, searchTerm);
+  }, [page, searchTerm]);
 
   const refreshTracking = async (orderId: string, code?: string | null) => {
     if (!code) return;
@@ -78,135 +93,173 @@ export default function ShippedOrdersPage() {
     return parts.filter(Boolean).join(', ');
   };
 
-  if (loading) {
-    return <div className="container mx-auto p-6">Carregando pedidos enviados...</div>;
-  }
-
   return (
     <div className="container mx-auto p-6 space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-metallic-900">Pedidos Enviados</h1>
           <p className="text-sm text-metallic-600">Inclui enviados, entregues e cancelados</p>
         </div>
-        <Link href="/admin/orders" className="text-primary-600 text-sm hover:underline">Voltar para pedidos</Link>
+        <div className="flex items-center gap-3 w-full lg:w-auto">
+          <div className="relative w-full lg:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-metallic-400" />
+            <Input
+              placeholder="Buscar por número ou cliente"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPage(1);
+              }}
+              className="pl-10"
+            />
+          </div>
+          <Link href="/admin/orders" className="text-primary-600 text-sm hover:underline whitespace-nowrap">Voltar para pedidos</Link>
+        </div>
       </div>
 
-      {orders.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-6 flex items-center gap-3 text-metallic-700">
-          <Truck className="h-5 w-5 text-metallic-500" />
-          Nenhum pedido enviado até o momento.
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {orders.map((order) => (
-            <div key={order.id} className="bg-white rounded-lg shadow p-5 border border-metallic-100">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-                <div>
-                  <p className="text-sm text-metallic-600">Pedido</p>
-                  <h2 className="text-xl font-semibold text-metallic-900">{order.orderNumber}</h2>
-                  <p className="text-sm text-metallic-600">{new Date(order.createdAt).toLocaleString('pt-BR')}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${statusBadgeClass(order.status)}`}>
-                    {statusToPt(order.status)}
-                  </span>
-                </div>
-              </div>
+      <div className="relative">
+        {loading && (
+          <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-10">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+          </div>
+        )}
 
-              <div className="grid md:grid-cols-2 gap-3 mt-3 bg-metallic-50 border border-metallic-100 rounded-lg p-3">
-                <div className="flex items-start gap-2 text-sm text-metallic-700">
-                  <User className="h-4 w-4 text-primary-600 mt-0.5" />
+        {orders.length === 0 && !loading ? (
+          <div className="bg-white rounded-lg shadow p-6 flex items-center gap-3 text-metallic-700">
+            <Truck className="h-5 w-5 text-metallic-500" />
+            Nenhum pedido enviado até o momento.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {orders.map((order) => (
+              <div key={order.id} className="bg-white rounded-lg shadow p-5 border border-metallic-100">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                   <div>
-                    <p className="font-semibold text-metallic-900">Cliente</p>
-                    <p>{order.user?.name || 'Sem nome'}</p>
-                    <div className="flex items-center gap-1 text-xs text-metallic-600">
-                      <Mail className="h-3 w-3" />
-                      <span>{order.user?.email || 'Sem e-mail'}</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-xs text-metallic-600">
-                      <Phone className="h-3 w-3" />
-                      <span>{order.user?.phone || 'Sem telefone'}</span>
-                    </div>
+                    <p className="text-sm text-metallic-600">Pedido</p>
+                    <h2 className="text-xl font-semibold text-metallic-900">{order.orderNumber}</h2>
+                    <p className="text-sm text-metallic-600">{new Date(order.createdAt).toLocaleString('pt-BR')}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${statusBadgeClass(order.status)}`}>
+                      {statusToPt(order.status)}
+                    </span>
                   </div>
                 </div>
-                <div className="flex items-start gap-2 text-sm text-metallic-700">
-                  <MapPin className="h-4 w-4 text-primary-600 mt-0.5" />
-                  <div>
-                    <p className="font-semibold text-metallic-900">Entrega</p>
-                    <p>{formatAddress(order.shippingAddress)}</p>
-                    {order.trackingCode && (
-                      <div className="mt-1 space-y-1">
-                        <p className="text-xs text-metallic-600">Rastreio: {order.trackingCode}</p>
-                        <button
-                          onClick={() => refreshTracking(order.id, order.trackingCode)}
-                          className="inline-flex items-center gap-1 text-xs text-primary-700 hover:underline"
-                          disabled={trackingLoadingId === order.id}
-                        >
-                          <RefreshCw className="h-3 w-3" />
-                          {trackingLoadingId === order.id ? 'Atualizando...' : 'Atualizar status'}
-                        </button>
-                        {trackingStatus[order.id]?.status && (
-                          <p className="text-xs text-metallic-700">
-                            {trackingStatus[order.id]?.status}
-                            {trackingStatus[order.id]?.updatedAt && (
-                              <span className="text-[11px] text-metallic-500"> — {new Date(trackingStatus[order.id]?.updatedAt || '').toLocaleString('pt-BR')}</span>
-                            )}
-                          </p>
-                        )}
+
+                <div className="grid md:grid-cols-2 gap-3 mt-3 bg-metallic-50 border border-metallic-100 rounded-lg p-3">
+                  <div className="flex items-start gap-2 text-sm text-metallic-700">
+                    <User className="h-4 w-4 text-primary-600 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-metallic-900">Cliente</p>
+                      <p>{order.user?.name || 'Sem nome'}</p>
+                      <div className="flex items-center gap-1 text-xs text-metallic-600">
+                        <Mail className="h-3 w-3" />
+                        <span>{order.user?.email || 'Sem e-mail'}</span>
                       </div>
-                    )}
-                    {order.trackingUrl && (
-                      <a
-                        href={order.trackingUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-primary-700 underline"
-                      >
-                        Ver rastreio
-                      </a>
-                    )}
+                      <div className="flex items-center gap-1 text-xs text-metallic-600">
+                        <Phone className="h-3 w-3" />
+                        <span>{order.user?.phone || 'Sem telefone'}</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-
-              <div className="mt-4 grid md:grid-cols-3 gap-3">
-                <div className="bg-metallic-50 rounded-lg p-3 border border-metallic-100">
-                  <p className="text-sm text-metallic-600">Pagamento</p>
-                  <p className="font-semibold text-metallic-900">{paymentToPt(order.paymentMethod)}</p>
-                </div>
-                <div className="bg-metallic-50 rounded-lg p-3 border border-metallic-100">
-                  <p className="text-sm text-metallic-600">Total</p>
-                  <p className="font-semibold text-metallic-900">R$ {order.total.toFixed(2)}</p>
-                </div>
-                <div className="bg-metallic-50 rounded-lg p-3 border border-metallic-100">
-                  <p className="text-sm text-metallic-600">Frete / Desconto</p>
-                  <p className="font-semibold text-metallic-900">Frete R$ {order.shipping.toFixed(2)} | Desc R$ {order.discount.toFixed(2)}</p>
-                </div>
-              </div>
-
-              <div className="mt-4 border-t border-metallic-100 pt-3 space-y-2">
-                <p className="font-semibold text-metallic-900">Itens</p>
-                {order.items.map((item) => (
-                  <div key={item.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm text-metallic-700">
-                    <div className="flex-1">
-                      <span className="font-medium text-metallic-900">{item.product.name}</span>
-                      {item.product.sku && <span className="ml-2 text-xs text-metallic-500">SKU: {item.product.sku}</span>}
-                      {item.product.specs && (
-                        <span className="ml-2 text-xs text-metallic-500">Specs: {JSON.stringify(item.product.specs)}</span>
+                  <div className="flex items-start gap-2 text-sm text-metallic-700">
+                    <MapPin className="h-4 w-4 text-primary-600 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-metallic-900">Entrega</p>
+                      <p>{formatAddress(order.shippingAddress)}</p>
+                      {order.trackingCode && (
+                        <div className="mt-1 space-y-1">
+                          <p className="text-xs text-metallic-600">Rastreio: {order.trackingCode}</p>
+                          <button
+                            onClick={() => refreshTracking(order.id, order.trackingCode)}
+                            className="inline-flex items-center gap-1 text-xs text-primary-700 hover:underline"
+                            disabled={trackingLoadingId === order.id}
+                          >
+                            <RefreshCw className="h-3 w-3" />
+                            {trackingLoadingId === order.id ? 'Atualizando...' : 'Atualizar status'}
+                          </button>
+                          {trackingStatus[order.id]?.status && (
+                            <p className="text-xs text-metallic-700">
+                              {trackingStatus[order.id]?.status}
+                              {trackingStatus[order.id]?.updatedAt && (
+                                <span className="text-[11px] text-metallic-500"> — {new Date(trackingStatus[order.id]?.updatedAt || '').toLocaleString('pt-BR')}</span>
+                              )}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      {order.trackingUrl && (
+                        <a
+                          href={order.trackingUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary-700 underline"
+                        >
+                          Ver rastreio
+                        </a>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 mt-1 sm:mt-0">
-                      <span>Qtd: {item.quantity}</span>
-                      <span>Preço: R$ {item.price.toFixed(2)}</span>
-                    </div>
                   </div>
-                ))}
+                </div>
+
+                <div className="mt-4 grid md:grid-cols-3 gap-3">
+                  <div className="bg-metallic-50 rounded-lg p-3 border border-metallic-100">
+                    <p className="text-sm text-metallic-600">Pagamento</p>
+                    <p className="font-semibold text-metallic-900">{paymentToPt(order.paymentMethod)}</p>
+                  </div>
+                  <div className="bg-metallic-50 rounded-lg p-3 border border-metallic-100">
+                    <p className="text-sm text-metallic-600">Total</p>
+                    <p className="font-semibold text-metallic-900">R$ {order.total.toFixed(2)}</p>
+                  </div>
+                  <div className="bg-metallic-50 rounded-lg p-3 border border-metallic-100">
+                    <p className="text-sm text-metallic-600">Frete / Desconto</p>
+                    <p className="font-semibold text-metallic-900">Frete R$ {order.shipping.toFixed(2)} | Desc R$ {order.discount.toFixed(2)}</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 border-t border-metallic-100 pt-3 space-y-2">
+                  <p className="font-semibold text-metallic-900">Itens</p>
+                  {order.items.map((item) => (
+                    <div key={item.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm text-metallic-700">
+                      <div className="flex-1">
+                        <span className="font-medium text-metallic-900">{item.product.name}</span>
+                        {item.product.sku && <span className="ml-2 text-xs text-metallic-500">SKU: {item.product.sku}</span>}
+                        {item.product.specs && (
+                          <span className="ml-2 text-xs text-metallic-500">Specs: {JSON.stringify(item.product.specs)}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 mt-1 sm:mt-0">
+                        <span>Qtd: {item.quantity}</span>
+                        <span>Preço: R$ {item.price.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between text-sm text-metallic-600">
+        <span>Página {page} de {totalPages}</span>
+        <div className="flex gap-2">
+          <button
+            className="px-3 py-2 rounded-md border disabled:opacity-50"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1 || loading}
+          >
+            Anterior
+          </button>
+          <button
+            className="px-3 py-2 rounded-md border disabled:opacity-50"
+            onClick={() => setPage((p) => (p < totalPages ? p + 1 : p))}
+            disabled={page >= totalPages || loading}
+          >
+            Próxima
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }

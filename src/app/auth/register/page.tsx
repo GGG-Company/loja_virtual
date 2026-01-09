@@ -20,6 +20,7 @@ export default function RegisterPage() {
     password: '',
     confirmPassword: '',
     phone: '',
+    personType: 'CPF' as 'CPF' | 'CNPJ',
     cpf: '',
     cnpj: '',
     stateRegistration: '',
@@ -35,8 +36,13 @@ export default function RegisterPage() {
       return;
     }
 
-    if (!formData.cpf && !formData.cnpj) {
-      toast.error('Informe CPF ou CNPJ');
+    const hasDoc =
+      formData.personType === 'CPF'
+        ? !!formData.cpf.trim()
+        : !!formData.cnpj.trim();
+
+    if (!hasDoc) {
+      toast.error('Informe o documento selecionado');
       setIsLoading(false);
       return;
     }
@@ -47,8 +53,8 @@ export default function RegisterPage() {
         email: formData.email,
         password: formData.password,
         phone: formData.phone,
-        cpf: formData.cpf || undefined,
-        cnpj: formData.cnpj || undefined,
+        cpf: formData.personType === 'CPF' ? formData.cpf : undefined,
+        cnpj: formData.personType === 'CNPJ' ? formData.cnpj : undefined,
         stateRegistration: formData.stateRegistration || undefined,
       });
 
@@ -129,52 +135,71 @@ export default function RegisterPage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <Label>Tipo de cadastro</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {(['CPF', 'CNPJ'] as const).map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, personType: type })}
+                    className={`h-11 rounded-xl border transition ${
+                      formData.personType === type
+                        ? 'border-primary-500 bg-primary-50 text-primary-700'
+                        : 'border-metallic-200 hover:border-primary-200 text-metallic-700'
+                    }`}
+                  >
+                    {type === 'CPF' ? 'Pessoa Física (CPF)' : 'Pessoa Jurídica (CNPJ)'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {formData.personType === 'CPF' ? (
               <div className="space-y-2">
-                <Label htmlFor="cpf">CPF (PF)</Label>
+                <Label htmlFor="cpf">CPF</Label>
                 <Input
                   id="cpf"
                   type="text"
                   placeholder="000.000.000-00"
                   value={formData.cpf}
-                  onChange={(e) =>
-                    setFormData({ ...formData, cpf: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
                   className="h-12"
+                  required={formData.personType === 'CPF'}
                 />
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cnpj">CNPJ (PJ)</Label>
-                <Input
-                  id="cnpj"
-                  type="text"
-                  placeholder="00.000.000/0000-00"
-                  value={formData.cnpj}
-                  onChange={(e) =>
-                    setFormData({ ...formData, cnpj: e.target.value })
-                  }
-                  className="h-12"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="stateRegistration">Inscrição Estadual (PJ)</Label>
-              <Input
-                id="stateRegistration"
-                type="text"
-                placeholder="ISENTO ou número"
-                value={formData.stateRegistration}
-                onChange={(e) =>
-                  setFormData({ ...formData, stateRegistration: e.target.value })
-                }
-                className="h-12"
-              />
-              <p className="text-xs text-metallic-600">
-                Obrigatório para B2B; PF pode deixar em branco.
-              </p>
-            </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="cnpj">CNPJ</Label>
+                  <Input
+                    id="cnpj"
+                    type="text"
+                    placeholder="00.000.000/0000-00"
+                    value={formData.cnpj}
+                    onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
+                    className="h-12"
+                    required={formData.personType === 'CNPJ'}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="stateRegistration">Inscrição Estadual (PJ)</Label>
+                  <Input
+                    id="stateRegistration"
+                    type="text"
+                    placeholder="ISENTO ou número"
+                    value={formData.stateRegistration}
+                    onChange={(e) =>
+                      setFormData({ ...formData, stateRegistration: e.target.value })
+                    }
+                    className="h-12"
+                  />
+                  <p className="text-xs text-metallic-600">
+                    Obrigatório para B2B; informe "ISENTO" se não tiver.
+                  </p>
+                </div>
+              </>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>

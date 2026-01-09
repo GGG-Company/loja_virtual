@@ -45,7 +45,7 @@ export default function PagamentoPage() {
   const [pixCode, setPixCode] = useState<string>('');
   const [timeLeft, setTimeLeft] = useState<number>(0); // seconds
   const [expired, setExpired] = useState<boolean>(false);
-  const TOTAL_SECONDS = 15 * 60;
+  const TOTAL_SECONDS = 30;
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -60,9 +60,9 @@ export default function PagamentoPage() {
         }
         
         setOrder(response.data);
-        // Inicializa contagem: 15 minutos a partir de createdAt
+        // Inicializa contagem: 30 segundos a partir de createdAt
         const created = new Date(response.data.createdAt).getTime();
-        const expiresAt = created + 15 * 60 * 1000;
+        const expiresAt = created + 30 * 1000;
         const now = Date.now();
         const initial = Math.max(0, Math.floor((expiresAt - now) / 1000));
         setTimeLeft(initial);
@@ -223,7 +223,7 @@ export default function PagamentoPage() {
                 </span>
                 {!expired && order && (
                   <span className="text-xs text-metallic-600">
-                    Expira às {new Date(new Date(order.createdAt).getTime() + 15 * 60 * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    Expira às {new Date(new Date(order.createdAt).getTime() + 30 * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 )}
                 {!expired && (

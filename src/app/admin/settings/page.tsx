@@ -22,6 +22,8 @@ export default function AdminSettingsPage() {
   const [mpConfigLoading, setMpConfigLoading] = useState(false);
   const [showMpForm, setShowMpForm] = useState(false);
   const [mpForm, setMpForm] = useState({ publicKey: '', accessToken: '' });
+  const [webhookSending, setWebhookSending] = useState(false);
+  const [webhookFeedback, setWebhookFeedback] = useState<string | null>(null);
 
   // Carregar status das integrações
   useEffect(() => {
@@ -82,6 +84,27 @@ export default function AdminSettingsPage() {
       console.error(error);
     } finally {
       setMpConfigLoading(false);
+    }
+  };
+
+  const handleSendWebhookTest = async () => {
+    try {
+      setWebhookFeedback(null);
+      setWebhookSending(true);
+      const res = await fetch('/api/admin/integrations/webhook/test', { method: 'POST' });
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        setWebhookFeedback(data?.error || 'Erro ao enviar webhook de teste');
+        return;
+      }
+
+      setWebhookFeedback(data?.message || 'Webhook de teste enviado');
+    } catch (error) {
+      console.error(error);
+      setWebhookFeedback('Erro ao enviar webhook de teste');
+    } finally {
+      setWebhookSending(false);
     }
   };
 
@@ -247,6 +270,28 @@ export default function AdminSettingsPage() {
               Após conectar, o cálculo de frete, pontos de coleta e rastreamento usarão sua conta do Melhor Envio.
             </p>
           </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold mb-4">Webhooks</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Envie um evento de teste para validar a URL configurada (N8N_ORDERS_WEBHOOK_URL ou N8N_WEBHOOK_URL).
+          </p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <button
+              onClick={handleSendWebhookTest}
+              disabled={webhookSending}
+              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {webhookSending ? 'Enviando…' : 'Enviar webhook de teste'}
+            </button>
+            {webhookFeedback && (
+              <span className="text-sm text-gray-700">{webhookFeedback}</span>
+            )}
+          </div>
+          <p className="text-xs text-gray-500 mt-3">
+            O payload contém um pedido fictício; personalize pelo corpo da requisição, se necessário.
+          </p>
         </div>
       </div>
     </div>

@@ -26,15 +26,17 @@ export default function CuponsAdminPage() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-  useEffect(() => {
-    fetchCoupons();
-  }, []);
-
-  const fetchCoupons = async () => {
+  const fetchCoupons = async (currentPage: number, term: string) => {
+    setIsLoading(true);
     try {
-      const response = await apiClient.get<{ coupons: Coupon[] }>('/api/admin/coupons');
+      const response = await apiClient.get<{ coupons: Coupon[]; pagination?: { pages?: number } }>('/api/admin/coupons', {
+        params: { page: currentPage, limit: 10, search: term || undefined },
+      });
       setCoupons(response.data.coupons);
+      setTotalPages(response.data.pagination?.pages || 1);
     } catch (error) {
       console.error('Erro ao carregar cupons:', error);
       toast.error('Erro ao carregar cupons');
@@ -43,23 +45,24 @@ export default function CuponsAdminPage() {
     }
   };
 
+  useEffect(() => {
+    fetchCoupons(page, searchTerm);
+  }, [page, searchTerm]);
+
   const handleDelete = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir este cupom?')) return;
 
     try {
       await apiClient.delete(`/api/admin/coupons/${id}`);
       toast.success('Cupom excluído com sucesso');
-      fetchCoupons();
+      fetchCoupons(page, searchTerm);
     } catch (error) {
       console.error('Erro ao excluir cupom:', error);
       toast.error('Erro ao excluir cupom');
     }
   };
 
-  const filteredCoupons = coupons.filter((coupon) =>
-    coupon.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    coupon.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredCoupons = coupons;
 
   if (isLoading) {
     return (
@@ -90,7 +93,10 @@ export default function CuponsAdminPage() {
             type="text"
             placeholder="Buscar por código ou descrição..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setPage(1);
+            }}
             className="w-full pl-10 pr-4 py-2 border border-metallic-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
         </div>
@@ -194,6 +200,26 @@ export default function CuponsAdminPage() {
             <p className="text-metallic-600">Nenhum cupom encontrado</p>
           </div>
         )}
+      </div>
+
+      <div className="flex items-center justify-between text-sm text-metallic-600 mt-4">
+        <span>Página {page} de {totalPages}</span>
+        <div className="flex gap-2">
+          <button
+            className="px-3 py-2 rounded-md border disabled:opacity-50"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1 || isLoading}
+          >
+            Anterior
+          </button>
+          <button
+            className="px-3 py-2 rounded-md border disabled:opacity-50"
+            onClick={() => setPage((p) => (p < totalPages ? p + 1 : p))}
+            disabled={page >= totalPages || isLoading}
+          >
+            Próxima
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -15,31 +15,62 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
 
-    // Cancelar automaticamente pedidos pendentes com mais de 15 minutos
-    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+    // Cancelar automaticamente pedidos pendentes com mais de 30 segundos
+    const thirtySecondsAgo = new Date(Date.now() - 30 * 1000);
     await prisma.order.updateMany({
       where: {
         status: 'PENDING',
-        createdAt: { lt: fifteenMinutesAgo },
+        createdAt: { lt: thirtySecondsAgo },
       },
       data: { status: 'CANCELLED' },
     });
 
-    const orders = await prisma.order.findMany({
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
+    const { searchParams } = new URL(req.url);
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '10')));
+    const search = (searchParams.get('search') || '').trim();
+
+    const where = search
+      ? {
+          OR: [
+            { orderNumber: { contains: search } },
+            { user: { name: { contains: search } } },
+            { user: { email: { contains: search } } },
+          ],
+        }
+      : {};
+
+    const skip = (page - 1) * limit;
+
+    const [orders, total] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              name: true,
+              email: true,
+            },
           },
         },
-      },
-      orderBy: {
-        createdAt: 'desc',
+        orderBy: {
+          createdAt: 'desc',
+        },
+        skip,
+        take: limit,
+      }),
+      prisma.order.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      orders,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.max(1, Math.ceil(total / limit)),
       },
     });
-
-    return NextResponse.json(orders);
   } catch (error) {
     console.error('[ADMIN_ORDERS_GET]', error);
     return NextResponse.json({ error: 'Erro ao buscar pedidos' }, { status: 500 });

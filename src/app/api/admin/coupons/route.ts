@@ -16,11 +16,41 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    const coupons = await prisma.coupon.findMany({
-      orderBy: { createdAt: 'desc' },
-    });
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '10')));
+    const search = (searchParams.get('search') || '').trim();
 
-    return NextResponse.json({ coupons });
+    const where = search
+      ? {
+          OR: [
+            { code: { contains: search, mode: 'insensitive' } },
+            { description: { contains: search, mode: 'insensitive' } },
+          ],
+        }
+      : {};
+
+    const skip = (page - 1) * limit;
+
+    const [coupons, total] = await Promise.all([
+      prisma.coupon.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.coupon.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      coupons,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.max(1, Math.ceil(total / limit)),
+      },
+    });
   } catch (error) {
     console.error('[ADMIN_COUPONS_GET]', error);
     return NextResponse.json({ error: 'Erro ao listar cupons' }, { status: 500 });

@@ -18,13 +18,13 @@ export async function GET() {
       return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
     }
 
-    // Cancelar automaticamente pedidos pendentes com mais de 15 minutos
-    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+    // Cancelar automaticamente pedidos pendentes com mais de 30 segundos
+    const thirtySecondsAgo = new Date(Date.now() - 30 * 1000);
     await prisma.order.updateMany({
       where: {
         userId: user.id,
         status: 'PENDING',
-        createdAt: { lt: fifteenMinutesAgo },
+        createdAt: { lt: thirtySecondsAgo },
       },
       data: { status: 'CANCELLED' },
     });

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { sendOrderStatusUpdate } from '@/lib/webhooks';
 
 function formatOrderNumber(seq: number) {
   const year = new Date().getFullYear();
@@ -10,6 +11,12 @@ function formatOrderNumber(seq: number) {
 export async function POST(req: Request) {
   try {
     const session = await auth();
+    console.log('[ORDER_CREATE_SESSION]', {
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      userName: session?.user?.name,
+    });
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
@@ -25,6 +32,8 @@ export async function POST(req: Request) {
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'Carrinho vazio' }, { status: 400 });
     }
+
+    console.log('[ORDER_CREATE_ITEMS]', items);
 
     const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const shipping = 0;
@@ -72,11 +81,30 @@ export async function POST(req: Request) {
           },
         },
         include: {
-          items: true,
+          items: {
+            include: {
+              product: {
+                select: { id: true, name: true, sku: true, imageUrl: true }
+              }
+            }
+          },
+          user: true,
         },
       });
 
       return order;
+    });
+
+    // Enviar webhook para n8n quando pedido é criado (PENDING)
+    await sendOrderStatusUpdate({
+      orderId: result.id,
+      orderNumber: result.orderNumber,
+      status: 'PENDING',
+      total: result.total,
+      user: result.user,
+      paymentMethod: result.paymentMethod,
+      shippingAddress: result.shippingAddress,
+      items: result.items,
     });
 
     return NextResponse.json(result, { status: 201 });

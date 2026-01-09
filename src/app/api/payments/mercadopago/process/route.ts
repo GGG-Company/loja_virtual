@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getMercadoPagoKeys } from '@/lib/mercadopago-config';
 import { prisma } from '@/lib/prisma';
+import { sendOrderStatusUpdate } from '@/lib/webhooks';
 
 // SDK do Mercado Pago para backend
 const MercadoPago = require('mercadopago');
@@ -61,13 +62,34 @@ export async function POST(req: NextRequest) {
     const response = await payment.create({ body: paymentData });
 
     // Atualizar pedido com informações do pagamento
-    await prisma.order.update({
+    const updated = await prisma.order.update({
       where: { id: orderId },
       data: {
         status: response.status === 'approved' ? 'CONFIRMED' : 'PENDING',
         paymentId: String(response.id),
         paymentStatus: response.status,
       },
+      include: { 
+        user: true,
+        items: {
+          include: {
+            product: {
+              select: { id: true, name: true, sku: true, imageUrl: true }
+            }
+          }
+        }
+      },
+    });
+
+    await sendOrderStatusUpdate({
+      orderId: updated.id,
+      orderNumber: updated.orderNumber,
+      status: updated.status as any,
+      total: updated.total,
+      user: updated.user,
+      paymentMethod: updated.paymentMethod,
+      paidAt: updated.paidAt,
+      items: updated.items,
     });
 
     return NextResponse.json({

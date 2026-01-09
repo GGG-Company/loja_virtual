@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { OrderStatus } from '@prisma/client';
+import { sendOrderStatusUpdate } from '@/lib/webhooks';
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,13 +22,33 @@ export async function POST(req: NextRequest) {
     }
 
     // Simular aprovação do pagamento
-    await prisma.order.update({
+    const updated = await prisma.order.update({
       where: { id: order.id },
       data: {
         status: OrderStatus.CONFIRMED,
         paymentStatus: 'approved',
         paidAt: new Date(),
       },
+      include: { 
+        user: true,
+        items: {
+          include: {
+            product: {
+              select: { id: true, name: true, sku: true, imageUrl: true }
+            }
+          }
+        }
+      },
+    });
+
+    await sendOrderStatusUpdate({
+      orderId: updated.id,
+      orderNumber: updated.orderNumber,
+      status: 'CONFIRMED',
+      total: updated.total,
+      user: updated.user,
+      paidAt: updated.paidAt,
+      items: updated.items,
     });
 
     return NextResponse.json({

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getMercadoPagoKeys } from '@/lib/mercadopago-config';
 import { prisma } from '@/lib/prisma';
 import { OrderStatus } from '@prisma/client';
+import { sendOrderStatusUpdate } from '@/lib/webhooks';
 
 const MercadoPago = require('mercadopago');
 
@@ -61,12 +62,32 @@ export async function POST(req: NextRequest) {
           orderStatus = OrderStatus.PENDING;
       }
 
-      await prisma.order.update({
+      const updated = await prisma.order.update({
         where: { id: orderId },
         data: {
           status: orderStatus,
           paymentStatus: paymentInfo.status,
         },
+        include: { 
+          user: true,
+          items: {
+            include: {
+              product: {
+                select: { id: true, name: true, sku: true, imageUrl: true }
+              }
+            }
+          }
+        },
+      });
+
+      await sendOrderStatusUpdate({
+        orderId: updated.id,
+        orderNumber: updated.orderNumber,
+        status: orderStatus as any,
+        total: updated.total,
+        user: updated.user,
+        paymentMethod: updated.paymentMethod,
+        items: updated.items,
       });
 
       console.log(`Pedido ${orderId} atualizado para ${orderStatus}`);

@@ -54,7 +54,7 @@ export async function PUT(
     }
 
     const body = await req.json();
-    const { name, description, price, promotionalPrice, stock, status, imageUrl, isFeatured } = body;
+    const { name, description, price, promotionalPrice, stock, status, imageUrl, isFeatured, stockLocation, categoryId } = body;
 
     // Garante que o produto existe e captura categoryId atual para fallback
     const existing = await prisma.product.findUnique({
@@ -76,6 +76,8 @@ export async function PUT(
       isFeatured: isFeatured ?? false,
       stock,
       isActive: status === 'ACTIVE' ? true : status === 'INACTIVE' ? false : existing.isActive,
+      stockLocation: stockLocation?.trim() || null,
+      ...(categoryId ? { categoryId } : {}),
       ...(imageUrl !== undefined && { imageUrl: normalizedImage }),
     };
 

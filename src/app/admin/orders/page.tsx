@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { statusToPt, statusBadgeClass } from '@/lib/i18n';
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
 
 interface Order {
   id: string;
@@ -19,26 +21,52 @@ interface Order {
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const fetchOrders = async (currentPage: number, term: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/orders?page=${currentPage}&limit=10&search=${encodeURIComponent(term)}`);
+      const data = await res.json();
+      setOrders(data.orders || []);
+      setTotalPages(data.pagination?.pages || 1);
+    } catch (error) {
+      console.error('Erro ao buscar pedidos', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    fetch('/api/admin/orders')
-      .then((res) => res.json())
-      .then((data) => {
-        setOrders(data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
-
-  if (loading) {
-    return <div className="container mx-auto p-6">Carregando pedidos...</div>;
-  }
+    fetchOrders(page, searchTerm);
+  }, [page, searchTerm]);
 
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">Pedidos</h1>
+    <div className="container mx-auto p-6 space-y-4">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <h1 className="text-3xl font-bold">Pedidos</h1>
+        <div className="relative w-full md:w-72">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Buscar por número ou cliente"
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setPage(1);
+            }}
+            className="pl-10"
+          />
+        </div>
+      </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow overflow-hidden relative">
+        {loading && (
+          <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-10">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+          </div>
+        )}
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -87,6 +115,32 @@ export default function AdminOrdersPage() {
             ))}
           </tbody>
         </table>
+
+        {orders.length === 0 && (
+          <div className="text-center py-10 text-metallic-600">Nenhum pedido encontrado</div>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between text-sm text-gray-600">
+        <span>
+          Página {page} de {totalPages}
+        </span>
+        <div className="flex gap-2">
+          <button
+            className="px-3 py-2 rounded-md border text-sm disabled:opacity-50"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1 || loading}
+          >
+            Anterior
+          </button>
+          <button
+            className="px-3 py-2 rounded-md border text-sm disabled:opacity-50"
+            onClick={() => setPage((p) => (p < totalPages ? p + 1 : p))}
+            disabled={page >= totalPages || loading}
+          >
+            Próxima
+          </button>
+        </div>
       </div>
     </div>
   );

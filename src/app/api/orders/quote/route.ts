@@ -90,7 +90,16 @@ export async function POST(req: Request) {
             })),
           },
         },
-        include: { items: true },
+        include: { 
+          items: {
+            include: {
+              product: {
+                select: { id: true, name: true, sku: true, imageUrl: true }
+              }
+            }
+          },
+          user: true
+        },
       });
       return created;
     });
@@ -102,6 +111,7 @@ export async function POST(req: Request) {
       total,
       user: { id: session.user.id, name: customer.name, email: customer.email, phone: customer.phone ?? null },
       shippingAddress: order.shippingAddress,
+      items: order.items,
       extra: { validityDays },
     });
 

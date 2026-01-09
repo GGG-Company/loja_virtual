@@ -57,6 +57,16 @@ export async function PATCH(
         trackingCode: status === 'SHIPPED' ? trackingCode ?? undefined : undefined,
         trackingUrl: status === 'SHIPPED' ? trackingUrl ?? undefined : undefined,
       },
+      include: {
+        user: true,
+        items: {
+          include: {
+            product: {
+              select: { id: true, name: true, sku: true, imageUrl: true }
+            }
+          }
+        }
+      },
     });
 
     await sendOrderStatusUpdate({
@@ -65,6 +75,9 @@ export async function PATCH(
       shippedAt: (updated as any).shippedAt,
       trackingCode: (updated as any).trackingCode,
       trackingUrl: (updated as any).trackingUrl,
+      user: (updated as any).user,
+      total: (updated as any).total,
+      items: (updated as any).items,
     });
 
     return NextResponse.json(updated);

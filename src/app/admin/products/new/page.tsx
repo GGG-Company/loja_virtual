@@ -20,6 +20,7 @@ export default function NewProductPage() {
     stock: '',
     categoryId: '',
     imageUrl: '',
+    stockLocation: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,6 +35,7 @@ export default function NewProductPage() {
           ...formData,
           price: parseFloat(formData.price),
           stock: parseInt(formData.stock),
+            stockLocation: formData.stockLocation || null,
         }),
       });
 
@@ -170,6 +172,17 @@ export default function NewProductPage() {
           </div>
 
           <div>
+            <Label htmlFor="stockLocation">Endereço / Localização no estoque</Label>
+            <Input
+              id="stockLocation"
+              name="stockLocation"
+              value={formData.stockLocation}
+              onChange={handleChange}
+              placeholder="Ex.: Corredor B - Prateleira 4"
+            />
+          </div>
+
+          <div>
             <Label htmlFor="categoryId">Categoria</Label>
             <select
               id="categoryId"
@@ -177,7 +190,7 @@ export default function NewProductPage() {
               value={formData.categoryId}
               onChange={handleChange}
               required
-              className="w-full h-10 rounded-lg border border-gray-300 px-3 text-sm shadow-sm bg-white font-sans focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+              className="w-full h-10 rounded-lg border border-gray-300 px-3 text-sm shadow-sm bg-white font-sans text-gray-900 focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
             >
               <option value="">Selecione uma categoria</option>
               <option value="1">Ferramentas Elétricas</option>

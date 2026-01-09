@@ -67,6 +67,16 @@ export async function POST(request: NextRequest) {
         shippedAt: status === 'SHIPPED' ? new Date() : order.shippedAt,
         deliveredAt: status === 'DELIVERED' ? new Date() : order.deliveredAt,
       },
+      include: {
+        user: true,
+        items: {
+          include: {
+            product: {
+              select: { id: true, name: true, sku: true, imageUrl: true }
+            }
+          }
+        }
+      },
     });
 
     await sendOrderStatusUpdate({
@@ -77,6 +87,9 @@ export async function POST(request: NextRequest) {
       trackingUrl: (updated as any).trackingUrl,
       shippedAt: (updated as any).shippedAt,
       deliveredAt: (updated as any).deliveredAt,
+      user: (updated as any).user,
+      total: (updated as any).total,
+      items: (updated as any).items,
     });
 
     // Log da integração

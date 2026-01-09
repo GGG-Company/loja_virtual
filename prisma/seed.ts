@@ -61,8 +61,14 @@ async function main() {
   // ============================================
   console.log('📁 Criando categorias...');
 
-  const categoryFuradeiras = await prisma.category.create({
-    data: {
+  const categoryFuradeiras = await prisma.category.upsert({
+    where: { slug: 'furadeiras' },
+    update: {
+      name: 'Furadeiras',
+      description: 'Furadeiras e Parafusadeiras profissionais',
+      image: '/categories/furadeiras.jpg',
+    },
+    create: {
       name: 'Furadeiras',
       slug: 'furadeiras',
       description: 'Furadeiras e Parafusadeiras profissionais',
@@ -70,8 +76,14 @@ async function main() {
     },
   });
 
-  const categorySerras = await prisma.category.create({
-    data: {
+  const categorySerras = await prisma.category.upsert({
+    where: { slug: 'serras' },
+    update: {
+      name: 'Serras',
+      description: 'Serras elétricas e manuais',
+      image: '/categories/serras.jpg',
+    },
+    create: {
       name: 'Serras',
       slug: 'serras',
       description: 'Serras elétricas e manuais',
@@ -79,8 +91,14 @@ async function main() {
     },
   });
 
-  const categoryEsmerilhadeiras = await prisma.category.create({
-    data: {
+  const categoryEsmerilhadeiras = await prisma.category.upsert({
+    where: { slug: 'esmerilhadeiras' },
+    update: {
+      name: 'Esmerilhadeiras',
+      description: 'Esmerilhadeiras angulares e retas',
+      image: '/categories/esmerilhadeiras.jpg',
+    },
+    create: {
       name: 'Esmerilhadeiras',
       slug: 'esmerilhadeiras',
       description: 'Esmerilhadeiras angulares e retas',
@@ -217,11 +235,16 @@ async function main() {
   ];
 
   for (const productData of products) {
-    const product = await prisma.product.create({
-      data: productData,
+    const { sku, ...rest } = productData;
+
+    const product = await prisma.product.upsert({
+      where: { sku },
+      update: rest,
+      create: productData,
     });
 
-    // Criar imagens fictícias
+    // Substitui imagens para manter seed idempotente
+    await prisma.productImage.deleteMany({ where: { productId: product.id } });
     await prisma.productImage.createMany({
       data: [
         {
@@ -254,6 +277,7 @@ async function main() {
   });
 
   if (makitaDHR) {
+    await prisma.productVariant.deleteMany({ where: { productId: makitaDHR.id } });
     await prisma.productVariant.createMany({
       data: [
         {
@@ -282,58 +306,67 @@ async function main() {
   // ============================================
   console.log('🎟️  Criando cupons...');
 
-  await prisma.coupon.createMany({
-    data: [
-      {
-        code: 'BEMVINDO10',
-        description: 'Desconto de 10% para primeira compra',
-        discountType: 'PERCENTAGE',
-        value: 10,
-        scope: 'GLOBAL',
-        minPurchase: 100,
-        maxDiscount: 50,
-        isActive: true,
-        startDate: new Date(),
-        endDate: new Date('2025-12-31'),
-      },
-      {
-        code: 'BAHIA50',
-        description: 'R$ 50 de desconto para clientes da Bahia',
-        discountType: 'FIXED',
-        value: 50,
-        scope: 'STATE',
-        scopeValues: ['BA'],
-        minPurchase: 200,
-        isActive: true,
-      },
-    ],
-  });
+  const coupons = [
+    {
+      code: 'BEMVINDO10',
+      description: 'Desconto de 10% para primeira compra',
+      discountType: 'PERCENTAGE',
+      value: 10,
+      scope: 'GLOBAL',
+      minPurchase: 100,
+      maxDiscount: 50,
+      isActive: true,
+      startDate: new Date(),
+      endDate: new Date('2025-12-31'),
+    },
+    {
+      code: 'BAHIA50',
+      description: 'R$ 50 de desconto para clientes da Bahia',
+      discountType: 'FIXED',
+      value: 50,
+      scope: 'STATE',
+      scopeValues: ['BA'],
+      minPurchase: 200,
+      isActive: true,
+    },
+  ];
 
-  console.log('✅ Cupons criados\n');
+  for (const coupon of coupons) {
+    await prisma.coupon.upsert({
+      where: { code: coupon.code },
+      update: coupon as any,
+      create: coupon as any,
+    });
+    console.log(`✅ Cupom ${coupon.code}`);
+  }
+
+  console.log('');
 
   // ============================================
   // 6. CRIAR BANNERS
   // ============================================
   console.log('🎨 Criando banners...');
 
-  await prisma.banner.createMany({
-    data: [
-      {
-        title: 'Black Friday Ferramentas',
-        imageUrl: '/banners/blackfriday.jpg',
-        link: '/promocoes/blackfriday',
-        order: 0,
-        isActive: true,
-      },
-      {
-        title: 'Lançamento Makita 2025',
-        imageUrl: '/banners/makita-lancamento.jpg',
-        link: '/categorias/furadeiras',
-        order: 1,
-        isActive: true,
-      },
-    ],
-  });
+  const banners = [
+    {
+      title: 'Black Friday Ferramentas',
+      imageUrl: '/banners/blackfriday.jpg',
+      link: '/promocoes/blackfriday',
+      order: 0,
+      isActive: true,
+    },
+    {
+      title: 'Lançamento Makita 2025',
+      imageUrl: '/banners/makita-lancamento.jpg',
+      link: '/categorias/furadeiras',
+      order: 1,
+      isActive: true,
+    },
+  ];
+
+  // Remove banners com mesmo título antes de recriar
+  await prisma.banner.deleteMany({ where: { title: { in: banners.map((b) => b.title) } } });
+  await prisma.banner.createMany({ data: banners });
 
   console.log('✅ Banners criados\n');
 
@@ -368,9 +401,30 @@ async function main() {
   });
 
   if (exampleProduct) {
-    const order = await prisma.order.create({
-      data: {
-        orderNumber: 'ORD-2025-000001',
+    const orderNumber = 'ORD-2025-000001';
+
+    const order = await prisma.order.upsert({
+      where: { orderNumber },
+      update: {
+        userId: customer.id,
+        status: 'CONFIRMED',
+        subtotal: 899,
+        shipping: 25,
+        total: 924,
+        paymentMethod: 'CREDIT_CARD',
+        installments: 3,
+        paidAt: new Date(),
+        shippingAddress: {
+          street: 'Rua das Ferramentas',
+          number: '123',
+          neighborhood: 'Centro',
+          city: 'Salvador',
+          state: 'BA',
+          zipCode: '40000-000',
+        },
+      },
+      create: {
+        orderNumber,
         userId: customer.id,
         status: 'CONFIRMED',
         subtotal: 899,
@@ -390,6 +444,8 @@ async function main() {
       },
     });
 
+    // Recria itens do pedido para manter seed consistente
+    await prisma.orderItem.deleteMany({ where: { orderId: order.id } });
     await prisma.orderItem.create({
       data: {
         orderId: order.id,

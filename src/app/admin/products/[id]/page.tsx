@@ -17,6 +17,7 @@ interface Product {
   stock: number;
   categoryId: string;
   status: string;
+  stockLocation?: string | null;
   slug?: string;
   imageUrl?: string | null;
   category?: { name?: string } | null;
@@ -43,6 +44,7 @@ export default function EditProductPage() {
     status: 'ACTIVE',
     imageUrl: '',
     isFeatured: false,
+    stockLocation: '',
   });
 
   useEffect(() => {
@@ -62,6 +64,7 @@ export default function EditProductPage() {
             status: data.status,
             imageUrl: data.imageUrl || '',
             isFeatured: data.isFeatured || false,
+            stockLocation: data.stockLocation || '',
           });
           setImagePreview(data.imageUrl || '/placeholder.svg');
           setLoading(false);
@@ -90,6 +93,7 @@ export default function EditProductPage() {
           promotionalPrice: formData.promotionalPrice ? parseFloat(formData.promotionalPrice) : null,
           stock: parseInt(formData.stock),
           imageUrl: imageToSend,
+          stockLocation: formData.stockLocation || null,
         }),
       });
 
@@ -294,6 +298,18 @@ export default function EditProductPage() {
             <p className="text-xs text-gray-500 mt-1">Estoque é ajustado automaticamente por pedidos e devoluções</p>
           </div>
 
+          <div>
+            <Label htmlFor="stockLocation">Endereço / Localização no estoque</Label>
+            <Input
+              id="stockLocation"
+              name="stockLocation"
+              type="text"
+              value={formData.stockLocation}
+              onChange={handleChange}
+              placeholder="Ex.: Corredor B - Prateleira 4"
+            />
+          </div>
+
           <div className="flex items-center gap-2">
             <input
               id="isFeatured"
@@ -316,7 +332,7 @@ export default function EditProductPage() {
               value={formData.categoryId}
               onChange={handleChange}
               required
-              className="w-full h-10 rounded-lg border border-gray-300 px-3 text-sm shadow-sm bg-white font-sans focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+              className="w-full h-10 rounded-lg border border-gray-300 px-3 text-sm shadow-sm bg-white font-sans text-gray-900 focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
             >
               <option value="">Selecione uma categoria</option>
               <option value="1">Ferramentas Elétricas</option>

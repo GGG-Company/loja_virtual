@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { sendOrderStatusUpdate } from '@/lib/webhooks';
 
 export async function GET(
   request: NextRequest,
@@ -60,9 +61,9 @@ export async function GET(
       return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
     }
 
-      // Cancelar automaticamente se passou de 15 minutos pendente
-      const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
-      if (order.status === 'PENDING' && order.createdAt < fifteenMinutesAgo) {
+      // Cancelar automaticamente se passou de 30 segundos pendente
+      const thirtySecondsAgo = new Date(Date.now() - 30 * 1000);
+      if (order.status === 'PENDING' && order.createdAt < thirtySecondsAgo) {
         const cancelled = await prisma.order.update({
           where: { id: order.id },
           data: { status: 'CANCELLED' },
@@ -72,7 +73,17 @@ export async function GET(
                 product: { select: { name: true, imageUrl: true } },
               },
             },
+            user: true,
           },
+        });
+
+        await sendOrderStatusUpdate({
+          orderId: cancelled.id,
+          orderNumber: cancelled.orderNumber,
+          status: 'CANCELLED',
+          total: cancelled.total,
+          user: cancelled.user,
+          items: cancelled.items,
         });
 
         return NextResponse.json(cancelled);

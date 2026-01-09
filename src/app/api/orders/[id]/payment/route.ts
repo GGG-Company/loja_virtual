@@ -44,9 +44,9 @@ export async function POST(
       return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
     }
 
-    // Verificar se o pedido está pendente e dentro do prazo de 15 minutos
-    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
-    if (order.status === 'PENDING' && order.createdAt < fifteenMinutesAgo) {
+    // Verificar se o pedido está pendente e dentro do prazo de 30 segundos
+    const thirtySecondsAgo = new Date(Date.now() - 30 * 1000);
+    if (order.status === 'PENDING' && order.createdAt < thirtySecondsAgo) {
       await prisma.order.update({
         where: { id: order.id },
         data: { status: 'CANCELLED' },
@@ -70,7 +70,7 @@ export async function POST(
 
     if (paymentMethod === 'PIX') {
       paymentPayload.qrcode = '00020126360014BR.GOV.BCB.PIX0114+5511999999995204000053039865405150.005802BR5909LOJA TEST6009Sao Paulo62070503***6304ABCD';
-      paymentPayload.expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+      paymentPayload.expiresAt = new Date(Date.now() + 30 * 1000).toISOString();
     }
 
     if (paymentMethod === 'BOLETO') {
@@ -86,6 +86,16 @@ export async function POST(
         status: 'CONFIRMED',
         paidAt: now,
       },
+      include: {
+        user: true,
+        items: {
+          include: {
+            product: {
+              select: { id: true, name: true, sku: true, imageUrl: true }
+            }
+          }
+        }
+      },
     });
 
     await sendOrderStatusUpdate({
@@ -94,6 +104,8 @@ export async function POST(
       total: (updatedOrder as any).total,
       paymentMethod: (updatedOrder as any).paymentMethod,
       paidAt: (updatedOrder as any).paidAt,
+      user: (updatedOrder as any).user,
+      items: (updatedOrder as any).items,
     });
 
     return NextResponse.json({ 

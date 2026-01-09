@@ -30,7 +30,7 @@ function CheckoutPagamentoContent() {
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [expired, setExpired] = useState<boolean>(false);
   const [loadingPayment, setLoadingPayment] = useState(false);
-  const TOTAL_SECONDS = 15 * 60;
+  const TOTAL_SECONDS = 30;
 
   // Memoizar dados do usuário para evitar re-renderizações
   const userEmail = useMemo(() => session?.user?.email || '', [session?.user?.email]);
@@ -139,7 +139,7 @@ function CheckoutPagamentoContent() {
       try {
         const response = await apiClient.get(`/api/user/orders/${orderId}`);
         const created = new Date(response.data.createdAt).getTime();
-        const expiresAt = created + 15 * 60 * 1000;
+        const expiresAt = created + 30 * 1000;
         const now = Date.now();
         const initial = Math.max(0, Math.floor((expiresAt - now) / 1000));
         setTimeLeft(initial);

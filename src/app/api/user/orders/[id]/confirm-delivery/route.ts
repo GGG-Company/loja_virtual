@@ -49,18 +49,34 @@ export async function POST(
       data: {
         deliveredAt: new Date(),
       },
+      include: {
+        user: true,
+        items: {
+          include: {
+            product: {
+              select: { id: true, name: true, sku: true, imageUrl: true }
+            }
+          }
+        }
+      },
     });
 
     await sendOrderStatusUpdate({
       orderId: (updatedOrder as any).id,
       status: 'DELIVERED',
       deliveredAt: (updatedOrder as any).deliveredAt,
+      user: (updatedOrder as any).user,
+      total: (updatedOrder as any).total,
+      items: (updatedOrder as any).items,
     });
 
     await sendOrderStatusUpdate({
       orderId: (updatedOrder as any).id,
       status: 'DELIVERED',
       deliveredAt: (updatedOrder as any).deliveredAt,
+      user: (updatedOrder as any).user,
+      total: (updatedOrder as any).total,
+      items: (updatedOrder as any).items,
     });
 
     return NextResponse.json({ 
