@@ -3,8 +3,7 @@ import { getMercadoPagoKeys } from '@/lib/mercadopago-config';
 import { prisma } from '@/lib/prisma';
 import { sendOrderStatusUpdate } from '@/lib/webhooks';
 
-// SDK do Mercado Pago para backend
-const MercadoPago = require('mercadopago');
+// load mercadopago dynamically inside handler
 
 export async function POST(req: NextRequest) {
   try {
@@ -30,13 +29,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Configurar o SDK
-    const client = new MercadoPago.MercadoPagoConfig({ 
-      accessToken: accessToken 
-    });
-
+    // Configurar o SDK dinamicamente
+    const MercadoPagoModule = await import('mercadopago');
+    const MercadoPagoLib = (MercadoPagoModule as any).default ?? MercadoPagoModule;
+    const client = new (MercadoPagoLib as any).MercadoPagoConfig({ accessToken });
     // Criar pagamento
-    const payment = new MercadoPago.Payment(client);
+    const payment = new (MercadoPagoLib as any).Payment(client);
     
     // Extrair os dados reais do formData (pode estar aninhado)
     const paymentFormData = formData.formData || formData;

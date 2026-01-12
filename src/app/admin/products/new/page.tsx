@@ -8,31 +8,32 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import Image from "next/image";
 
 export default function NewProductPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
-  const [imagePreview, setImagePreview] = useState<string>('/placeholder.svg');
+  const [imagePreview, setImagePreview] = useState<string>("/placeholder.svg");
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    price: '',
-    promotionalPrice: '',
-    stock: '',
-    categoryId: '',
-    imageUrl: '',
+    name: "",
+    description: "",
+    price: "",
+    promotionalPrice: "",
+    stock: "",
+    categoryId: "",
+    imageUrl: "",
     isFeatured: false,
     isPromo: false,
-    stockLocation: '',
+    stockLocation: "",
   });
 
   useEffect(() => {
     // Carregar categorias dinamicamente
-    fetch('/api/categories')
-      .then(res => res.json())
-      .then(data => setCategories(data.categories || []))
-      .catch(err => console.error('Erro ao carregar categorias:', err));
+    fetch("/api/categories")
+      .then((res) => res.json())
+      .then((data) => setCategories(data.categories || []))
+      .catch((err) => console.error("Erro ao carregar categorias:", err));
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,9 +41,9 @@ export default function NewProductPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/admin/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/admin/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
           price: parseFloat(formData.price),
@@ -53,14 +54,14 @@ export default function NewProductPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Erro ao criar produto');
+        throw new Error("Erro ao criar produto");
       }
 
-      toast.success('Produto criado com sucesso!');
-      router.push('/admin/products');
+      toast.success("Produto criado com sucesso!");
+      router.push("/admin/products");
     } catch (error) {
-      console.error('Erro:', error);
-      toast.error('Erro ao criar produto');
+      console.error("Erro:", error);
+      toast.error("Erro ao criar produto");
     } finally {
       setLoading(false);
     }
@@ -77,7 +78,7 @@ export default function NewProductPage() {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
-        toast.error('Imagem muito grande. Máximo 2MB');
+        toast.error("Imagem muito grande. Máximo 2MB");
         return;
       }
 
@@ -108,21 +109,10 @@ export default function NewProductPage() {
             <div className="mt-2">
               <div className="flex items-center gap-4">
                 <div className="relative w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden">
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="w-full h-full object-cover"
-                  />
+                  <Image src={imagePreview} alt="Preview" fill sizes="128px" className="object-cover" />
                 </div>
                 <div className="flex-1">
-                  <Input
-                    id="image"
-                    name="image"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="cursor-pointer"
-                  />
+                  <Input id="image" name="image" type="file" accept="image/*" onChange={handleImageChange} className="cursor-pointer" />
                   <p className="text-xs text-gray-500 mt-1">PNG, JPG ou WEBP (máx. 2MB)</p>
                 </div>
               </div>
@@ -131,108 +121,47 @@ export default function NewProductPage() {
 
           <div>
             <Label htmlFor="name">Nome do Produto</Label>
-            <Input
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              placeholder="Ex: Furadeira Bosch GSB 550"
-            />
+            <Input id="name" name="name" value={formData.name} onChange={handleChange} required placeholder="Ex: Furadeira Bosch GSB 550" />
           </div>
 
           <div>
             <Label htmlFor="description">Descrição</Label>
-            <textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              required
-              rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="Descrição detalhada do produto"
-            />
+            <textarea id="description" name="description" value={formData.description} onChange={handleChange} required rows={4} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Descrição detalhada do produto" />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="price">Preço Normal (R$)</Label>
-              <Input
-                id="price"
-                name="price"
-                type="number"
-                step="0.01"
-                value={formData.price}
-                onChange={handleChange}
-                required
-                placeholder="0.00"
-              />
+              <Input id="price" name="price" type="number" step="0.01" value={formData.price} onChange={handleChange} required placeholder="0.00" />
             </div>
 
             <div>
               <Label htmlFor="promotionalPrice">Preço Promocional (R$)</Label>
-              <Input
-                id="promotionalPrice"
-                name="promotionalPrice"
-                type="number"
-                step="0.01"
-                value={formData.promotionalPrice}
-                onChange={handleChange}
-                placeholder="Opcional"
-              />
+              <Input id="promotionalPrice" name="promotionalPrice" type="number" step="0.01" value={formData.promotionalPrice} onChange={handleChange} placeholder="Opcional" />
               <p className="text-xs text-gray-500 mt-1">Deixe vazio se não houver promoção</p>
             </div>
           </div>
 
           <div>
             <Label htmlFor="stock">Estoque Inicial</Label>
-            <Input
-              id="stock"
-              name="stock"
-              type="number"
-              value={formData.stock}
-              onChange={handleChange}
-              required
-              placeholder="0"
-            />
+            <Input id="stock" name="stock" type="number" value={formData.stock} onChange={handleChange} required placeholder="0" />
           </div>
 
           <div>
             <Label htmlFor="stockLocation">Endereço / Localização no estoque</Label>
-            <Input
-              id="stockLocation"
-              name="stockLocation"
-              value={formData.stockLocation}
-              onChange={handleChange}
-              placeholder="Ex.: Corredor B - Prateleira 4"
-            />
+            <Input id="stockLocation" name="stockLocation" value={formData.stockLocation} onChange={handleChange} placeholder="Ex.: Corredor B - Prateleira 4" />
           </div>
 
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
-              <input
-                id="isFeatured"
-                name="isFeatured"
-                type="checkbox"
-                checked={formData.isFeatured}
-                onChange={(e) => setFormData({ ...formData, isFeatured: e.target.checked })}
-                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-              />
+              <input id="isFeatured" name="isFeatured" type="checkbox" checked={formData.isFeatured} onChange={(e) => setFormData({ ...formData, isFeatured: e.target.checked })} className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded" />
               <Label htmlFor="isFeatured" className="cursor-pointer">
                 ⭐ Produto em Destaque (aparece na home)
               </Label>
             </div>
 
             <div className="flex items-center gap-2">
-              <input
-                id="isPromo"
-                name="isPromo"
-                type="checkbox"
-                checked={formData.isPromo}
-                onChange={(e) => setFormData({ ...formData, isPromo: e.target.checked })}
-                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-              />
+              <input id="isPromo" name="isPromo" type="checkbox" checked={formData.isPromo} onChange={(e) => setFormData({ ...formData, isPromo: e.target.checked })} className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded" />
               <Label htmlFor="isPromo" className="cursor-pointer">
                 🔥 Produto em Oferta (aparece na página de ofertas)
               </Label>
@@ -241,14 +170,7 @@ export default function NewProductPage() {
 
           <div>
             <Label htmlFor="categoryId">Categoria</Label>
-            <select
-              id="categoryId"
-              name="categoryId"
-              value={formData.categoryId}
-              onChange={handleChange}
-              required
-              className="w-full h-10 rounded-lg border border-gray-300 px-3 text-sm shadow-sm bg-white font-sans text-gray-900 focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
-            >
+            <select id="categoryId" name="categoryId" value={formData.categoryId} onChange={handleChange} required className="w-full h-10 rounded-lg border border-gray-300 px-3 text-sm shadow-sm bg-white font-sans text-gray-900 focus:border-primary-500 focus:ring-2 focus:ring-primary-100">
               <option value="">Selecione uma categoria</option>
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.id}>
@@ -260,7 +182,7 @@ export default function NewProductPage() {
 
           <div className="flex gap-4">
             <Button type="submit" disabled={loading}>
-              {loading ? 'Criando...' : 'Criar Produto'}
+              {loading ? "Criando..." : "Criar Produto"}
             </Button>
             <Button type="button" variant="outline" onClick={() => router.back()}>
               Cancelar

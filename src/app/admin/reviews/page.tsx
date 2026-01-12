@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Star, Search, CheckCircle, XCircle, MessageSquare, Trash2, ChevronLeft, ChevronRight, Filter, Package } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
+import { useEffect, useState, useCallback } from "react";
+import { Star, Search, CheckCircle, XCircle, MessageSquare, Trash2, ChevronLeft, ChevronRight, Filter, Package } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import Image from "next/image";
 
 interface Review {
   id: string;
@@ -39,14 +40,14 @@ export default function AdminReviewsPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 10, total: 0, totalPages: 1 });
-  const [search, setSearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'approved' | 'pending'>('all');
+  const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState<"all" | "approved" | "pending">("all");
   const [filterRating, setFilterRating] = useState<number | null>(null);
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
-  const [responseText, setResponseText] = useState('');
+  const [responseText, setResponseText] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
@@ -54,14 +55,14 @@ export default function AdminReviewsPage() {
         limit: String(pagination.limit),
       });
 
-      if (filterStatus !== 'all') {
-        params.set('status', filterStatus);
+      if (filterStatus !== "all") {
+        params.set("status", filterStatus);
       }
       if (filterRating) {
-        params.set('rating', String(filterRating));
+        params.set("rating", String(filterRating));
       }
       if (search) {
-        params.set('search', search);
+        params.set("search", search);
       }
 
       const res = await fetch(`/api/admin/reviews?${params}`);
@@ -72,16 +73,16 @@ export default function AdminReviewsPage() {
         setPagination(data.pagination);
       }
     } catch (error) {
-      console.error('[FETCH_REVIEWS]', error);
-      toast.error('Erro ao carregar avaliações');
+      console.error("[FETCH_REVIEWS]", error);
+      toast.error("Erro ao carregar avaliações");
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.page, pagination.limit, filterStatus, filterRating, search]);
 
   useEffect(() => {
     fetchReviews();
-  }, [pagination.page, pagination.limit, filterStatus, filterRating, search]);
+  }, [fetchReviews]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,7 +101,7 @@ export default function AdminReviewsPage() {
       const data = await res.json();
       if (data.success) {
         toast.success(approve ? "Avaliação aprovada" : "Avaliação reprovada");
-        setReviews(reviews.map((r) => (r.id === reviewId ? { ...r, isApproved: approve } : r)));
+        setReviews((prev) => prev.map((r) => (r.id === reviewId ? { ...r, isApproved: approve } : r)));
       } else {
         toast.error(data.error || "Erro ao atualizar avaliação");
       }
@@ -118,7 +119,7 @@ export default function AdminReviewsPage() {
 
       if (data.success) {
         toast.success("Avaliação excluída");
-        setReviews(reviews.filter((r) => r.id !== reviewId));
+        setReviews((prev) => prev.filter((r) => r.id !== reviewId));
       } else {
         toast.error(data.error || "Erro ao excluir avaliação");
       }
@@ -135,16 +136,13 @@ export default function AdminReviewsPage() {
       const res = await fetch(`/api/reviews/${selectedReview.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "seller_response",
-          sellerResponse: responseText,
-        }),
+        body: JSON.stringify({ action: "seller_response", sellerResponse: responseText }),
       });
 
       const data = await res.json();
       if (data.success) {
         toast.success("Resposta enviada com sucesso");
-        setReviews(reviews.map((r) => (r.id === selectedReview.id ? { ...r, sellerResponse: responseText, sellerResponseAt: new Date().toISOString() } : r)));
+        setReviews((prev) => prev.map((r) => (r.id === selectedReview.id ? { ...r, sellerResponse: responseText, sellerResponseAt: new Date().toISOString() } : r)));
         setSelectedReview(null);
         setResponseText("");
       } else {
@@ -157,15 +155,14 @@ export default function AdminReviewsPage() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("pt-BR", {
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString("pt-BR", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
 
   const StarRating = ({ rating }: { rating: number }) => (
     <div className="flex gap-0.5">
@@ -271,7 +268,7 @@ export default function AdminReviewsPage() {
                 {/* Imagem do produto */}
                 <div className="flex-shrink-0 w-20 h-20 bg-gray-100 rounded-lg overflow-hidden">
                   {review.product.imageUrl ? (
-                    <img src={review.product.imageUrl} alt={review.product.name} className="w-full h-full object-contain" />
+                    <Image src={review.product.imageUrl} alt={review.product.name} width={80} height={80} className="w-full h-full object-contain" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <Package className="h-8 w-8 text-gray-400" />
@@ -320,23 +317,14 @@ export default function AdminReviewsPage() {
                     {review.isApproved && (
                       <Button size="sm" variant="outline" onClick={() => handleApprove(review.id, false)} className="text-yellow-600 border-yellow-200 hover:bg-yellow-50">
                         <XCircle className="h-4 w-4 mr-1" />
-                        Desaprovar
+                        Reprovar
                       </Button>
                     )}
-                    {!review.sellerResponse && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setSelectedReview(review);
-                          setResponseText("");
-                        }}
-                      >
-                        <MessageSquare className="h-4 w-4 mr-1" />
-                        Responder
-                      </Button>
-                    )}
-                    <Button size="sm" variant="outline" onClick={() => handleDelete(review.id)} className="text-red-600 border-red-200 hover:bg-red-50">
+                    <Button size="sm" variant="outline" onClick={() => setSelectedReview(review)} className="ml-auto">
+                      <MessageSquare className="h-4 w-4 mr-1" />
+                      Responder
+                    </Button>
+                    <Button size="sm" variant="destructive" onClick={() => handleDelete(review.id)}>
                       <Trash2 className="h-4 w-4 mr-1" />
                       Excluir
                     </Button>
@@ -348,94 +336,37 @@ export default function AdminReviewsPage() {
         </div>
       )}
 
-      {/* Paginação */}
-      {pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between bg-white px-4 py-3 rounded-xl shadow-sm">
-          <div className="text-sm text-gray-500">
-            Mostrando {(pagination.page - 1) * pagination.limit + 1} a {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setPagination((prev) => ({ ...prev, page: 1 }))} disabled={pagination.page === 1}>
-              Primeiro
-            </Button>
-
-            <Button variant="outline" size="sm" onClick={() => setPagination((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))} disabled={pagination.page === 1}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-
-            <div className="flex items-center gap-1">
-              {Array.from({ length: Math.min(7, pagination.totalPages) }, (_, i) => {
-                let pageNum;
-                if (pagination.totalPages <= 7) {
-                  pageNum = i + 1;
-                } else if (pagination.page <= 4) {
-                  pageNum = i + 1;
-                } else if (pagination.page >= pagination.totalPages - 3) {
-                  pageNum = pagination.totalPages - 6 + i;
-                } else {
-                  pageNum = pagination.page - 3 + i;
-                }
-
-                if (pageNum < 1 || pageNum > pagination.totalPages) return null;
-
-                return (
-                  <Button key={pageNum} size="sm" variant={pagination.page === pageNum ? "default" : "outline"} onClick={() => setPagination((prev) => ({ ...prev, page: pageNum }))} className="w-9 h-9">
-                    {pageNum}
-                  </Button>
-                );
-              })}
-            </div>
-
-            <Button variant="outline" size="sm" onClick={() => setPagination((prev) => ({ ...prev, page: Math.min(prev.totalPages, prev.page + 1) }))} disabled={pagination.page >= pagination.totalPages}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-
-            <Button variant="outline" size="sm" onClick={() => setPagination((prev) => ({ ...prev, page: prev.totalPages }))} disabled={pagination.page >= pagination.totalPages}>
-              Último
-            </Button>
-          </div>
-        </div>
-      )}
-
       {/* Modal de resposta */}
       {selectedReview && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-lg w-full p-6 space-y-4">
-            <h3 className="text-lg font-semibold">Responder Avaliação</h3>
-
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <StarRating rating={selectedReview.rating} />
-                <span className="text-sm font-medium">{selectedReview.user.name}</span>
-              </div>
-              {selectedReview.title && <p className="font-medium text-gray-900 text-sm">{selectedReview.title}</p>}
-              {selectedReview.comment && <p className="text-gray-600 text-sm mt-1">{selectedReview.comment}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Sua resposta</label>
-              <textarea value={responseText} onChange={(e) => setResponseText(e.target.value)} rows={4} placeholder="Escreva sua resposta..." className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 resize-none" maxLength={500} />
-              <p className="text-xs text-gray-400 mt-1">{responseText.length}/500</p>
-            </div>
-
-            <div className="flex gap-3 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSelectedReview(null);
-                  setResponseText("");
-                }}
-              >
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-lg p-6 w-full max-w-xl">
+            <h3 className="text-lg font-semibold mb-2">Responder avaliação</h3>
+            <p className="text-sm text-gray-600 mb-4">Produto: {selectedReview.product.name}</p>
+            <textarea value={responseText} onChange={(e) => setResponseText(e.target.value)} rows={4} placeholder="Escreva sua resposta..." className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 resize-none" maxLength={500} />
+            <div className="flex items-center gap-2 justify-end mt-4">
+              <Button variant="outline" onClick={() => setSelectedReview(null)}>
                 Cancelar
               </Button>
-              <Button onClick={handleResponse} disabled={!responseText.trim() || submitting}>
-                {submitting ? "Enviando..." : "Enviar Resposta"}
+              <Button onClick={handleResponse} disabled={submitting}>
+                {submitting ? "Enviando..." : "Enviar resposta"}
               </Button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Paginação simples */}
+      <div className="flex items-center justify-center gap-2 pt-6">
+        <Button variant="outline" size="sm" onClick={() => setPagination((p) => ({ ...p, page: Math.max(1, p.page - 1) }))} disabled={pagination.page === 1}>
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <div className="px-3 py-1 border rounded">
+          {pagination.page} / {pagination.totalPages}
+        </div>
+        <Button variant="outline" size="sm" onClick={() => setPagination((p) => ({ ...p, page: Math.min(p.totalPages, p.page + 1) }))} disabled={pagination.page >= pagination.totalPages}>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   );
 }

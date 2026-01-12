@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Star, ThumbsUp, CheckCircle, ChevronDown, User, MessageSquare } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
-import { useSession } from 'next-auth/react';
+import { useState, useEffect, useCallback } from "react";
+import { Star, ThumbsUp, CheckCircle, ChevronDown, User, MessageSquare } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { useSession } from "next-auth/react";
+import Image from "next/image";
 
 interface Review {
   id: string;
@@ -41,27 +42,27 @@ export function ProductReviews({ productId, productName }: ProductReviewsProps) 
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [sortBy, setSortBy] = useState('recent');
+  const [sortBy, setSortBy] = useState("recent");
   const [filterRating, setFilterRating] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  
+
   // Form state
   const [newRating, setNewRating] = useState(5);
-  const [newTitle, setNewTitle] = useState('');
-  const [newComment, setNewComment] = useState('');
+  const [newTitle, setNewTitle] = useState("");
+  const [newComment, setNewComment] = useState("");
   const [hoverRating, setHoverRating] = useState(0);
 
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
         page: String(page),
-        limit: '5',
+        limit: "5",
         sortBy,
       });
       if (filterRating) {
-        params.set('rating', String(filterRating));
+        params.set("rating", String(filterRating));
       }
 
       const res = await fetch(`/api/products/${productId}/reviews?${params}`);
@@ -73,29 +74,29 @@ export function ProductReviews({ productId, productName }: ProductReviewsProps) 
         setTotalPages(data.pagination.totalPages);
       }
     } catch (error) {
-      console.error('[FETCH_REVIEWS]', error);
+      console.error("[FETCH_REVIEWS]", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [productId, page, sortBy, filterRating]);
 
   useEffect(() => {
     fetchReviews();
-  }, [productId, page, sortBy, filterRating]);
+  }, [fetchReviews]);
 
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!session) {
-      toast.error('Faça login para avaliar');
+      toast.error("Faça login para avaliar");
       return;
     }
 
     setSubmitting(true);
     try {
       const res = await fetch(`/api/products/${productId}/reviews`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           rating: newRating,
           title: newTitle || undefined,
@@ -106,18 +107,18 @@ export function ProductReviews({ productId, productName }: ProductReviewsProps) 
       const data = await res.json();
 
       if (data.success) {
-        toast.success('Avaliação enviada com sucesso!');
+        toast.success("Avaliação enviada com sucesso!");
         setShowForm(false);
         setNewRating(5);
-        setNewTitle('');
-        setNewComment('');
+        setNewTitle("");
+        setNewComment("");
         setPage(1);
         fetchReviews();
       } else {
-        toast.error(data.error || 'Erro ao enviar avaliação');
+        toast.error(data.error || "Erro ao enviar avaliação");
       }
     } catch (error) {
-      toast.error('Erro ao enviar avaliação');
+      toast.error("Erro ao enviar avaliação");
     } finally {
       setSubmitting(false);
     }
@@ -126,59 +127,38 @@ export function ProductReviews({ productId, productName }: ProductReviewsProps) 
   const handleHelpful = async (reviewId: string) => {
     try {
       const res = await fetch(`/api/reviews/${reviewId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'helpful' }),
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "helpful" }),
       });
 
       const data = await res.json();
       if (data.success) {
-        setReviews(reviews.map(r => 
-          r.id === reviewId ? { ...r, isHelpful: data.isHelpful } : r
-        ));
-        toast.success('Obrigado pelo feedback!');
+        setReviews(reviews.map((r) => (r.id === reviewId ? { ...r, isHelpful: data.isHelpful } : r)));
+        toast.success("Obrigado pelo feedback!");
       }
     } catch (error) {
-      toast.error('Erro ao marcar como útil');
+      toast.error("Erro ao marcar como útil");
     }
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
+    return new Date(dateString).toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
     });
   };
 
-  const StarRating = ({ rating, size = 'md', interactive = false, onRate }: {
-    rating: number;
-    size?: 'sm' | 'md' | 'lg';
-    interactive?: boolean;
-    onRate?: (r: number) => void;
-  }) => {
-    const sizeClass = size === 'sm' ? 'h-4 w-4' : size === 'lg' ? 'h-6 w-6' : 'h-5 w-5';
-    const displayRating = interactive ? (hoverRating || rating) : rating;
+  const StarRating = ({ rating, size = "md", interactive = false, onRate }: { rating: number; size?: "sm" | "md" | "lg"; interactive?: boolean; onRate?: (r: number) => void }) => {
+    const sizeClass = size === "sm" ? "h-4 w-4" : size === "lg" ? "h-6 w-6" : "h-5 w-5";
+    const displayRating = interactive ? hoverRating || rating : rating;
 
     return (
       <div className="flex gap-0.5">
         {[1, 2, 3, 4, 5].map((star) => (
-          <button
-            key={star}
-            type="button"
-            disabled={!interactive}
-            onClick={() => interactive && onRate?.(star)}
-            onMouseEnter={() => interactive && setHoverRating(star)}
-            onMouseLeave={() => interactive && setHoverRating(0)}
-            className={interactive ? 'cursor-pointer' : 'cursor-default'}
-          >
-            <Star
-              className={`${sizeClass} ${
-                star <= displayRating
-                  ? 'fill-yellow-400 text-yellow-400'
-                  : 'fill-gray-200 text-gray-200'
-              } transition-colors`}
-            />
+          <button key={star} type="button" disabled={!interactive} onClick={() => interactive && onRate?.(star)} onMouseEnter={() => interactive && setHoverRating(star)} onMouseLeave={() => interactive && setHoverRating(0)} className={interactive ? "cursor-pointer" : "cursor-default"}>
+            <Star className={`${sizeClass} ${star <= displayRating ? "fill-yellow-400 text-yellow-400" : "fill-gray-200 text-gray-200"} transition-colors`} />
           </button>
         ))}
       </div>
@@ -191,37 +171,22 @@ export function ProductReviews({ productId, productName }: ProductReviewsProps) 
       <div className="flex flex-col lg:flex-row gap-6 p-6 bg-white rounded-xl shadow-sm">
         {/* Rating geral */}
         <div className="flex flex-col items-center justify-center lg:border-r lg:pr-8">
-          <div className="text-5xl font-bold text-gray-900">
-            {stats?.averageRating.toFixed(1) || '0.0'}
-          </div>
+          <div className="text-5xl font-bold text-gray-900">{stats?.averageRating.toFixed(1) || "0.0"}</div>
           <StarRating rating={Math.round(stats?.averageRating || 0)} size="lg" />
-          <p className="text-sm text-gray-500 mt-2">
-            {stats?.totalReviews || 0} avaliações
-          </p>
+          <p className="text-sm text-gray-500 mt-2">{stats?.totalReviews || 0} avaliações</p>
         </div>
 
         {/* Distribuição de ratings */}
         <div className="flex-1 space-y-2">
           {[5, 4, 3, 2, 1].map((star) => {
             const count = stats?.distribution[star] || 0;
-            const percentage = stats?.totalReviews 
-              ? (count / stats.totalReviews) * 100 
-              : 0;
+            const percentage = stats?.totalReviews ? (count / stats.totalReviews) * 100 : 0;
 
             return (
-              <button
-                key={star}
-                onClick={() => setFilterRating(filterRating === star ? null : star)}
-                className={`flex items-center gap-2 w-full group hover:bg-gray-50 p-1 rounded transition-colors ${
-                  filterRating === star ? 'bg-primary-50' : ''
-                }`}
-              >
+              <button key={star} onClick={() => setFilterRating(filterRating === star ? null : star)} className={`flex items-center gap-2 w-full group hover:bg-gray-50 p-1 rounded transition-colors ${filterRating === star ? "bg-primary-50" : ""}`}>
                 <span className="text-sm text-gray-600 w-16">{star} estrelas</span>
                 <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-yellow-400 rounded-full transition-all"
-                    style={{ width: `${percentage}%` }}
-                  />
+                  <div className="h-full bg-yellow-400 rounded-full transition-all" style={{ width: `${percentage}%` }} />
                 </div>
                 <span className="text-sm text-gray-500 w-10 text-right">{count}</span>
               </button>
@@ -231,9 +196,7 @@ export function ProductReviews({ productId, productName }: ProductReviewsProps) 
 
         {/* Botão de avaliar */}
         <div className="flex flex-col items-center justify-center lg:border-l lg:pl-8">
-          <p className="text-sm text-gray-600 mb-3 text-center">
-            Comprou este produto?
-          </p>
+          <p className="text-sm text-gray-600 mb-3 text-center">Comprou este produto?</p>
           <Button onClick={() => setShowForm(!showForm)}>
             <MessageSquare className="h-4 w-4 mr-2" />
             Avaliar Produto
@@ -245,46 +208,26 @@ export function ProductReviews({ productId, productName }: ProductReviewsProps) 
       {showForm && (
         <form onSubmit={handleSubmitReview} className="p-6 bg-white rounded-xl shadow-sm space-y-4">
           <h3 className="text-lg font-semibold">Escreva sua avaliação</h3>
-          
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Sua nota
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Sua nota</label>
             <StarRating rating={newRating} size="lg" interactive onRate={setNewRating} />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Título (opcional)
-            </label>
-            <input
-              type="text"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="Resumo da sua avaliação"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              maxLength={100}
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Título (opcional)</label>
+            <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Resumo da sua avaliação" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" maxLength={100} />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Comentário (opcional)
-            </label>
-            <textarea
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder="Conte sua experiência com o produto..."
-              rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
-              maxLength={1000}
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Comentário (opcional)</label>
+            <textarea value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Conte sua experiência com o produto..." rows={4} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none" maxLength={1000} />
             <p className="text-xs text-gray-400 mt-1">{newComment.length}/1000</p>
           </div>
 
           <div className="flex gap-3">
             <Button type="submit" disabled={submitting}>
-              {submitting ? 'Enviando...' : 'Enviar Avaliação'}
+              {submitting ? "Enviando..." : "Enviar Avaliação"}
             </Button>
             <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
               Cancelar
@@ -310,7 +253,10 @@ export function ProductReviews({ productId, productName }: ProductReviewsProps) 
           <span className="text-sm text-gray-600">Ordenar por:</span>
           <select
             value={sortBy}
-            onChange={(e) => { setSortBy(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setSortBy(e.target.value);
+              setPage(1);
+            }}
             className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
           >
             <option value="recent">Mais recentes</option>
@@ -351,11 +297,7 @@ export function ProductReviews({ productId, productName }: ProductReviewsProps) 
                 {/* Avatar */}
                 <div className="flex-shrink-0">
                   {review.user.image ? (
-                    <img
-                      src={review.user.image}
-                      alt={review.user.name || 'Usuário'}
-                      className="w-12 h-12 rounded-full object-cover"
-                    />
+                    <Image src={review.user.image} alt={review.user.name || "Usuário"} width={48} height={48} className="w-12 h-12 rounded-full object-cover" />
                   ) : (
                     <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
                       <User className="h-6 w-6 text-gray-400" />
@@ -366,9 +308,7 @@ export function ProductReviews({ productId, productName }: ProductReviewsProps) 
                 {/* Conteúdo */}
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <span className="font-medium text-gray-900">
-                      {review.user.name || 'Usuário'}
-                    </span>
+                    <span className="font-medium text-gray-900">{review.user.name || "Usuário"}</span>
                     {review.isVerifiedPurchase && (
                       <span className="inline-flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
                         <CheckCircle className="h-3 w-3" />
@@ -379,35 +319,24 @@ export function ProductReviews({ productId, productName }: ProductReviewsProps) 
 
                   <div className="flex items-center gap-2 mb-2">
                     <StarRating rating={review.rating} size="sm" />
-                    <span className="text-sm text-gray-500">
-                      {formatDate(review.createdAt)}
-                    </span>
+                    <span className="text-sm text-gray-500">{formatDate(review.createdAt)}</span>
                   </div>
 
-                  {review.title && (
-                    <h4 className="font-medium text-gray-900 mb-1">{review.title}</h4>
-                  )}
+                  {review.title && <h4 className="font-medium text-gray-900 mb-1">{review.title}</h4>}
 
-                  {review.comment && (
-                    <p className="text-gray-600 whitespace-pre-line">{review.comment}</p>
-                  )}
+                  {review.comment && <p className="text-gray-600 whitespace-pre-line">{review.comment}</p>}
 
                   {/* Resposta do vendedor */}
                   {review.sellerResponse && (
                     <div className="mt-4 p-4 bg-gray-50 rounded-lg border-l-4 border-primary-500">
-                      <p className="text-sm font-medium text-gray-900 mb-1">
-                        Resposta da loja
-                      </p>
+                      <p className="text-sm font-medium text-gray-900 mb-1">Resposta da loja</p>
                       <p className="text-sm text-gray-600">{review.sellerResponse}</p>
                     </div>
                   )}
 
                   {/* Ações */}
                   <div className="mt-4 flex items-center gap-4">
-                    <button
-                      onClick={() => handleHelpful(review.id)}
-                      className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
-                    >
+                    <button onClick={() => handleHelpful(review.id)} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors">
                       <ThumbsUp className="h-4 w-4" />
                       Útil ({review.isHelpful})
                     </button>
@@ -422,23 +351,13 @@ export function ProductReviews({ productId, productName }: ProductReviewsProps) 
       {/* Paginação */}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 pt-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage(1)}
-            disabled={page === 1}
-          >
+          <Button variant="outline" size="sm" onClick={() => setPage(1)} disabled={page === 1}>
             Primeira
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page === 1}
-          >
+          <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
             Anterior
           </Button>
-          
+
           <div className="flex items-center gap-1">
             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
               let pageNum;
@@ -451,35 +370,19 @@ export function ProductReviews({ productId, productName }: ProductReviewsProps) 
               } else {
                 pageNum = page - 2 + i;
               }
-              
+
               return (
-                <Button
-                  key={pageNum}
-                  variant={page === pageNum ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setPage(pageNum)}
-                  className="w-9 h-9"
-                >
+                <Button key={pageNum} variant={page === pageNum ? "default" : "outline"} size="sm" onClick={() => setPage(pageNum)} className="w-9 h-9">
                   {pageNum}
                 </Button>
               );
             })}
           </div>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-            disabled={page >= totalPages}
-          >
+
+          <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
             Próxima
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage(totalPages)}
-            disabled={page >= totalPages}
-          >
+          <Button variant="outline" size="sm" onClick={() => setPage(totalPages)} disabled={page >= totalPages}>
             Última
           </Button>
         </div>

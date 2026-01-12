@@ -51,7 +51,6 @@ export async function GET(req: NextRequest) {
 
     const [orders, total] = await Promise.all([
       prisma.order.findMany({
-        // @ts-ignore - Prisma type inference issue with conditional where clause
         where,
         include: {
           user: {
@@ -73,7 +72,7 @@ export async function GET(req: NextRequest) {
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
         take: limit,
       }),

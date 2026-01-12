@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Header } from "@/components/header";
@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { SlidersHorizontal } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
-import { Suspense } from "react";
 
 // Helper to forward client logs to server for debugging in VSCode terminal
 async function sendServerLog(tag: string, payload: any) {
@@ -162,27 +161,27 @@ function ProductsContent() {
   }, [fetchProducts, searchKey]);
 
   // Toggle brand selection
-  const toggleBrand = (brand: string) => {
+  const toggleBrand = useCallback((brand: string) => {
     setSelectedBrands((prev) => {
       const next = prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand];
       console.log("[PLP] toggleBrand ->", brand, { next });
       sendServerLog("toggleBrand", { brand, next });
       return next;
     });
-  };
+  }, []);
 
   // Toggle voltage selection
-  const toggleVoltage = (vol: string) => {
+  const toggleVoltage = useCallback((vol: string) => {
     setSelectedVoltages((prev) => {
       const next = prev.includes(vol) ? prev.filter((v) => v !== vol) : [...prev, vol];
       console.log("[PLP] toggleVoltage ->", vol, { next });
       sendServerLog("toggleVoltage", { vol, next });
       return next;
     });
-  };
+  }, []);
 
   // Apply client-side filters using the raw fetched list
-  const applyFilters = () => {
+  const applyFilters = useCallback(() => {
     // Use current slider temp values (commit immediately for this run)
     const [minTemp, maxTemp] = tempRange;
     const min = Math.min(minTemp, maxTemp);
@@ -258,32 +257,35 @@ function ProductsContent() {
     sendServerLog("applyFiltersSorted", { count: sorted.length, exampleIds: sorted.slice(0, 5).map((p) => p.id) });
 
     setProducts(sorted);
-  };
+  }, [tempRange, selectedBrands, selectedVoltages, sortBy, allProducts, router, searchParams]);
 
   // When sort changes we reorder current shown products (no refetch)
-  const handleSortChange = (value: string) => {
-    setSortBy(value);
-    const sorted = [...products].sort((a, b) => {
-      const priceA = a.promotionalPrice ?? a.price ?? 0;
-      const priceB = b.promotionalPrice ?? b.price ?? 0;
-      switch (value) {
-        case "price-asc":
-          return priceA - priceB;
-        case "price-desc":
-          return priceB - priceA;
-        case "name":
-          return (a.name || "").localeCompare(b.name || "");
-        case "recent":
-        default:
-          if (a.createdAt && b.createdAt) return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-          return 0;
-      }
-    });
-    setProducts(sorted);
-  };
+  const handleSortChange = useCallback(
+    (value: string) => {
+      setSortBy(value);
+      const sorted = [...products].sort((a, b) => {
+        const priceA = a.promotionalPrice ?? a.price ?? 0;
+        const priceB = b.promotionalPrice ?? b.price ?? 0;
+        switch (value) {
+          case "price-asc":
+            return priceA - priceB;
+          case "price-desc":
+            return priceB - priceA;
+          case "name":
+            return (a.name || "").localeCompare(b.name || "");
+          case "recent":
+          default:
+            if (a.createdAt && b.createdAt) return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            return 0;
+        }
+      });
+      setProducts(sorted);
+    },
+    [products]
+  );
 
   // Commit tempRange on pointer up (user released the thumb)
-  const commitTempRange = () => {
+  const commitTempRange = useCallback(() => {
     // Normalize so min <= max
     const [a, b] = tempRange;
     const min = Math.min(a, b);
@@ -293,7 +295,7 @@ function ProductsContent() {
     setTempRange([min, max]);
     console.log("[PLP] commitTempRange ->", { min, max });
     sendServerLog("commitTempRange", { min, max });
-  };
+  }, [tempRange]);
 
   return (
     <>
