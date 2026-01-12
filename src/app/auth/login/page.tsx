@@ -172,6 +172,7 @@ export default function LoginPage() {
             </p>
           </div>
 
+
           {/* Credenciais de Teste */}
           {/* <div className="mt-6 p-4 bg-metallic-50 rounded-lg">
             <p className="text-xs text-metallic-600 font-semibold mb-2">
