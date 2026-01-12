@@ -173,7 +173,7 @@ export default function LoginPage() {
           </div>
 
           {/* Credenciais de Teste */}
-          <div className="mt-6 p-4 bg-metallic-50 rounded-lg">
+          {/* <div className="mt-6 p-4 bg-metallic-50 rounded-lg">
             <p className="text-xs text-metallic-600 font-semibold mb-2">
               Credenciais de teste:
             </p>
@@ -182,7 +182,7 @@ export default function LoginPage() {
               <p>🛡️ Admin: gerente@loja.com / senha123</p>
               <p>👤 Cliente: cliente@gmail.com / senha123</p>
             </div>
-          </div>
+          </div> */}
         </div>
       </motion.div>
     </div>

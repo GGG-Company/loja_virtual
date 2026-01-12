@@ -16,6 +16,8 @@
 # Misc
 .DS_Store
 *.pem
+
+# Env
 .env
 .env.local
 .env.development.local

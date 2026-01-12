@@ -81,49 +81,49 @@ export default function AdminReviewsPage() {
 
   useEffect(() => {
     fetchReviews();
-  }, [pagination.page, filterStatus, filterRating]);
+  }, [pagination.page, pagination.limit, filterStatus, filterRating, search]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setPagination(prev => ({ ...prev, page: 1 }));
+    setPagination((prev) => ({ ...prev, page: 1 }));
     fetchReviews();
   };
 
   const handleApprove = async (reviewId: string, approve: boolean) => {
     try {
       const res = await fetch(`/api/reviews/${reviewId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isApproved: approve }),
       });
 
       const data = await res.json();
       if (data.success) {
-        toast.success(approve ? 'Avaliação aprovada' : 'Avaliação reprovada');
-        setReviews(reviews.map(r => r.id === reviewId ? { ...r, isApproved: approve } : r));
+        toast.success(approve ? "Avaliação aprovada" : "Avaliação reprovada");
+        setReviews(reviews.map((r) => (r.id === reviewId ? { ...r, isApproved: approve } : r)));
       } else {
-        toast.error(data.error || 'Erro ao atualizar avaliação');
+        toast.error(data.error || "Erro ao atualizar avaliação");
       }
     } catch (error) {
-      toast.error('Erro ao atualizar avaliação');
+      toast.error("Erro ao atualizar avaliação");
     }
   };
 
   const handleDelete = async (reviewId: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta avaliação?')) return;
+    if (!confirm("Tem certeza que deseja excluir esta avaliação?")) return;
 
     try {
-      const res = await fetch(`/api/reviews/${reviewId}`, { method: 'DELETE' });
+      const res = await fetch(`/api/reviews/${reviewId}`, { method: "DELETE" });
       const data = await res.json();
 
       if (data.success) {
-        toast.success('Avaliação excluída');
-        setReviews(reviews.filter(r => r.id !== reviewId));
+        toast.success("Avaliação excluída");
+        setReviews(reviews.filter((r) => r.id !== reviewId));
       } else {
-        toast.error(data.error || 'Erro ao excluir avaliação');
+        toast.error(data.error || "Erro ao excluir avaliação");
       }
     } catch (error) {
-      toast.error('Erro ao excluir avaliação');
+      toast.error("Erro ao excluir avaliação");
     }
   };
 
@@ -133,53 +133,44 @@ export default function AdminReviewsPage() {
     setSubmitting(true);
     try {
       const res = await fetch(`/api/reviews/${selectedReview.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: 'seller_response',
+          action: "seller_response",
           sellerResponse: responseText,
         }),
       });
 
       const data = await res.json();
       if (data.success) {
-        toast.success('Resposta enviada com sucesso');
-        setReviews(reviews.map(r => 
-          r.id === selectedReview.id 
-            ? { ...r, sellerResponse: responseText, sellerResponseAt: new Date().toISOString() } 
-            : r
-        ));
+        toast.success("Resposta enviada com sucesso");
+        setReviews(reviews.map((r) => (r.id === selectedReview.id ? { ...r, sellerResponse: responseText, sellerResponseAt: new Date().toISOString() } : r)));
         setSelectedReview(null);
-        setResponseText('');
+        setResponseText("");
       } else {
-        toast.error(data.error || 'Erro ao enviar resposta');
+        toast.error(data.error || "Erro ao enviar resposta");
       }
     } catch (error) {
-      toast.error('Erro ao enviar resposta');
+      toast.error("Erro ao enviar resposta");
     } finally {
       setSubmitting(false);
     }
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+    return new Date(dateString).toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const StarRating = ({ rating }: { rating: number }) => (
     <div className="flex gap-0.5">
       {[1, 2, 3, 4, 5].map((star) => (
-        <Star
-          key={star}
-          className={`h-4 w-4 ${
-            star <= rating ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-200 text-gray-200'
-          }`}
-        />
+        <Star key={star} className={`h-4 w-4 ${star <= rating ? "fill-yellow-400 text-yellow-400" : "fill-gray-200 text-gray-200"}`} />
       ))}
     </div>
   );
@@ -197,13 +188,7 @@ export default function AdminReviewsPage() {
           <form onSubmit={handleSearch} className="flex-1 min-w-[300px]">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Buscar por produto ou usuário..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              />
+              <input type="text" placeholder="Buscar por produto ou usuário..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500" />
             </div>
           </form>
 
@@ -211,8 +196,8 @@ export default function AdminReviewsPage() {
           <select
             value={filterStatus}
             onChange={(e) => {
-              setFilterStatus(e.target.value as 'all' | 'approved' | 'pending');
-              setPagination(prev => ({ ...prev, page: 1 }));
+              setFilterStatus(e.target.value as "all" | "approved" | "pending");
+              setPagination((prev) => ({ ...prev, page: 1 }));
             }}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
           >
@@ -223,18 +208,37 @@ export default function AdminReviewsPage() {
 
           {/* Filtro de rating */}
           <select
-            value={filterRating || ''}
+            value={filterRating || ""}
             onChange={(e) => {
               setFilterRating(e.target.value ? Number(e.target.value) : null);
-              setPagination(prev => ({ ...prev, page: 1 }));
+              setPagination((prev) => ({ ...prev, page: 1 }));
             }}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
           >
             <option value="">Todas as notas</option>
             {[5, 4, 3, 2, 1].map((r) => (
-              <option key={r} value={r}>{r} estrelas</option>
+              <option key={r} value={r}>
+                {r} estrelas
+              </option>
             ))}
           </select>
+
+          {/* Tamanho da página */}
+          <div className="flex items-center">
+            <label className="text-sm text-gray-600 mr-2">Por página:</label>
+            <select
+              value={pagination.limit}
+              onChange={(e) => {
+                const newLimit = Number(e.target.value);
+                setPagination((prev) => ({ ...prev, limit: newLimit, page: 1 }));
+              }}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -267,11 +271,7 @@ export default function AdminReviewsPage() {
                 {/* Imagem do produto */}
                 <div className="flex-shrink-0 w-20 h-20 bg-gray-100 rounded-lg overflow-hidden">
                   {review.product.imageUrl ? (
-                    <img
-                      src={review.product.imageUrl}
-                      alt={review.product.name}
-                      className="w-full h-full object-contain"
-                    />
+                    <img src={review.product.imageUrl} alt={review.product.name} className="w-full h-full object-contain" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <Package className="h-8 w-8 text-gray-400" />
@@ -283,26 +283,12 @@ export default function AdminReviewsPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
                     <div>
-                      <h3 className="font-medium text-gray-900 truncate">
-                        {review.product.name}
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        Por: {review.user.name || review.user.email}
-                      </p>
+                      <h3 className="font-medium text-gray-900 truncate">{review.product.name}</h3>
+                      <p className="text-sm text-gray-500">Por: {review.user.name || review.user.email}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        review.isApproved 
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-yellow-100 text-yellow-700'
-                      }`}>
-                        {review.isApproved ? 'Aprovada' : 'Pendente'}
-                      </span>
-                      {review.isVerifiedPurchase && (
-                        <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
-                          Compra Verificada
-                        </span>
-                      )}
+                      <span className={`px-2 py-1 text-xs rounded-full ${review.isApproved ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>{review.isApproved ? "Aprovada" : "Pendente"}</span>
+                      {review.isVerifiedPurchase && <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">Compra Verificada</span>}
                     </div>
                   </div>
 
@@ -311,13 +297,9 @@ export default function AdminReviewsPage() {
                     <span className="text-sm text-gray-500">{formatDate(review.createdAt)}</span>
                   </div>
 
-                  {review.title && (
-                    <h4 className="font-medium text-gray-900 mb-1">{review.title}</h4>
-                  )}
+                  {review.title && <h4 className="font-medium text-gray-900 mb-1">{review.title}</h4>}
 
-                  {review.comment && (
-                    <p className="text-gray-600 text-sm mb-3">{review.comment}</p>
-                  )}
+                  {review.comment && <p className="text-gray-600 text-sm mb-3">{review.comment}</p>}
 
                   {/* Resposta do vendedor */}
                   {review.sellerResponse && (
@@ -330,23 +312,13 @@ export default function AdminReviewsPage() {
                   {/* Ações */}
                   <div className="flex flex-wrap gap-2 pt-3 border-t">
                     {!review.isApproved && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleApprove(review.id, true)}
-                        className="text-green-600 border-green-200 hover:bg-green-50"
-                      >
+                      <Button size="sm" variant="outline" onClick={() => handleApprove(review.id, true)} className="text-green-600 border-green-200 hover:bg-green-50">
                         <CheckCircle className="h-4 w-4 mr-1" />
                         Aprovar
                       </Button>
                     )}
                     {review.isApproved && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleApprove(review.id, false)}
-                        className="text-yellow-600 border-yellow-200 hover:bg-yellow-50"
-                      >
+                      <Button size="sm" variant="outline" onClick={() => handleApprove(review.id, false)} className="text-yellow-600 border-yellow-200 hover:bg-yellow-50">
                         <XCircle className="h-4 w-4 mr-1" />
                         Desaprovar
                       </Button>
@@ -357,19 +329,14 @@ export default function AdminReviewsPage() {
                         variant="outline"
                         onClick={() => {
                           setSelectedReview(review);
-                          setResponseText('');
+                          setResponseText("");
                         }}
                       >
                         <MessageSquare className="h-4 w-4 mr-1" />
                         Responder
                       </Button>
                     )}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleDelete(review.id)}
-                      className="text-red-600 border-red-200 hover:bg-red-50"
-                    >
+                    <Button size="sm" variant="outline" onClick={() => handleDelete(review.id)} className="text-red-600 border-red-200 hover:bg-red-50">
                       <Trash2 className="h-4 w-4 mr-1" />
                       Excluir
                     </Button>
@@ -385,26 +352,47 @@ export default function AdminReviewsPage() {
       {pagination.totalPages > 1 && (
         <div className="flex items-center justify-between bg-white px-4 py-3 rounded-xl shadow-sm">
           <div className="text-sm text-gray-500">
-            Mostrando {((pagination.page - 1) * pagination.limit) + 1} a {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total}
+            Mostrando {(pagination.page - 1) * pagination.limit + 1} a {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total}
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
-              disabled={pagination.page === 1}
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Anterior
+
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setPagination((prev) => ({ ...prev, page: 1 }))} disabled={pagination.page === 1}>
+              Primeiro
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
-              disabled={pagination.page >= pagination.totalPages}
-            >
-              Próxima
+
+            <Button variant="outline" size="sm" onClick={() => setPagination((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))} disabled={pagination.page === 1}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(7, pagination.totalPages) }, (_, i) => {
+                let pageNum;
+                if (pagination.totalPages <= 7) {
+                  pageNum = i + 1;
+                } else if (pagination.page <= 4) {
+                  pageNum = i + 1;
+                } else if (pagination.page >= pagination.totalPages - 3) {
+                  pageNum = pagination.totalPages - 6 + i;
+                } else {
+                  pageNum = pagination.page - 3 + i;
+                }
+
+                if (pageNum < 1 || pageNum > pagination.totalPages) return null;
+
+                return (
+                  <Button key={pageNum} size="sm" variant={pagination.page === pageNum ? "default" : "outline"} onClick={() => setPagination((prev) => ({ ...prev, page: pageNum }))} className="w-9 h-9">
+                    {pageNum}
+                  </Button>
+                );
+              })}
+            </div>
+
+            <Button variant="outline" size="sm" onClick={() => setPagination((prev) => ({ ...prev, page: Math.min(prev.totalPages, prev.page + 1) }))} disabled={pagination.page >= pagination.totalPages}>
               <ChevronRight className="h-4 w-4" />
+            </Button>
+
+            <Button variant="outline" size="sm" onClick={() => setPagination((prev) => ({ ...prev, page: prev.totalPages }))} disabled={pagination.page >= pagination.totalPages}>
+              Último
             </Button>
           </div>
         </div>
@@ -415,32 +403,19 @@ export default function AdminReviewsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-lg w-full p-6 space-y-4">
             <h3 className="text-lg font-semibold">Responder Avaliação</h3>
-            
+
             <div className="p-4 bg-gray-50 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <StarRating rating={selectedReview.rating} />
                 <span className="text-sm font-medium">{selectedReview.user.name}</span>
               </div>
-              {selectedReview.title && (
-                <p className="font-medium text-gray-900 text-sm">{selectedReview.title}</p>
-              )}
-              {selectedReview.comment && (
-                <p className="text-gray-600 text-sm mt-1">{selectedReview.comment}</p>
-              )}
+              {selectedReview.title && <p className="font-medium text-gray-900 text-sm">{selectedReview.title}</p>}
+              {selectedReview.comment && <p className="text-gray-600 text-sm mt-1">{selectedReview.comment}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Sua resposta
-              </label>
-              <textarea
-                value={responseText}
-                onChange={(e) => setResponseText(e.target.value)}
-                rows={4}
-                placeholder="Escreva sua resposta..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 resize-none"
-                maxLength={500}
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Sua resposta</label>
+              <textarea value={responseText} onChange={(e) => setResponseText(e.target.value)} rows={4} placeholder="Escreva sua resposta..." className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 resize-none" maxLength={500} />
               <p className="text-xs text-gray-400 mt-1">{responseText.length}/500</p>
             </div>
 
@@ -449,16 +424,13 @@ export default function AdminReviewsPage() {
                 variant="outline"
                 onClick={() => {
                   setSelectedReview(null);
-                  setResponseText('');
+                  setResponseText("");
                 }}
               >
                 Cancelar
               </Button>
-              <Button
-                onClick={handleResponse}
-                disabled={!responseText.trim() || submitting}
-              >
-                {submitting ? 'Enviando...' : 'Enviar Resposta'}
+              <Button onClick={handleResponse} disabled={!responseText.trim() || submitting}>
+                {submitting ? "Enviando..." : "Enviar Resposta"}
               </Button>
             </div>
           </div>
