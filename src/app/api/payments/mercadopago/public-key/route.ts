@@ -8,15 +8,25 @@ export async function GET() {
     // Tenta pegar do banco primeiro
     const config = await getMercadoPagoConfig();
     
-    // Fallback para variável de ambiente
-    const publicKey = config?.publicKey || process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY;
+    // Fallback para variáveis de ambiente (várias possibilidades)
+    let publicKey = config?.publicKey || 
+                    process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY || 
+                    process.env.MERCADO_PAGO_PUBLIC_KEY;
 
-    if (!publicKey) {
-      return NextResponse.json({ error: 'Configuração não encontrada' }, { status: 404 });
+    // Limpeza de possíveis aspas ou espaços
+    if (publicKey) {
+      publicKey = publicKey.replace(/['"]/g, '').trim();
+    }
+
+    console.log('[API/MercadoPago] Fornecendo chave pública:', publicKey ? '***' + publicKey.slice(-5) : 'não encontrada');
+
+    if (!publicKey || publicKey.length < 10) {
+      return NextResponse.json({ error: 'Configuração não encontrada ou inválida' }, { status: 404 });
     }
 
     return NextResponse.json({ publicKey });
   } catch (error) {
+    console.error('[API/MercadoPago] Erro ao buscar chave:', error);
     return NextResponse.json({ error: 'Erro ao buscar chave pública' }, { status: 500 });
   }
 }

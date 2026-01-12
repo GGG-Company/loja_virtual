@@ -26,6 +26,9 @@ export const MercadoPagoPaymentBrick = memo(function MercadoPagoPaymentBrick({
 }: MercadoPagoPaymentBrickProps) {
   const { initialized } = useMercadoPago();
 
+  // Log para debug em produção
+  console.log('[MercadoPagoBrick] Props:', { amount, orderId, initialized });
+
   // Memoizar initialization para evitar re-criação
   const initialization = useMemo(() => ({
     amount: amount,

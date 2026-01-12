@@ -41,17 +41,25 @@ function CheckoutPagamentoContent() {
     if (!total) return 0;
     // Remove qualquer caractere que não seja número, ponto ou vírgula
     const cleaned = total.replace(/[^\d.,]/g, '');
+    let val = 0;
     
     // Se tiver vírgula e ponto (ex: 1.409,11), remove o ponto e troca vírgula por ponto
     if (cleaned.includes('.') && cleaned.includes(',')) {
-      return Number(cleaned.replace(/\./g, '').replace(',', '.'));
-    }
+      val = Number(cleaned.replace(/\./g, '').replace(',', '.'));
+    } 
     // Se tiver apenas vírgula (ex: 1409,11), troca por ponto
-    if (cleaned.includes(',')) {
-      return Number(cleaned.replace(',', '.'));
+    else if (cleaned.includes(',')) {
+      val = Number(cleaned.replace(',', '.'));
     }
     // Se tiver apenas ponto ou for número puro
-    return Number(cleaned);
+    else {
+      val = Number(cleaned);
+    }
+    
+    // Arredondar para 2 casas decimais (essencial para o Mercado Pago)
+    const finalVal = Math.max(0, Math.round(val * 100) / 100);
+    console.log('[CheckoutPagamento] Valor processado:', { total, val, finalVal });
+    return finalVal;
   }, [total]);
 
   // Callbacks estáveis
@@ -85,7 +93,7 @@ function CheckoutPagamentoContent() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             orderId,
-            amount: Number(total.replace(',', '.')),
+            amount: amountNumber,
             userEmail: session?.user?.email,
             userName: session?.user?.name,
           }),
@@ -122,7 +130,7 @@ function CheckoutPagamentoContent() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             orderId,
-            amount: Number(total.replace(',', '.')),
+            amount: amountNumber,
             userEmail: session?.user?.email,
             userName: session?.user?.name,
             userCpf: session?.user?.cpf || '12345678909',

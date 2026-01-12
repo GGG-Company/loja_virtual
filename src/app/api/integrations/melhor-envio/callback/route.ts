@@ -24,10 +24,10 @@ export async function GET(req: NextRequest) {
     });
     await saveToken(token);
     console.info('[melhorenvio][callback] token salvo com sucesso');
-    // Redireciona para uma página de sucesso (admin), ou retorna JSON
-    const redirect = process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/admin/settings` : '/admin/settings';
-    // Prefer redirect for UX; but in dev, JSON can be handy
-    return NextResponse.redirect(redirect);
+    
+    // Redireciona para o admin usando a URL base da requisição atual (mais seguro)
+    const redirectUrl = new URL('/admin/settings', req.url);
+    return NextResponse.redirect(redirectUrl);
   } catch (e: any) {
     console.error('[melhorenvio][callback] erro ao trocar code por token', {
       message: e?.message,
