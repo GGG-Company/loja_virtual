@@ -116,7 +116,10 @@ function roundPrice(v: number) {
 
 async function quoteWithMelhorEnvio(params: { items: ShippingItem[]; destinationZip: string; originZip: string; }): Promise<ShippingOption[] | null> {
   const token = await getAccessToken();
-  if (!token) return null;
+  if (!token) {
+    console.warn('[shipping] Token do Melhor Envio não encontrado. Vá em Configurações e conecte sua conta.');
+    return null;
+  }
 
   const servicesStr = (process.env.MELHOR_ENVIO_SERVICES || '1,2').trim(); // API exige string com ids separados por vírgula
   const baseUrl = melhorEnvioBaseUrl();
@@ -169,9 +172,12 @@ async function quoteWithMelhorEnvio(params: { items: ShippingItem[]; destination
     }
 
     const data = JSON.parse(responseText);
-    if (!Array.isArray(data)) return null;
+    if (!Array.isArray(data)) {
+      console.warn('[shipping] Resposta do Melhor Envio não é um array:', data);
+      return null;
+    }
 
-    console.log('[shipping] Dados brutos do Melhor Envio:', JSON.stringify(data.slice(0, 2), null, 2));
+    console.log('[shipping] Dados brutos do Melhor Envio (primeiros 2):', JSON.stringify(data.slice(0, 2), null, 2));
 
     // Usar custom_price e custom_delivery_time conforme documentação
     const mapped = data.map((d: any) => ({
@@ -316,7 +322,8 @@ export async function getShippingOptions(params: { items: ShippingItem[]; destin
   const normalized = await loadShippingItems(params.items);
   console.log('[shipping] Itens normalizados:', JSON.stringify(normalized, null, 2));
   
-  const originZip = normalizeZip(params.originZip || process.env.SHIPPING_ORIGIN_ZIP || '44002264');
+  const originZip = normalizeZip(params.originZip || process.env.SHIPPING_ORIGIN_ZIP || process.env.ORIGIN_ZIP || '44002264');
+  console.log('[shipping] CEP de Origem final:', originZip);
 
   const pickup: ShippingOption = {
     id: 'pickup-feira',

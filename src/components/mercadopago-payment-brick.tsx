@@ -87,7 +87,9 @@ export const MercadoPagoPaymentBrick = memo(function MercadoPagoPaymentBrick({
 
   const onError = useCallback(async (error: any) => {
     console.error('Payment Brick Error:', error);
-    toast.error('Erro ao carregar formulário de pagamento');
+    // Tenta extrair mensagem amigável
+    const msg = error?.message || (typeof error === 'string' ? error : 'Erro desconhecido no Checkout');
+    toast.error(`Erro ao carregar checkout: ${msg}`);
     onPaymentError(error);
   }, [onPaymentError]);
 

@@ -34,9 +34,25 @@ function CheckoutPagamentoContent() {
 
   // Memoizar dados do usuário para evitar re-renderizações
   const userEmail = useMemo(() => session?.user?.email || '', [session?.user?.email]);
-  const userFirstName = useMemo(() => session?.user?.name?.split(' ')[0] || '', [session?.user?.name]);
-  const userLastName = useMemo(() => session?.user?.name?.split(' ').slice(1).join(' ') || '', [session?.user?.name]);
-  const amountNumber = useMemo(() => Number(total.replace(',', '.')), [total]);
+  const userFirstName = useMemo(() => session?.user?.name?.split(' ')[0] || 'Cliente', [session?.user?.name]);
+  const userLastName = useMemo(() => session?.user?.name?.split(' ').slice(1).join(' ') || 'Azura', [session?.user?.name]);
+  
+  const amountNumber = useMemo(() => {
+    if (!total) return 0;
+    // Remove qualquer caractere que não seja número, ponto ou vírgula
+    const cleaned = total.replace(/[^\d.,]/g, '');
+    
+    // Se tiver vírgula e ponto (ex: 1.409,11), remove o ponto e troca vírgula por ponto
+    if (cleaned.includes('.') && cleaned.includes(',')) {
+      return Number(cleaned.replace(/\./g, '').replace(',', '.'));
+    }
+    // Se tiver apenas vírgula (ex: 1409,11), troca por ponto
+    if (cleaned.includes(',')) {
+      return Number(cleaned.replace(',', '.'));
+    }
+    // Se tiver apenas ponto ou for número puro
+    return Number(cleaned);
+  }, [total]);
 
   // Callbacks estáveis
   const handlePaymentSuccess = useCallback((paymentId: string) => {
@@ -382,7 +398,7 @@ function CheckoutPagamentoContent() {
                       <img src="https://http2.mlstatic.com/frontend-assets/mp-web-navigation/ui-navigation/5.21.11/mercadopago/logo__large@2x.png" alt="Mercado Pago" className="h-5" />
                     </div>
                     <p className="text-sm text-gray-600">Preencha os dados do cartão abaixo.</p>
-                    {orderId ? (
+                    {orderId && amountNumber > 0 ? (
                       <div className="mt-4">
                         <MercadoPagoPaymentBrick
                           amount={amountNumber}
@@ -396,7 +412,7 @@ function CheckoutPagamentoContent() {
                       </div>
                     ) : (
                       <div className="w-full h-32 bg-metallic-100 border border-dashed border-metallic-300 rounded-lg flex items-center justify-center text-gray-500 text-sm">
-                        Carregando checkout do Mercado Pago...
+                        {amountNumber <= 0 ? 'Valor do pedido inválido para processamento.' : 'Carregando checkout do Mercado Pago...'}
                       </div>
                     )}
                   </div>
