@@ -121,11 +121,10 @@ async function quoteWithMelhorEnvio(params: { items: ShippingItem[]; destination
     return null;
   }
 
-  const servicesStr = (process.env.MELHOR_ENVIO_SERVICES || '1,2').trim(); // API exige string com ids separados por vírgula
+  const servicesStr = (process.env.MELHOR_ENVIO_SERVICES || '').trim();
   const baseUrl = melhorEnvioBaseUrl();
 
   // Preparar produtos no formato correto da API do Melhor Envio
-  // Cada produto deve ter: id, width, height, length, weight, insurance_value, quantity
   const products = params.items.map((item, index) => {
     const dims = item.dimensions || { height: 12, width: 18, length: 24 };
     const weight = item.weightKg || 1;
@@ -133,16 +132,16 @@ async function quoteWithMelhorEnvio(params: { items: ShippingItem[]; destination
     
     return {
       id: item.productId || `produto-${index}`,
-      width: Math.max(11, Math.round(dims.width || 11)), // mínimo 11cm
-      height: Math.max(2, Math.round(dims.height || 2)), // mínimo 2cm
-      length: Math.max(16, Math.round(dims.length || 16)), // mínimo 16cm
-      weight: Math.max(0.3, Number(weight.toFixed(2))), // mínimo 0.3kg
-      insurance_value: Number(price.toFixed(2)), // valor segurado unitário
+      width: Math.max(11, Math.round(dims.width || 11)),
+      height: Math.max(2, Math.round(dims.height || 2)),
+      length: Math.max(16, Math.round(dims.length || 16)),
+      weight: Math.max(0.3, Number(weight.toFixed(2))),
+      insurance_value: Number(price.toFixed(2)),
       quantity: item.quantity || 1,
     };
   });
 
-  const body = {
+  const body: any = {
     from: { postal_code: params.originZip },
     to: { postal_code: params.destinationZip },
     products,
@@ -150,10 +149,14 @@ async function quoteWithMelhorEnvio(params: { items: ShippingItem[]; destination
       receipt: false,
       own_hand: false,
     },
-    services: servicesStr,
   };
 
-  console.log('[shipping] Cotação Melhor Envio - Request:', JSON.stringify(body, null, 2));
+  // Se houver serviços específicos, adiciona
+  if (servicesStr) {
+    body.services = servicesStr;
+  }
+
+  console.log('[shipping] Cotação Melhor Envio - Request Body:', JSON.stringify(body, null, 2));
 
   try {
     const res = await fetch(`${baseUrl}/api/v2/me/shipment/calculate`, {
@@ -162,39 +165,49 @@ async function quoteWithMelhorEnvio(params: { items: ShippingItem[]; destination
       body: JSON.stringify(body),
     });
 
+    const responseStatus = res.status;
     const responseText = await res.text();
-    console.log('[shipping] Cotação Melhor Envio - Response status:', res.status);
-    console.log('[shipping] Cotação Melhor Envio - Response body:', responseText?.slice(0, 500));
-
+    
     if (!res.ok) {
-      console.warn('[shipping] melhor envio quote error', res.status, responseText?.slice(0, 300));
+      console.error('[shipping] Melhor Envio Error Response:', {
+        status: responseStatus,
+        body: responseText
+      });
       return null;
     }
 
-    const data = JSON.parse(responseText);
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      console.error('[shipping] Erro ao parsear JSON do Melhor Envio:', responseText);
+      return null;
+    }
+
     if (!Array.isArray(data)) {
       console.warn('[shipping] Resposta do Melhor Envio não é um array:', data);
       return null;
     }
 
-    console.log('[shipping] Dados brutos do Melhor Envio (primeiros 2):', JSON.stringify(data.slice(0, 2), null, 2));
+    // Mapear opções
+    const mapped = data.map((d: any) => {
+      const priceValue = Number(d.custom_price || d.price || d.cost || 0);
+      const errorMsg = d.error || d.observations || null;
+      
+      return {
+        id: String(d.id || d.service_id || d.name),
+        service: d.name || d.delivery_service || 'Frete',
+        carrier: d.company?.name || 'Melhor Envio',
+        price: roundPrice(priceValue),
+        etaDays: d.custom_delivery_time || d.delivery_time || null,
+        notes: errorMsg,
+      };
+    }).filter((o: ShippingOption) => o.price > 0 && !(o.notes && typeof o.notes === 'string' && o.notes.toLowerCase().includes('erro')));
 
-    // Usar custom_price e custom_delivery_time conforme documentação
-    const mapped = data.map((d: any) => ({
-      id: String(d.id || d.service_id || d.name),
-      service: d.name || d.delivery_service || 'Frete',
-      carrier: d.company?.name || 'Melhor Envio',
-      price: roundPrice(Number(d.custom_price || d.price || d.cost || 0)), // Preferir custom_price
-      etaDays: d.custom_delivery_time || d.delivery_time || null, // Preferir custom_delivery_time
-      notes: d.error || d.observations || d.company?.alias || undefined,
-    })).filter((o: ShippingOption) => o.price > 0 && !o.notes?.includes('erro'));
-
-    console.log('[shipping] Opções mapeadas:', JSON.stringify(mapped, null, 2));
-
-    console.info('[shipping] melhor envio quote ok', mapped.length, 'opcoes');
+    console.info('[shipping] Melhor Envio OK. Opções encontradas:', mapped.length);
     return mapped;
   } catch (err) {
-    console.warn('[shipping] melhor envio fallback', err);
+    console.error('[shipping] Erro catastrófico na cotação Melhor Envio:', err);
     return null;
   }
 }

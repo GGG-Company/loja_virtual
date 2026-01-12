@@ -3,6 +3,7 @@
 import { Payment } from '@mercadopago/sdk-react';
 import { toast } from 'sonner';
 import { memo, useCallback, useMemo } from 'react';
+import { useMercadoPago } from './mercadopago-provider';
 
 interface MercadoPagoPaymentBrickProps {
   amount: number;
@@ -23,6 +24,8 @@ export const MercadoPagoPaymentBrick = memo(function MercadoPagoPaymentBrick({
   userFirstName,
   userLastName,
 }: MercadoPagoPaymentBrickProps) {
+  const { initialized } = useMercadoPago();
+
   // Memoizar initialization para evitar re-criação
   const initialization = useMemo(() => ({
     amount: amount,
@@ -97,6 +100,14 @@ export const MercadoPagoPaymentBrick = memo(function MercadoPagoPaymentBrick({
     // Quando o brick estiver pronto
     console.log('Payment Brick carregado');
   }, []);
+
+  if (!initialized) {
+    return (
+      <div className="w-full h-48 bg-metallic-100 animate-pulse rounded-lg flex items-center justify-center">
+        <p className="text-sm text-gray-500">Inicializando Mercado Pago...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="mercadopago-payment-card-only">

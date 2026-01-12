@@ -1,13 +1,13 @@
 'use client';
 
 import { initMercadoPago } from '@mercadopago/sdk-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, createContext, useContext } from 'react';
 
-interface MercadoPagoProviderProps {
-  children: React.ReactNode;
-}
+const MercadoPagoContext = createContext({ initialized: false });
 
-export function MercadoPagoProvider({ children }: MercadoPagoProviderProps) {
+export const useMercadoPago = () => useContext(MercadoPagoContext);
+
+export function MercadoPagoProvider({ children }: { children: React.ReactNode }) {
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
@@ -42,5 +42,9 @@ export function MercadoPagoProvider({ children }: MercadoPagoProviderProps) {
     init();
   }, [initialized]);
 
-  return <>{children}</>;
+  return (
+    <MercadoPagoContext.Provider value={{ initialized }}>
+      {children}
+    </MercadoPagoContext.Provider>
+  );
 }
