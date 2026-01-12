@@ -31,7 +31,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Nenhum item informado' }, { status: 400 });
     }
 
-    const options = await getShippingOptions({ items, destinationZip });
+    // Cast seguro para ShippingItem tratando campos opcionais das dimensões
+    const formattedItems = items.map(item => ({
+      ...item,
+      dimensions: item.dimensions ? {
+        height: item.dimensions.height || 0,
+        width: item.dimensions.width || 0,
+        length: item.dimensions.length || 0,
+      } : undefined
+    }));
+
+    const rawOptions = await getShippingOptions({ items: formattedItems, destinationZip });
+    
+    // Mapear para o formato esperado pelo frontend (carrinho e checkout)
+    const options = rawOptions.map((opt) => ({
+      id: opt.id,
+      name: opt.service || opt.carrier || 'Frete',
+      service: opt.service || opt.carrier || 'Frete',
+      carrier: opt.carrier || 'Correios',
+      price: opt.price,
+      delivery_time: opt.etaDays || 0,
+      etaDays: opt.etaDays || 0,
+      company: opt.carrier ? { name: opt.carrier } : undefined,
+      pickup: opt.pickup || false,
+      notes: opt.notes || undefined,
+    }));
 
     return NextResponse.json({ success: true, options });
   } catch (error) {

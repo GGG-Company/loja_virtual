@@ -230,7 +230,7 @@ export default function PrivacyPage() {
                 <p className="font-semibold">
                   Email: privacidade@shopferramentas.com.br
                 </p>
-                <p className="font-semibold">Telefone: (71) 3333-4444</p>
+                <p className="font-semibold">Telefone: (75) 3333-4444</p>
               </div>
             </motion.div>
           </div>

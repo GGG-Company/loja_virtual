@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { sendOrderStatusUpdate } from '@/lib/webhooks';
+import { notifyOrderStatusChange } from '@/lib/notifications';
+import type { OrderStatus } from '@/lib/i18n';
 
 const UpdateStatusSchema = z.object({
   orderNumber: z.string(),
@@ -90,6 +92,16 @@ export async function POST(request: NextRequest) {
       user: (updated as any).user,
       total: (updated as any).total,
       items: (updated as any).items,
+    });
+
+    // Notificar o cliente sobre a mudança de status
+    await notifyOrderStatusChange({
+      userId: updated.userId,
+      orderId: updated.id,
+      orderNumber: updated.orderNumber,
+      status: status as OrderStatus,
+      trackingCode: updated.trackingCode,
+      trackingUrl: updated.trackingUrl,
     });
 
     // Log da integração

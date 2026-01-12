@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getProduct, isExternalEnabled } from '@/lib/products-repository';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }

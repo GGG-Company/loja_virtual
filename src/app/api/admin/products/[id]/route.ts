@@ -54,7 +54,19 @@ export async function PUT(
     }
 
     const body = await req.json();
-    const { name, description, price, promotionalPrice, stock, status, imageUrl, isFeatured, stockLocation, categoryId } = body;
+    const { 
+      name, 
+      description, 
+      price, 
+      promotionalPrice, 
+      stock, 
+      status, 
+      imageUrl, 
+      isFeatured, 
+      isPromo,
+      stockLocation, 
+      categoryId 
+    } = body;
 
     // Garante que o produto existe e captura categoryId atual para fallback
     const existing = await prisma.product.findUnique({
@@ -66,6 +78,20 @@ export async function PUT(
       return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 });
     }
 
+    // Valida se a categoria existe, caso categoryId seja fornecido
+    let validCategoryId = existing.categoryId; // fallback para categoria atual
+    if (categoryId && categoryId.trim() !== '') {
+      const categoryExists = await prisma.category.findUnique({
+        where: { id: categoryId },
+        select: { id: true },
+      });
+      if (categoryExists) {
+        validCategoryId = categoryId;
+      } else {
+        console.warn(`[ADMIN_PRODUCT_PUT] Categoria ${categoryId} não encontrada, mantendo categoria atual`);
+      }
+    }
+
     const normalizedImage = imageUrl === '' || imageUrl === null ? null : imageUrl;
 
     const updateData: any = {
@@ -74,10 +100,11 @@ export async function PUT(
       price,
       promotionalPrice: promotionalPrice || null,
       isFeatured: isFeatured ?? false,
+      isPromo: isPromo ?? false,
       stock,
       isActive: status === 'ACTIVE' ? true : status === 'INACTIVE' ? false : existing.isActive,
       stockLocation: stockLocation?.trim() || null,
-      ...(categoryId ? { categoryId } : {}),
+      categoryId: validCategoryId,
       ...(imageUrl !== undefined && { imageUrl: normalizedImage }),
     };
 

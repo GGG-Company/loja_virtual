@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { ShoppingCart, Zap, Shield, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import Image from "next/image";
 
 export function HeroSection() {
   return (
@@ -89,8 +90,15 @@ export function HeroSection() {
           >
             <div className="absolute inset-0 bg-gradient-to-br from-primary-500/20 to-transparent rounded-3xl" />
             <div className="relative h-full flex items-center justify-center">
-              <div className="w-full h-full bg-white/5 backdrop-blur-sm rounded-3xl border border-white/10 flex items-center justify-center">
-                <p className="text-6xl">🔨</p>
+              <div className="w-full h-full bg-white/5 backdrop-blur-sm rounded-3xl border border-white/10 flex items-center justify-center relative overflow-hidden">
+                <Image
+                  src="/img.jpg"
+                  alt="Ferramentas Profissionais"
+                  fill
+                  className="object-cover"
+                  priority
+                  unoptimized
+                />
               </div>
             </div>
           </motion.div>

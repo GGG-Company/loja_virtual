@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { statusToPt, statusBadgeClass, paymentToPt } from '@/lib/i18n';
+import { Button } from '@/components/ui/button';
+import { Printer, FileText, Truck, RefreshCw, ExternalLink } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface OrderDetail {
   id: string;
@@ -16,6 +19,13 @@ interface OrderDetail {
   createdAt: string;
   paymentMethod: string;
   shippingAddress: any;
+  shippingServiceId?: string | null;
+  melhorEnvioOrderId?: string | null;
+  melhorEnvioLabelUrl?: string | null;
+  melhorEnvioStatus?: string | null;
+  melhorEnvioService?: string | null;
+  trackingCode?: string | null;
+  trackingUrl?: string | null;
   user: { name: string | null; email: string };
   items: Array<{
     id: string;
@@ -32,14 +42,80 @@ export default function OrderDetailPage() {
   const orderId = params?.id as string;
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [generatingLabel, setGeneratingLabel] = useState(false);
+  const [labelInfo, setLabelInfo] = useState<{
+    hasLabel: boolean;
+    labelUrl?: string;
+    trackingCode?: string;
+    melhorEnvioStatus?: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!orderId) return;
     fetch(`/api/admin/orders/${orderId}`)
       .then((res) => res.json())
-      .then((data) => setOrder(data))
+      .then((data) => {
+        setOrder(data);
+        // Verificar info da etiqueta
+        checkLabelStatus();
+      })
       .finally(() => setLoading(false));
   }, [orderId]);
+
+  const checkLabelStatus = async () => {
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/label`);
+      const data = await res.json();
+      if (data.success) {
+        setLabelInfo({
+          hasLabel: data.hasLabel,
+          labelUrl: data.labelUrl,
+          trackingCode: data.trackingCode,
+          melhorEnvioStatus: data.melhorEnvioStatus,
+        });
+      }
+    } catch (e) {
+      console.error('Erro ao verificar etiqueta:', e);
+    }
+  };
+
+  const handleGenerateLabel = async () => {
+    setGeneratingLabel(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/label`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        toast.success(data.message || 'Etiqueta gerada com sucesso!');
+        setLabelInfo({
+          hasLabel: true,
+          labelUrl: data.labelUrl,
+          trackingCode: data.trackingCode,
+        });
+        // Recarregar pedido para atualizar dados
+        const orderRes = await fetch(`/api/admin/orders/${orderId}`);
+        const orderData = await orderRes.json();
+        setOrder(orderData);
+      } else {
+        toast.error(data.error || 'Erro ao gerar etiqueta');
+      }
+    } catch (e) {
+      console.error('Erro ao gerar etiqueta:', e);
+      toast.error('Erro ao gerar etiqueta');
+    } finally {
+      setGeneratingLabel(false);
+    }
+  };
+
+  const handlePrintLabel = () => {
+    if (labelInfo?.labelUrl) {
+      window.open(labelInfo.labelUrl, '_blank');
+    } else if (order?.melhorEnvioLabelUrl) {
+      window.open(order.melhorEnvioLabelUrl, '_blank');
+    }
+  };
 
   if (loading) return <div className="container mx-auto p-6">Carregando pedido...</div>;
   if (!order) return <div className="container mx-auto p-6">Pedido não encontrado</div>;
@@ -105,6 +181,91 @@ export default function OrderDetailPage() {
           <div className="bg-white rounded-lg shadow p-4">
             <h2 className="text-lg font-semibold mb-3">Pagamento</h2>
             <p className="text-sm text-gray-700">{paymentToPt(order.paymentMethod)}</p>
+          </div>
+
+          {/* Seção de Etiqueta de Envio */}
+          <div className="bg-white rounded-lg shadow p-4">
+            <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <Truck className="h-5 w-5" />
+              Etiqueta de Envio
+            </h2>
+            
+            {order.trackingCode && (
+              <div className="mb-3 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Rastreio:</strong> {order.trackingCode}
+                </p>
+                {order.trackingUrl && (
+                  <a 
+                    href={order.trackingUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-600 hover:underline flex items-center gap-1 mt-1"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    Ver rastreamento
+                  </a>
+                )}
+              </div>
+            )}
+
+            {order.melhorEnvioService && (
+              <p className="text-sm text-gray-600 mb-2">
+                Serviço: <strong>{order.melhorEnvioService}</strong>
+              </p>
+            )}
+
+            {labelInfo?.melhorEnvioStatus && (
+              <p className="text-sm text-gray-600 mb-3">
+                Status ME: <span className="font-medium">{labelInfo.melhorEnvioStatus}</span>
+              </p>
+            )}
+
+            <div className="flex flex-col gap-2">
+              {(labelInfo?.hasLabel || order.melhorEnvioLabelUrl) ? (
+                <Button 
+                  onClick={handlePrintLabel}
+                  className="w-full"
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Imprimir Etiqueta
+                </Button>
+              ) : order.shipping > 0 ? (
+                <Button 
+                  onClick={handleGenerateLabel}
+                  disabled={generatingLabel}
+                  className="w-full"
+                >
+                  {generatingLabel ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Gerando...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Gerar Etiqueta
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <p className="text-xs text-gray-500 text-center">
+                  Pedido sem frete (retirada na loja)
+                </p>
+              )}
+
+              {(labelInfo?.hasLabel || order.melhorEnvioLabelUrl) && (
+                <Button 
+                  variant="outline"
+                  onClick={handleGenerateLabel}
+                  disabled={generatingLabel}
+                  size="sm"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${generatingLabel ? 'animate-spin' : ''}`} />
+                  Regenerar Etiqueta
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="bg-white rounded-lg shadow p-4 space-y-2">

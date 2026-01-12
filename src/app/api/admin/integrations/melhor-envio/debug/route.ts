@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { buildAuthorizeUrl, commonHeaders, ME_SCOPES } from '@/lib/melhorenvio-oauth';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const sandbox = (process.env.MELHOR_ENVIO_SANDBOX || 'true').toLowerCase() !== 'false';
   const base = sandbox ? 'https://sandbox.melhorenvio.com.br' : 'https://melhorenvio.com.br';

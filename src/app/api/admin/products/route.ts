@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/admin/products
  * 
@@ -69,12 +71,57 @@ export async function GET(request: Request) {
  * Requer role: ADMIN ou OWNER
  */
 export async function POST(request: Request) {
-  // Criação de produtos foi desabilitada: catálogo vem do banco externo.
-  // Admin pode apenas editar campos locais (overlay) via PUT em /api/admin/products/[id].
-  return NextResponse.json(
-    { error: 'Product creation disabled. Use PUT /api/admin/products/[id] to edit local fields.' },
-    { status: 405 }
-  );
+  try {
+    const session = await auth();
+
+    if (!session?.user || session.user.role === 'CUSTOMER') {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { 
+      name, 
+      description, 
+      price, 
+      promotionalPrice,
+      stock, 
+      categoryId, 
+      imageUrl,
+      isFeatured,
+      isPromo,
+      stockLocation
+    } = body;
+
+    if (!name || !price || !categoryId) {
+      return NextResponse.json({ error: 'Campos obrigatórios ausentes' }, { status: 400 });
+    }
+
+    const slug = generateSlug(name) + '-' + Math.random().toString(36).substring(2, 7);
+    const sku = 'SKU-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+
+    const product = await prisma.product.create({
+      data: {
+        name,
+        slug,
+        sku,
+        description,
+        price,
+        promotionalPrice: promotionalPrice ? parseFloat(promotionalPrice) : null,
+        stock: parseInt(stock) || 0,
+        categoryId,
+        imageUrl: imageUrl || null,
+        isFeatured: isFeatured ?? false,
+        isPromo: isPromo ?? false,
+        stockLocation: stockLocation || null,
+        isActive: true,
+      },
+    });
+
+    return NextResponse.json(product);
+  } catch (error) {
+    console.error('[ADMIN_PRODUCT_POST]', error);
+    return NextResponse.json({ error: 'Erro ao criar produto' }, { status: 500 });
+  }
 }
 
 function generateSlug(text: string): string {

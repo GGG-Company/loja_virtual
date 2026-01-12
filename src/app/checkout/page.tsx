@@ -58,6 +58,22 @@ export default function CheckoutPage() {
   const [paymentProcessed, setPaymentProcessed] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
 
+  // Estados para frete
+  const [shippingOptions, setShippingOptions] = useState<Array<{
+    id: number;
+    name: string;
+    price: number;
+    delivery_time: number;
+    company: { name: string; picture: string };
+  }>>([]);
+  const [selectedShipping, setSelectedShipping] = useState<{
+    id: number;
+    name: string;
+    price: number;
+    delivery_time: number;
+  } | null>(null);
+  const [loadingShipping, setLoadingShipping] = useState(false);
+
   // Persistência do progresso do checkout
   useEffect(() => {
     try {
@@ -164,6 +180,59 @@ export default function CheckoutPage() {
   }, [status]);
 
   const total = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const shippingCost = selectedShipping?.price || 0;
+  const totalWithShipping = total + shippingCost;
+
+  // Função para calcular frete via Melhor Envio
+  const calcularFrete = async (cep: string) => {
+    const cepLimpo = cep.replace(/\D/g, '');
+    if (cepLimpo.length !== 8 || cartItems.length === 0) return;
+
+    setLoadingShipping(true);
+    setShippingOptions([]);
+    setSelectedShipping(null);
+
+    try {
+      const items = cartItems.map(item => ({
+        productId: item.id,
+        quantity: item.quantity,
+        weightKg: item.weight || 0.5,
+        dimensions: item.dimensions || { height: 10, width: 15, length: 20 },
+        price: item.price,
+      }));
+
+      const response = await fetch('/api/shipping/quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          destinationZip: cepLimpo,
+          items,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.options && data.options.length > 0) {
+        setShippingOptions(data.options);
+        // Selecionar a primeira opção automaticamente
+        const firstOption = data.options[0];
+        setSelectedShipping({
+          id: firstOption.id,
+          name: firstOption.name,
+          price: firstOption.price,
+          delivery_time: firstOption.delivery_time,
+        });
+        toast.success('Frete calculado com sucesso!');
+      } else {
+        toast.error(data.error || 'Nenhuma opção de frete disponível');
+      }
+    } catch (error) {
+      console.error('[CHECKOUT] Erro ao calcular frete:', error);
+      toast.error('Erro ao calcular frete');
+    } finally {
+      setLoadingShipping(false);
+    }
+  };
 
   const buscarCep = async (cep: string) => {
     // Remove caracteres não numéricos
@@ -191,6 +260,9 @@ export default function CheckoutPage() {
       });
 
       toast.success('Endereço encontrado!');
+      
+      // Calcular frete automaticamente após encontrar o CEP
+      await calcularFrete(cep);
     } catch (error) {
       toast.error('Erro ao buscar CEP');
     } finally {
@@ -226,6 +298,10 @@ export default function CheckoutPage() {
       if (!entregaForm.cep || !entregaForm.endereco || !entregaForm.numero || 
           !entregaForm.bairro || !entregaForm.cidade || !entregaForm.estado) {
         toast.error('Preencha todos os campos obrigatórios');
+        return;
+      }
+      if (!selectedShipping) {
+        toast.error('Selecione uma opção de frete');
         return;
       }
     }
@@ -307,6 +383,13 @@ export default function CheckoutPage() {
         dados: dadosForm,
         entrega: entregaForm,
         paymentMethod,
+        // Dados do frete selecionado
+        shipping: selectedShipping ? {
+          serviceId: selectedShipping.id,
+          serviceName: selectedShipping.name,
+          price: selectedShipping.price,
+          deliveryTime: selectedShipping.delivery_time,
+        } : null,
       };
 
       const response = await fetch('/api/orders', {
@@ -333,7 +416,7 @@ export default function CheckoutPage() {
       const query = new URLSearchParams({
         orderId: order.id,
         method: paymentMethod,
-        total: total.toFixed(2),
+        total: totalWithShipping.toFixed(2),
         number: order.orderNumber || '',
       }).toString();
       router.push(`/checkout/pagamento?${query}`);
@@ -596,12 +679,91 @@ export default function CheckoutPage() {
                         </div>
                       </div>
 
+                      {/* Seleção de Frete */}
+                      <div className="pt-6 border-t mt-6">
+                        <Label className="text-lg font-semibold mb-4 block">Opções de Frete *</Label>
+                        
+                        {loadingShipping && (
+                          <div className="flex items-center justify-center py-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                            <span className="ml-3 text-gray-600">Calculando opções de frete...</span>
+                          </div>
+                        )}
+
+                        {!loadingShipping && shippingOptions.length === 0 && (
+                          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
+                            {entregaForm.cep.replace(/\D/g, '').length === 8 
+                              ? 'Nenhuma opção de frete disponível para este CEP'
+                              : 'Digite um CEP válido para calcular as opções de frete'}
+                          </div>
+                        )}
+
+                        {!loadingShipping && shippingOptions.length > 0 && (
+                          <div className="space-y-3">
+                            {shippingOptions.map((option) => (
+                              <div
+                                key={option.id}
+                                onClick={() => setSelectedShipping({
+                                  id: option.id,
+                                  name: option.name,
+                                  price: option.price,
+                                  delivery_time: option.delivery_time,
+                                })}
+                                className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                                  selectedShipping?.id === option.id
+                                    ? 'border-primary-600 bg-primary-50 ring-2 ring-primary-600'
+                                    : 'border-gray-300 hover:border-primary-400'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                      selectedShipping?.id === option.id
+                                        ? 'border-primary-600 bg-primary-600'
+                                        : 'border-gray-300'
+                                    }`}>
+                                      {selectedShipping?.id === option.id && (
+                                        <div className="w-2 h-2 bg-white rounded-full" />
+                                      )}
+                                    </div>
+                                    {option.company?.picture && (
+                                      <Image 
+                                        src={option.company.picture} 
+                                        alt={option.company.name || option.name}
+                                        width={40}
+                                        height={40}
+                                        className="object-contain"
+                                      />
+                                    )}
+                                    <div>
+                                      <p className="font-semibold text-gray-900">{option.name}</p>
+                                      <p className="text-sm text-gray-600">
+                                        Entrega em até {option.delivery_time} dias úteis
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="font-bold text-primary-700">
+                                      {option.price === 0 ? 'Grátis' : `R$ ${option.price.toFixed(2).replace('.', ',')}`}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {!selectedShipping && shippingOptions.length > 0 && (
+                          <p className="text-sm text-red-600 mt-2">* Selecione uma opção de frete para continuar</p>
+                        )}
+                      </div>
+
                       <div className="flex gap-4 pt-6">
                         <Button type="button" variant="outline" onClick={() => setCurrentStep(1)}>
                           Voltar
                         </Button>
-                        <Button type="submit" className="flex-1">
-                          Continuar
+                        <Button type="submit" className="flex-1" disabled={!selectedShipping || loadingShipping}>
+                          {!selectedShipping ? 'Selecione o frete para continuar' : 'Continuar'}
                         </Button>
                       </div>
                     </form>
@@ -794,23 +956,36 @@ export default function CheckoutPage() {
                 
                 <div className="space-y-2 mb-4 pb-4 border-b">
                   <div className="flex justify-between text-sm">
-                    <span>Subtotal</span>
+                    <span>Subtotal ({cartItems.length} {cartItems.length === 1 ? 'item' : 'itens'})</span>
                     <span>R$ {total.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Frete</span>
-                    <span className="text-green-600">Grátis</span>
+                    {loadingShipping ? (
+                      <span className="text-gray-400">Calculando...</span>
+                    ) : selectedShipping ? (
+                      <span className={selectedShipping.price === 0 ? 'text-green-600' : ''}>
+                        {selectedShipping.price === 0 ? 'Grátis' : `R$ ${selectedShipping.price.toFixed(2)}`}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">Informe o CEP</span>
+                    )}
                   </div>
+                  {selectedShipping && (
+                    <div className="text-xs text-gray-500">
+                      {selectedShipping.name} - até {selectedShipping.delivery_time} dias úteis
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total</span>
-                  <span className="text-primary-600">R$ {total.toFixed(2)}</span>
+                  <span className="text-primary-600">R$ {totalWithShipping.toFixed(2)}</span>
                 </div>
 
                 <div className="mt-6 text-xs text-gray-500">
                   <p>✓ Compra 100% segura</p>
-                  <p>✓ Frete grátis para todo Brasil</p>
+                  <p>✓ Envio via Melhor Envio</p>
                   <p>✓ Garantia de 90 dias</p>
                 </div>
               </motion.div>

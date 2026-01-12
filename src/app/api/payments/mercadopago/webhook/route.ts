@@ -3,6 +3,8 @@ import { getMercadoPagoKeys } from '@/lib/mercadopago-config';
 import { prisma } from '@/lib/prisma';
 import { OrderStatus } from '@prisma/client';
 import { sendOrderStatusUpdate } from '@/lib/webhooks';
+import { notifyOrderStatusChange, notifyPaymentStatus } from '@/lib/notifications';
+import type { OrderStatus as OrderStatusType } from '@/lib/i18n';
 
 const MercadoPago = require('mercadopago');
 
@@ -88,6 +90,27 @@ export async function POST(req: NextRequest) {
         user: updated.user,
         paymentMethod: updated.paymentMethod,
         items: updated.items,
+      });
+
+      // Criar notificação de pagamento
+      await notifyPaymentStatus({
+        userId: updated.userId,
+        orderId: updated.id,
+        orderNumber: updated.orderNumber,
+        status: paymentInfo.status === 'approved' ? 'approved' 
+              : paymentInfo.status === 'rejected' ? 'rejected'
+              : paymentInfo.status === 'refunded' ? 'refunded'
+              : 'pending',
+        amount: updated.total,
+        paymentMethod: updated.paymentMethod,
+      });
+
+      // Criar notificação de status do pedido
+      await notifyOrderStatusChange({
+        userId: updated.userId,
+        orderId: updated.id,
+        orderNumber: updated.orderNumber,
+        status: orderStatus as OrderStatusType,
       });
 
       console.log(`Pedido ${orderId} atualizado para ${orderStatus}`);

@@ -132,14 +132,14 @@ function CheckoutPagamentoContent() {
     generateBoletoMercadoPago();
   }, [method, orderId, total, session]);
 
-  // Buscar createdAt do pedido para contagem regressiva (15min)
+  // Buscar createdAt do pedido para contagem regressiva (1 minuto)
   useEffect(() => {
     const loadOrder = async () => {
       if (!orderId) return;
       try {
         const response = await apiClient.get(`/api/user/orders/${orderId}`);
         const created = new Date(response.data.createdAt).getTime();
-        const expiresAt = created + 30 * 1000;
+        const expiresAt = created + 120 * 1000; // 2 minutos
         const now = Date.now();
         const initial = Math.max(0, Math.floor((expiresAt - now) / 1000));
         setTimeLeft(initial);

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendOrderStatusUpdate } from '@/lib/webhooks';
+import { notifyOrderStatusChange } from '@/lib/notifications';
+import type { OrderStatus } from '@/lib/i18n';
 
 /**
  * Webhook do Melhor Envio para atualizar status de entrega
@@ -162,6 +164,16 @@ export async function POST(req: NextRequest) {
           event: type,
           melhorEnvioStatus: data.status,
         },
+      });
+
+      // Notificar o cliente sobre a mudança de status
+      await notifyOrderStatusChange({
+        userId: updated.userId,
+        orderId: updated.id,
+        orderNumber: updated.orderNumber,
+        status: orderStatus as OrderStatus,
+        trackingCode: updated.trackingCode,
+        trackingUrl: updated.trackingUrl,
       });
 
       console.info('[MELHOR_ENVIO_WEBHOOK] Pedido atualizado:', {

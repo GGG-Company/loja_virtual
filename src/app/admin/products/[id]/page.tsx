@@ -17,6 +17,8 @@ interface Product {
   stock: number;
   categoryId: string;
   status: string;
+  isFeatured: boolean;
+  isPromo: boolean;
   stockLocation?: string | null;
   slug?: string;
   imageUrl?: string | null;
@@ -31,6 +33,7 @@ export default function EditProductPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [product, setProduct] = useState<Product | null>(null);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [imagePreview, setImagePreview] = useState<string>('/placeholder.svg');
   const [showPreview, setShowPreview] = useState(false);
   const [slug, setSlug] = useState('');
@@ -44,10 +47,17 @@ export default function EditProductPage() {
     status: 'ACTIVE',
     imageUrl: '',
     isFeatured: false,
+    isPromo: false,
     stockLocation: '',
   });
 
   useEffect(() => {
+    // Carregar categorias
+    fetch('/api/categories')
+      .then(res => res.json())
+      .then(data => setCategories(data.categories || []))
+      .catch(err => console.error('Erro ao carregar categorias:', err));
+
     if (productId) {
       fetch(`/api/admin/products/${productId}`)
         .then((res) => res.json())
@@ -64,6 +74,7 @@ export default function EditProductPage() {
             status: data.status,
             imageUrl: data.imageUrl || '',
             isFeatured: data.isFeatured || false,
+            isPromo: data.isPromo || false,
             stockLocation: data.stockLocation || '',
           });
           setImagePreview(data.imageUrl || '/placeholder.svg');
@@ -310,18 +321,34 @@ export default function EditProductPage() {
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            <input
-              id="isFeatured"
-              name="isFeatured"
-              type="checkbox"
-              checked={formData.isFeatured}
-              onChange={(e) => setFormData({ ...formData, isFeatured: e.target.checked })}
-              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-            />
-            <Label htmlFor="isFeatured" className="cursor-pointer">
-              ⭐ Produto em Destaque (aparece na home)
-            </Label>
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-2">
+              <input
+                id="isFeatured"
+                name="isFeatured"
+                type="checkbox"
+                checked={formData.isFeatured}
+                onChange={(e) => setFormData({ ...formData, isFeatured: e.target.checked })}
+                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+              />
+              <Label htmlFor="isFeatured" className="cursor-pointer">
+                ⭐ Produto em Destaque (aparece na home)
+              </Label>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                id="isPromo"
+                name="isPromo"
+                type="checkbox"
+                checked={formData.isPromo}
+                onChange={(e) => setFormData({ ...formData, isPromo: e.target.checked })}
+                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+              />
+              <Label htmlFor="isPromo" className="cursor-pointer">
+                🔥 Produto em Oferta (aparece na página de ofertas)
+              </Label>
+            </div>
           </div>
 
           <div>
@@ -335,9 +362,11 @@ export default function EditProductPage() {
               className="w-full h-10 rounded-lg border border-gray-300 px-3 text-sm shadow-sm bg-white font-sans text-gray-900 focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
             >
               <option value="">Selecione uma categoria</option>
-              <option value="1">Ferramentas Elétricas</option>
-              <option value="2">Ferramentas Manuais</option>
-              <option value="3">Jardinagem</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
             </select>
           </div>
 

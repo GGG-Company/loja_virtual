@@ -16,6 +16,11 @@
 # Misc
 .DS_Store
 *.pem
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # Debug
 npm-debug.log*
@@ -28,5 +33,14 @@ yarn-error.log*
 # TypeScript
 *.tsbuildinfo
 
+# SQLite
+prisma/*.db
+prisma/*.db-journal
+
+# Uploads
+/public/uploads/*
+!/public/uploads/.gitkeep
+
 # Prisma
-prisma/migrations/
+# migrations should be committed to git
+# prisma/migrations/

@@ -19,7 +19,8 @@ function basicAuthHeader() {
 }
 
 export const ME_SCOPES = (
-  process.env.MELHOR_ENVIO_SCOPES || 'shipping-calculate shipping-tracking ecommerce-shipping shipping-companies orders-read users-read'
+  process.env.MELHOR_ENVIO_SCOPES || 
+  'cart-read cart-write shipping-calculate shipping-cancel shipping-checkout shipping-companies shipping-generate shipping-preview shipping-print shipping-share shipping-tracking ecommerce-shipping orders-read users-read users-write'
 ).trim();
 
 export function buildAuthorizeUrl(state: string = 'state') {

@@ -3,39 +3,41 @@
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { motion } from 'framer-motion';
-import { Tag, Percent, Gift } from 'lucide-react';
+import { Tag, Percent, Gift, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
 
-const offers = [
-  {
-    id: 1,
-    title: 'Parafusadeira Makita DHP453Z',
-    originalPrice: 899,
-    salePrice: 629,
-    discount: 30,
-    image: null,
-    badge: 'DESTAQUE',
-  },
-  {
-    id: 2,
-    title: 'Furadeira Bosch GSB 180-LI',
-    originalPrice: 1299,
-    salePrice: 909,
-    discount: 30,
-    image: null,
-    badge: 'OFERTA',
-  },
-  {
-    id: 3,
-    title: 'Serra Circular DeWalt DCD996B',
-    originalPrice: 2499,
-    salePrice: 1749,
-    discount: 30,
-    image: null,
-    badge: 'PROMOÇÃO',
-  },
-];
+interface Product {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+  promotionalPrice: number | null;
+  compareAtPrice: number | null;
+  imageUrl: string | null;
+}
 
 export default function OffersPage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/products?promo=true')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.products) {
+          setProducts(data.products);
+        }
+      })
+      .catch((err) => console.error('Erro ao buscar ofertas:', err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const calculateDiscount = (price: number, compareAt: number | null) => {
+    if (!compareAt) return 0;
+    return Math.round(((compareAt - price) / compareAt) * 100);
+  };
+
   return (
     <>
       <Header />
@@ -77,7 +79,7 @@ export default function OffersPage() {
               </motion.div>
 
               <h1 className="text-6xl font-bold mb-4">
-                Até 50% OFF
+                Grandes Descontos
               </h1>
               <p className="text-2xl text-white/90 mb-2">
                 Promoções por tempo limitado
@@ -91,89 +93,106 @@ export default function OffersPage() {
 
         {/* Offers Grid */}
         <div className="container mx-auto px-4 py-16">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="grid md:grid-cols-2 lg:grid-cols-3 gap-8"
-          >
-            {offers.map((offer, index) => (
-              <motion.div
-                key={offer.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 + index * 0.1 }}
-                whileHover={{ y: -8 }}
-                className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all overflow-hidden group"
-              >
-                {/* Image */}
-                <div className="relative aspect-square bg-gradient-to-br from-metallic-100 to-metallic-200 flex items-center justify-center">
-                  <p className="text-8xl">🔨</p>
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <Loader2 className="h-12 w-12 animate-spin text-red-500" />
+              <p className="text-metallic-600 mt-4">Buscando as melhores ofertas...</p>
+            </div>
+          ) : (
+            <>
+              {products.length > 0 ? (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {products.map((product, index) => {
+                    const price = product.promotionalPrice || product.price;
+                    const originalPrice = product.compareAtPrice || product.price;
+                    const discount = calculateDiscount(price, originalPrice);
 
-                  {/* Badge */}
-                  <motion.div
-                    initial={{ x: 100, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.6 + index * 0.1 }}
-                    className="absolute top-4 right-4"
-                  >
-                    <span className="px-4 py-2 bg-red-600 text-white font-bold rounded-full text-sm shadow-lg">
-                      {offer.badge}
-                    </span>
-                  </motion.div>
+                    return (
+                      <motion.div
+                        key={product.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        whileHover={{ y: -8 }}
+                        className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all overflow-hidden group border border-metallic-100"
+                      >
+                        <Link href={`/produtos/${product.slug}`}>
+                          {/* Image */}
+                          <div className="relative aspect-square bg-white flex items-center justify-center p-8 overflow-hidden">
+                            {product.imageUrl ? (
+                              <img 
+                                src={product.imageUrl} 
+                                alt={product.name}
+                                className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
+                              />
+                            ) : (
+                              <p className="text-8xl group-hover:scale-110 transition-transform duration-500">🔨</p>
+                            )}
 
-                  {/* Discount Badge */}
-                  <div className="absolute bottom-4 left-4 bg-orange-500 text-white px-4 py-2 rounded-lg font-bold shadow-lg">
-                    <Percent className="inline h-4 w-4 mr-1" />
-                    {offer.discount}% OFF
-                  </div>
+                            {/* Badge */}
+                            <div className="absolute top-4 right-4">
+                              <span className="px-4 py-2 bg-red-600 text-white font-bold rounded-full text-sm shadow-lg animate-pulse">
+                                OFERTA
+                              </span>
+                            </div>
+
+                            {/* Discount Badge */}
+                            {discount > 0 && (
+                              <div className="absolute bottom-4 left-4 bg-orange-500 text-white px-4 py-2 rounded-lg font-bold shadow-lg">
+                                <Percent className="inline h-4 w-4 mr-1" />
+                                {discount}% OFF
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Content */}
+                          <div className="p-6 space-y-4">
+                            <h3 className="text-lg font-bold text-metallic-900 line-clamp-2 h-14 group-hover:text-red-600 transition-colors">
+                              {product.name}
+                            </h3>
+
+                            <div>
+                              {originalPrice > price && (
+                                <p className="text-sm text-metallic-500 line-through">
+                                  De R$ {originalPrice.toFixed(2)}
+                                </p>
+                              )}
+                              <p className="text-3xl font-bold text-red-600">
+                                R$ {price.toFixed(2)}
+                              </p>
+                              <p className="text-xs text-metallic-600 mt-1">
+                                ou 12x de R$ {(price / 12).toFixed(2)}
+                              </p>
+                            </div>
+
+                            <div className="pt-2 border-t border-metallic-100">
+                              <p className="text-sm text-green-600 font-semibold flex items-center gap-2">
+                                <Gift className="h-4 w-4" />
+                                Confira agora mesmo
+                              </p>
+                            </div>
+                          </div>
+                        </Link>
+                      </motion.div>
+                    );
+                  })}
                 </div>
-
-                {/* Content */}
-                <div className="p-6 space-y-4">
-                  <h3 className="text-xl font-bold text-metallic-900 group-hover:text-primary-600 transition-colors">
-                    {offer.title}
-                  </h3>
-
-                  <div>
-                    <p className="text-sm text-metallic-500 line-through">
-                      De R$ {offer.originalPrice.toFixed(2)}
-                    </p>
-                    <p className="text-3xl font-bold text-red-600">
-                      R$ {offer.salePrice.toFixed(2)}
-                    </p>
-                    <p className="text-xs text-metallic-600 mt-1">
-                      ou 12x de R$ {(offer.salePrice / 12).toFixed(2)}
-                    </p>
-                  </div>
-
-                  <div className="pt-2 border-t border-metallic-200">
-                    <p className="text-sm text-green-600 font-semibold flex items-center gap-2">
-                      <Gift className="h-4 w-4" />
-                      Economize R${' '}
-                      {(offer.originalPrice - offer.salePrice).toFixed(2)}
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
-
-          {/* Empty State se não houver ofertas */}
-          {offers.length === 0 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-20"
-            >
-              <Tag className="h-24 w-24 text-metallic-300 mx-auto mb-6" />
-              <h2 className="text-2xl font-bold text-metallic-900 mb-4">
-                Nenhuma oferta disponível no momento
-              </h2>
-              <p className="text-metallic-600">
-                Fique atento! Novas promoções chegam em breve.
-              </p>
-            </motion.div>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-center py-20"
+                >
+                  <Tag className="h-24 w-24 text-metallic-300 mx-auto mb-6" />
+                  <h2 className="text-2xl font-bold text-metallic-900 mb-4">
+                    Nenhuma oferta disponível no momento
+                  </h2>
+                  <p className="text-metallic-600">
+                    Fique atento! Novas promoções chegam em breve.
+                  </p>
+                </motion.div>
+              )}
+            </>
           )}
         </div>
       </main>

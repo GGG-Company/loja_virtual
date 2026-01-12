@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const session = await auth();
@@ -30,12 +32,12 @@ export async function GET(req: NextRequest) {
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '10')));
     const search = (searchParams.get('search') || '').trim();
 
-    const where = search
+    const where: any = search
       ? {
           OR: [
-            { orderNumber: { contains: search } },
-            { user: { name: { contains: search } } },
-            { user: { email: { contains: search } } },
+            { orderNumber: { contains: search, mode: 'insensitive' as const } },
+            { user: { name: { contains: search, mode: 'insensitive' as const } } },
+            { user: { email: { contains: search, mode: 'insensitive' as const } } },
           ],
         }
       : {};

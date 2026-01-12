@@ -7,7 +7,7 @@ import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { Package, Clock, CheckCircle, XCircle, ArrowLeft, Eye } from 'lucide-react';
+import { Package, Clock, CheckCircle, XCircle, ArrowLeft, Eye, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -201,8 +201,8 @@ export default function MeusPedidosPage() {
                         </div>
                       </div>
 
-                      <div className="flex gap-3">
-                        <Link href={`/minha-conta/pedidos/${order.id}`} className="flex-1">
+                      <div className="flex gap-3 flex-wrap">
+                        <Link href={`/minha-conta/pedidos/${order.id}`} className="flex-1 min-w-[150px]">
                           <Button variant="outline" className="w-full">
                             <Eye className="h-4 w-4 mr-2" />
                             Ver Detalhes
@@ -211,10 +211,21 @@ export default function MeusPedidosPage() {
                         {(order.status === 'PENDING' && order.paymentMethod !== 'quote') && (
                           <Link 
                             href={`/checkout/pagamento?orderId=${order.id}&method=${order.paymentMethod}&total=${order.total.toFixed(2)}&number=${order.orderNumber}`}
-                            className="flex-1"
+                            className="flex-1 min-w-[150px]"
                           >
                             <Button className="w-full">
                               Continuar Pagamento
+                            </Button>
+                          </Link>
+                        )}
+                        {order.status === 'DELIVERED' && (
+                          <Link 
+                            href={`/minha-conta/pedidos/${order.id}/devolucao`}
+                            className="flex-1 min-w-[150px]"
+                          >
+                            <Button variant="outline" className="w-full text-orange-600 border-orange-200 hover:bg-orange-50">
+                              <RotateCcw className="h-4 w-4 mr-2" />
+                              Solicitar Devolução
                             </Button>
                           </Link>
                         )}

@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 
 export type ListProductsParams = {
   featured?: boolean;
+  promo?: boolean;
   categorySlug?: string | null;
   limit?: number | null;
 };
@@ -40,13 +41,14 @@ function mapExternalProduct(p: any) {
 }
 
 export async function listProducts(params: ListProductsParams) {
-  const { featured, categorySlug, limit } = params;
+  const { featured, promo, categorySlug, limit } = params;
 
   if (isExternalEnabled()) {
     try {
       const base = externalBase();
       const url = new URL(base + '/products');
       if (featured) url.searchParams.set('featured', 'true');
+      if (promo) url.searchParams.set('promo', 'true');
       if (categorySlug) url.searchParams.set('category', categorySlug);
       if (limit) url.searchParams.set('limit', String(limit));
 
@@ -64,6 +66,7 @@ export async function listProducts(params: ListProductsParams) {
   // Local Prisma fallback
   const where: any = { isActive: true };
   if (featured) where.isFeatured = true;
+  if (promo) where.isPromo = true;
   if (categorySlug) where.category = { slug: categorySlug };
 
   const products = await prisma.product.findMany({

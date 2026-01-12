@@ -9,14 +9,14 @@ import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { User, Package, MapPin } from 'lucide-react';
+import { User, Package, MapPin, RotateCcw } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { statusToPt, statusBadgeClass } from '@/lib/i18n';
 
 export default function MyAccountPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'perfil' | 'pedidos' | 'enderecos'>('perfil');
+  const [activeTab, setActiveTab] = useState<'perfil' | 'pedidos' | 'devolucoes' | 'enderecos'>('perfil');
   type Order = {
     id: string;
     createdAt: string;
@@ -58,6 +58,7 @@ export default function MyAccountPage() {
   const tabs = [
     { id: 'perfil' as const, label: 'Meu Perfil', icon: User },
     { id: 'pedidos' as const, label: 'Meus Pedidos', icon: Package },
+    { id: 'devolucoes' as const, label: 'Devoluções', icon: RotateCcw },
     { id: 'enderecos' as const, label: 'Endereços', icon: MapPin },
   ];
 
@@ -134,7 +135,7 @@ export default function MyAccountPage() {
                           <Input
                             id="phone"
                             type="tel"
-                            placeholder="(71) 99999-0000"
+                            placeholder="(75) 99999-0000"
                             className="h-12"
                           />
                         </div>
@@ -238,6 +239,26 @@ export default function MyAccountPage() {
                         <p className="text-metallic-600">
                           Nenhum endereço cadastrado
                         </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'devolucoes' && (
+                    <div className="space-y-6">
+                      <div className="flex justify-between items-center">
+                        <h2 className="text-2xl font-bold text-metallic-900">
+                          Minhas Devoluções
+                        </h2>
+                      </div>
+
+                      <div className="text-center py-8">
+                        <RotateCcw className="h-12 w-12 text-metallic-300 mx-auto mb-4" />
+                        <p className="text-metallic-600 mb-4">
+                          Gerencie suas solicitações de devolução
+                        </p>
+                        <Button asChild>
+                          <a href="/minha-conta/devolucoes">Ver Devoluções</a>
+                        </Button>
                       </div>
                     </div>
                   )}

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { apiClient } from '@/lib/api-client';
 import { toast } from 'sonner';
-import { Package, MapPin, Phone, Mail, MapPinned, Search, X } from 'lucide-react';
+import { Package, MapPin, Phone, Mail, MapPinned, Search, X, FileText, Printer, RefreshCw, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { statusToPt, statusBadgeClass } from '@/lib/i18n';
 import { Input } from '@/components/ui/input';
@@ -25,7 +25,11 @@ type PickingOrder = {
   orderNumber: string;
   status: string;
   createdAt: string;
+  shipping: number;
   shippingAddress?: any;
+  melhorEnvioLabelUrl?: string | null;
+  melhorEnvioStatus?: string | null;
+  trackingCode?: string | null;
   user?: {
     name?: string | null;
     email?: string | null;
@@ -43,10 +47,22 @@ export default function AdminPickingPage() {
   const [orders, setOrders] = useState<PickingOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [generatingLabelId, setGeneratingLabelId] = useState<string | null>(null);
+  const [sendingLabelId, setSendingLabelId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [showAllModal, setShowAllModal] = useState(false);
+  
+  // Modal de código de rastreio
+  const [trackingModal, setTrackingModal] = useState<{
+    open: boolean;
+    orderId: string;
+    orderNumber: string;
+  } | null>(null);
+  const [trackingCode, setTrackingCode] = useState('');
+  const [trackingUrl, setTrackingUrl] = useState('');
 
   const pickingReport = useMemo(() => {
     const map = new Map<string, { id: string; name: string; location: string; sku?: string | null; quantity: number }>();
@@ -73,7 +89,7 @@ export default function AdminPickingPage() {
       setLoading(true);
       try {
         const response = await apiClient.get<{ orders: PickingOrder[]; pagination?: { pages?: number } }>('/api/admin/picking', {
-          params: { page, limit: 10, search: searchTerm || undefined },
+          params: { page, limit: 10, search: searchTerm || undefined, sort: sortOrder },
         });
         setOrders(response.data.orders || []);
         setTotalPages(response.data.pagination?.pages || 1);
@@ -86,7 +102,7 @@ export default function AdminPickingPage() {
     };
 
     fetchPicking();
-  }, [page, searchTerm]);
+  }, [page, searchTerm, sortOrder]);
 
   const formatLocation = (location?: string | null) => {
     if (!location) return 'Sem localização cadastrada';
@@ -99,18 +115,95 @@ export default function AdminPickingPage() {
     return parts.filter(Boolean).join(', ');
   };
 
-  const updateStatus = async (orderId: string, status: 'PROCESSING' | 'SHIPPED') => {
+  const updateStatus = async (orderId: string, status: 'PROCESSING' | 'SHIPPED', code?: string, url?: string) => {
     setUpdatingId(orderId);
     try {
-      const response = await apiClient.patch(`/api/admin/picking/${orderId}`, { status });
+      const response = await apiClient.patch(`/api/admin/picking/${orderId}`, { 
+        status,
+        trackingCode: code || undefined,
+        trackingUrl: url || undefined,
+      });
       const updated = response.data;
-      setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: updated.status, shippedAt: updated.shippedAt } : o)));
+      setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: updated.status, shippedAt: updated.shippedAt, trackingCode: updated.trackingCode } : o)));
       toast.success(status === 'PROCESSING' ? 'Pedido marcado em separação' : 'Pedido enviado para ponto de coleta');
+      
+      // Fechar modal se estiver aberto
+      if (trackingModal?.open) {
+        setTrackingModal(null);
+        setTrackingCode('');
+        setTrackingUrl('');
+      }
     } catch (error) {
       console.error('Erro ao atualizar status:', error);
       toast.error('Não foi possível atualizar o status');
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const openTrackingModal = (orderId: string, orderNumber: string) => {
+    setTrackingModal({ open: true, orderId, orderNumber });
+    setTrackingCode('');
+    setTrackingUrl('');
+  };
+
+  const handleShipWithTracking = () => {
+    if (trackingModal) {
+      updateStatus(trackingModal.orderId, 'SHIPPED', trackingCode, trackingUrl);
+    }
+  };
+
+  const generateLabel = async (orderId: string) => {
+    setGeneratingLabelId(orderId);
+    try {
+      const response = await fetch(`/api/admin/orders/${orderId}/label`, { method: 'POST' });
+      const data = await response.json();
+      
+      if (data.success) {
+        toast.success(data.message || 'Etiqueta gerada com sucesso!');
+        // Atualizar pedido na lista
+        setOrders((prev) => prev.map((o) => 
+          o.id === orderId 
+            ? { ...o, melhorEnvioLabelUrl: data.labelUrl, trackingCode: data.trackingCode, melhorEnvioStatus: 'generated' } 
+            : o
+        ));
+      } else {
+        toast.error(data.error || 'Erro ao gerar etiqueta');
+      }
+    } catch (error) {
+      console.error('Erro ao gerar etiqueta:', error);
+      toast.error('Erro ao gerar etiqueta');
+    } finally {
+      setGeneratingLabelId(null);
+    }
+  };
+
+  const printLabel = (url?: string | null) => {
+    if (url) {
+      window.open(url, '_blank');
+    } else {
+      toast.error('URL da etiqueta não disponível');
+    }
+  };
+
+  const sendLabelToCustomer = async (orderId: string) => {
+    setSendingLabelId(orderId);
+    try {
+      const response = await fetch(`/api/admin/orders/${orderId}/send-label`, {
+        method: 'POST',
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('Etiqueta enviada para o cliente com sucesso!');
+      } else {
+        toast.error(data.error || 'Erro ao enviar etiqueta');
+      }
+    } catch (error) {
+      console.error('Erro ao enviar etiqueta:', error);
+      toast.error('Erro ao enviar etiqueta para o cliente');
+    } finally {
+      setSendingLabelId(null);
     }
   };
 
@@ -120,15 +213,15 @@ export default function AdminPickingPage() {
       const { pdf, Document, Page, Text, View, StyleSheet } = await import('@react-pdf/renderer');
 
       const styles = StyleSheet.create({
-        page: { padding: 24, fontSize: 10, color: '#111' },
-        title: { fontSize: 18, fontWeight: 'bold', marginBottom: 4 },
-        subtitle: { fontSize: 10, color: '#555', marginBottom: 12 },
-        header: { flexDirection: 'row', borderBottomWidth: 1, borderColor: '#ddd', paddingBottom: 6, marginBottom: 6 },
-        row: { flexDirection: 'row', paddingVertical: 4, borderBottomWidth: 0.5, borderColor: '#eee' },
-        colName: { width: '45%' },
-        colSku: { width: '15%' },
-        colLocation: { width: '25%' },
-        colQty: { width: '15%', textAlign: 'right' },
+        page: { padding: 24, fontSize: 9, color: '#111' },
+        title: { fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
+        subtitle: { fontSize: 9, color: '#555', marginBottom: 12 },
+        header: { flexDirection: 'row', borderBottomWidth: 1, borderColor: '#333', paddingBottom: 6, marginBottom: 6, backgroundColor: '#f5f5f5' },
+        row: { flexDirection: 'row', paddingVertical: 5, borderBottomWidth: 0.5, borderColor: '#ddd', minHeight: 20 },
+        colName: { width: '40%', paddingRight: 8 },
+        colSku: { width: '18%', paddingRight: 8 },
+        colLocation: { width: '32%', paddingRight: 8 },
+        colQty: { width: '10%', textAlign: 'right' },
         bold: { fontWeight: 'bold' },
       });
 
@@ -136,7 +229,7 @@ export default function AdminPickingPage() {
 
       const doc = (
         <Document>
-          <Page size="A4" style={styles.page}>
+          <Page size="A4" orientation="landscape" style={styles.page}>
             <Text style={styles.title}>Relatório de Picking</Text>
             <Text style={styles.subtitle}>Gerado em {generatedAt}</Text>
 
@@ -148,7 +241,7 @@ export default function AdminPickingPage() {
             </View>
 
             {pickingReport.map((item) => (
-              <View key={`${item.id}-${item.location}`} style={styles.row}>
+              <View key={`${item.id}-${item.location}`} style={styles.row} wrap={false}>
                 <Text style={styles.colName}>{item.name}</Text>
                 <Text style={styles.colSku}>{item.sku || '-'}</Text>
                 <Text style={styles.colLocation}>{item.location}</Text>
@@ -180,17 +273,30 @@ export default function AdminPickingPage() {
           <h1 className="text-3xl font-bold text-metallic-900">Separação de Pedidos</h1>
           <p className="text-sm text-metallic-600">Pedidos confirmados ou em separação</p>
         </div>
-        <div className="relative w-full md:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-metallic-400" />
-          <Input
-            placeholder="Buscar pedido ou cliente"
-            value={searchTerm}
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+          <select
+            value={sortOrder}
             onChange={(e) => {
-              setSearchTerm(e.target.value);
+              setSortOrder(e.target.value as 'desc' | 'asc');
               setPage(1);
             }}
-            className="pl-10"
-          />
+            className="px-3 py-2 border border-metallic-200 rounded-md text-sm bg-white text-metallic-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="desc">Mais recentes primeiro</option>
+            <option value="asc">Mais antigos primeiro</option>
+          </select>
+          <div className="relative w-full md:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-metallic-400" />
+            <Input
+              placeholder="Buscar pedido ou cliente"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPage(1);
+              }}
+              className="pl-10"
+            />
+          </div>
         </div>
       </div>
 
@@ -365,6 +471,73 @@ export default function AdminPickingPage() {
                   ))}
                 </div>
 
+                {/* Seção de Etiqueta */}
+                {order.shipping > 0 && (
+                  <div className="mt-4 border-t border-metallic-100 pt-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 text-sm">
+                        <FileText className="h-4 w-4 text-primary-600" />
+                        <span className="font-medium text-metallic-900">Etiqueta de Envio</span>
+                        {order.trackingCode && (
+                          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                            {order.trackingCode}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        {order.melhorEnvioLabelUrl ? (
+                          <>
+                            <Button
+                              size="sm"
+                              onClick={() => printLabel(order.melhorEnvioLabelUrl)}
+                            >
+                              <Printer className="h-4 w-4 mr-1" />
+                              Imprimir
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => sendLabelToCustomer(order.id)}
+                              disabled={sendingLabelId === order.id}
+                              title="Enviar etiqueta para o cliente via webhook e notificação"
+                            >
+                              <Send className={`h-4 w-4 mr-1 ${sendingLabelId === order.id ? 'animate-pulse' : ''}`} />
+                              Enviar ao Cliente
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => generateLabel(order.id)}
+                              disabled={generatingLabelId === order.id}
+                            >
+                              <RefreshCw className={`h-4 w-4 mr-1 ${generatingLabelId === order.id ? 'animate-spin' : ''}`} />
+                              Regenerar
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            size="sm"
+                            onClick={() => generateLabel(order.id)}
+                            disabled={generatingLabelId === order.id}
+                          >
+                            {generatingLabelId === order.id ? (
+                              <>
+                                <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
+                                Gerando...
+                              </>
+                            ) : (
+                              <>
+                                <FileText className="h-4 w-4 mr-1" />
+                                Gerar Etiqueta
+                              </>
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="mt-4 flex flex-col sm:flex-row gap-3">
                   {order.status === 'CONFIRMED' && (
                     <Button
@@ -378,11 +551,11 @@ export default function AdminPickingPage() {
                   {['CONFIRMED', 'PROCESSING'].includes(order.status) && (
                     <Button
                       variant="outline"
-                      onClick={() => updateStatus(order.id, 'SHIPPED')}
+                      onClick={() => openTrackingModal(order.id, order.orderNumber)}
                       disabled={updatingId === order.id}
                       className="flex-1"
                     >
-                      {updatingId === order.id ? 'Atualizando...' : 'Enviar ao ponto de coleta'}
+                      {updatingId === order.id ? 'Atualizando...' : 'Marcar como Enviado'}
                     </Button>
                   )}
                 </div>
@@ -459,6 +632,63 @@ export default function AdminPickingPage() {
             </div>
             <div className="flex items-center justify-end gap-2 p-4 border-t border-metallic-100">
               <Button variant="ghost" onClick={() => setShowAllModal(false)}>Fechar</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Código de Rastreio */}
+      {trackingModal?.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden border border-metallic-100">
+            <div className="flex items-center justify-between p-4 border-b border-metallic-100">
+              <div>
+                <p className="text-lg font-semibold text-metallic-900">Marcar como Enviado</p>
+                <p className="text-sm text-metallic-600">Pedido {trackingModal.orderNumber}</p>
+              </div>
+              <button
+                className="p-2 rounded-md hover:bg-metallic-50 text-metallic-600"
+                aria-label="Fechar"
+                onClick={() => setTrackingModal(null)}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-metallic-700 mb-1">
+                  Código de Rastreio (opcional)
+                </label>
+                <Input
+                  value={trackingCode}
+                  onChange={(e) => setTrackingCode(e.target.value)}
+                  placeholder="Ex: BR123456789BR"
+                />
+                <p className="text-xs text-metallic-500 mt-1">
+                  Se já gerou etiqueta pelo Melhor Envio, o código será preenchido automaticamente.
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-metallic-700 mb-1">
+                  URL de Rastreio (opcional)
+                </label>
+                <Input
+                  value={trackingUrl}
+                  onChange={(e) => setTrackingUrl(e.target.value)}
+                  placeholder="Ex: https://rastreamento.correios.com.br/..."
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 p-4 border-t border-metallic-100">
+              <Button variant="ghost" onClick={() => setTrackingModal(null)}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleShipWithTracking}
+                disabled={updatingId === trackingModal.orderId}
+              >
+                {updatingId === trackingModal.orderId ? 'Enviando...' : 'Confirmar Envio'}
+              </Button>
             </div>
           </div>
         </div>

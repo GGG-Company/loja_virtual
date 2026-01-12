@@ -71,7 +71,7 @@ export function Footer() {
             <ul className="space-y-3">
               <li className="flex items-center gap-2 text-metallic-400 text-sm">
                 <Phone className="h-4 w-4" />
-                (71) 3333-4444
+                (75) 3333-4444
               </li>
               <li className="flex items-center gap-2 text-metallic-400 text-sm">
                 <Mail className="h-4 w-4" />
@@ -79,7 +79,7 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2 text-metallic-400 text-sm">
                 <MapPin className="h-4 w-4" />
-                Salvador, BA
+                Feira de Santana, BA
               </li>
             </ul>
           </div>

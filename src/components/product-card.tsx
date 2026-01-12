@@ -137,13 +137,15 @@ export function ProductCard({ product, className }: ProductCardProps) {
       </motion.button>
 
       {/* Imagem */}
-      <div className="relative h-64 bg-metallic-100 overflow-hidden">
-        <motion.div whileHover={{ scale: 1.05 }} transition={{ duration: 0.3 }}>
+      <div className="relative w-full aspect-square bg-gradient-to-b from-metallic-50 to-metallic-100 overflow-hidden">
+        <motion.div whileHover={{ scale: 1.05 }} transition={{ duration: 0.3 }} className="relative w-full h-full p-4">
           <Image
             src={imageSrc}
             alt={product.images?.[0]?.alt || product.name}
             fill
-            className="object-cover"
+            className="object-contain drop-shadow-md"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            priority={false}
           />
         </motion.div>
 

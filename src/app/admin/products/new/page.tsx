@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,16 +12,28 @@ import Link from 'next/link';
 export default function NewProductPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [imagePreview, setImagePreview] = useState<string>('/placeholder.svg');
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     price: '',
+    promotionalPrice: '',
     stock: '',
     categoryId: '',
     imageUrl: '',
+    isFeatured: false,
+    isPromo: false,
     stockLocation: '',
   });
+
+  useEffect(() => {
+    // Carregar categorias dinamicamente
+    fetch('/api/categories')
+      .then(res => res.json())
+      .then(data => setCategories(data.categories || []))
+      .catch(err => console.error('Erro ao carregar categorias:', err));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,8 +46,9 @@ export default function NewProductPage() {
         body: JSON.stringify({
           ...formData,
           price: parseFloat(formData.price),
+          promotionalPrice: formData.promotionalPrice ? parseFloat(formData.promotionalPrice) : null,
           stock: parseInt(formData.stock),
-            stockLocation: formData.stockLocation || null,
+          stockLocation: formData.stockLocation || null,
         }),
       });
 
@@ -144,7 +157,7 @@ export default function NewProductPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="price">Preço (R$)</Label>
+              <Label htmlFor="price">Preço Normal (R$)</Label>
               <Input
                 id="price"
                 name="price"
@@ -158,17 +171,31 @@ export default function NewProductPage() {
             </div>
 
             <div>
-              <Label htmlFor="stock">Estoque</Label>
+              <Label htmlFor="promotionalPrice">Preço Promocional (R$)</Label>
               <Input
-                id="stock"
-                name="stock"
+                id="promotionalPrice"
+                name="promotionalPrice"
                 type="number"
-                value={formData.stock}
+                step="0.01"
+                value={formData.promotionalPrice}
                 onChange={handleChange}
-                required
-                placeholder="0"
+                placeholder="Opcional"
               />
+              <p className="text-xs text-gray-500 mt-1">Deixe vazio se não houver promoção</p>
             </div>
+          </div>
+
+          <div>
+            <Label htmlFor="stock">Estoque Inicial</Label>
+            <Input
+              id="stock"
+              name="stock"
+              type="number"
+              value={formData.stock}
+              onChange={handleChange}
+              required
+              placeholder="0"
+            />
           </div>
 
           <div>
@@ -182,6 +209,36 @@ export default function NewProductPage() {
             />
           </div>
 
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-2">
+              <input
+                id="isFeatured"
+                name="isFeatured"
+                type="checkbox"
+                checked={formData.isFeatured}
+                onChange={(e) => setFormData({ ...formData, isFeatured: e.target.checked })}
+                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+              />
+              <Label htmlFor="isFeatured" className="cursor-pointer">
+                ⭐ Produto em Destaque (aparece na home)
+              </Label>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                id="isPromo"
+                name="isPromo"
+                type="checkbox"
+                checked={formData.isPromo}
+                onChange={(e) => setFormData({ ...formData, isPromo: e.target.checked })}
+                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+              />
+              <Label htmlFor="isPromo" className="cursor-pointer">
+                🔥 Produto em Oferta (aparece na página de ofertas)
+              </Label>
+            </div>
+          </div>
+
           <div>
             <Label htmlFor="categoryId">Categoria</Label>
             <select
@@ -193,9 +250,11 @@ export default function NewProductPage() {
               className="w-full h-10 rounded-lg border border-gray-300 px-3 text-sm shadow-sm bg-white font-sans text-gray-900 focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
             >
               <option value="">Selecione uma categoria</option>
-              <option value="1">Ferramentas Elétricas</option>
-              <option value="2">Ferramentas Manuais</option>
-              <option value="3">Jardinagem</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
             </select>
           </div>
 

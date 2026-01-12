@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ShoppingCart, User, Search, Menu } from 'lucide-react';
 import { Button } from './ui/button';
+import { NotificationBell } from './notification-bell';
 import { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 
@@ -65,6 +66,8 @@ export function Header() {
           <div className="flex items-center gap-4">
             {session ? (
               <div className="flex items-center gap-3">
+                <NotificationBell />
+
                 <Link href="/minha-conta">
                   <Button variant="ghost" size="sm">
                     <User className="h-5 w-5 mr-2" />

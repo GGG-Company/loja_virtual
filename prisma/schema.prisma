@@ -4,7 +4,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // ============================================
@@ -88,6 +89,9 @@ model User {
   sessions      Session[]
   orders        Order[]
   carts         Cart[]
+  returns       Return[]  // Devoluções solicitadas pelo usuário
+  notifications Notification[]  // Notificações do usuário
+  reviews       Review[]  // Avaliações feitas pelo usuário
 
   @@index([email])
   @@map("users")
@@ -192,6 +196,7 @@ model Product {
   
   // Flags
   isFeatured      Boolean  @default(false)
+  isPromo         Boolean  @default(false)
   isActive        Boolean  @default(true)
   
   // SEO
@@ -210,6 +215,7 @@ model Product {
   orderItems      OrderItem[]
   cartItems       CartItem[]
   stockLogs       StockLog[]
+  reviews         Review[]
 
   @@index([sku])
   @@index([slug])
@@ -316,6 +322,14 @@ model Order {
   shippedAt       DateTime?
   deliveredAt     DateTime?
   
+  // Melhor Envio - Etiqueta
+  melhorEnvioOrderId  String?   // ID do pedido no carrinho do Melhor Envio
+  melhorEnvioLabelId  String?   // ID da etiqueta gerada
+  melhorEnvioStatus   String?   // Status da etiqueta (pending, released, posted, delivered, etc)
+  melhorEnvioService  String?   // Serviço escolhido (PAC, SEDEX, etc)
+  melhorEnvioLabelUrl String?   // URL para impressão da etiqueta
+  shippingServiceId   String?   // ID do serviço de frete selecionado
+  
   // Cupom
   couponId        String?
   
@@ -330,6 +344,8 @@ model Order {
   user            User          @relation(fields: [userId], references: [id])
   coupon          Coupon?       @relation(fields: [couponId], references: [id])
   items           OrderItem[]
+  returns         Return[]      // Devoluções associadas ao pedido
+  reviews         Review[]      // Avaliações associadas ao pedido
 
   @@index([userId])
   @@index([orderNumber])
@@ -530,6 +546,187 @@ model ActivityLog {
   @@index([action])
   @@index([createdAt])
   @@map("activity_logs")
+}
+
+// ============================================
+// RETURNS & REFUNDS (Devoluções)
+// ============================================
+
+enum ReturnStatus {
+  REQUESTED        // Solicitado pelo cliente
+  PENDING_REVIEW   // Aguardando análise do admin
+  APPROVED         // Aprovado - aguardando envio
+  LABEL_GENERATED  // Etiqueta de devolução gerada
+  IN_TRANSIT       // Produto em trânsito de volta
+  RECEIVED         // Produto recebido pela loja
+  INSPECTING       // Em inspeção/análise
+  REFUND_PENDING   // Aguardando reembolso
+  REFUNDED         // Reembolsado
+  REJECTED         // Devolução rejeitada
+  CANCELLED        // Cancelado pelo cliente
+}
+
+enum ReturnReason {
+  DEFECTIVE        // Produto com defeito
+  WRONG_PRODUCT    // Produto errado enviado
+  NOT_AS_DESCRIBED // Produto diferente do anunciado
+  DAMAGED_SHIPPING // Danificado no transporte
+  CHANGED_MIND     // Arrependimento (7 dias CDC)
+  SIZE_ISSUE       // Tamanho/medidas incorretas
+  OTHER            // Outro motivo
+}
+
+model Return {
+  id              String        @id @default(cuid())
+  returnNumber    String        @unique // "DEV-2026-000001"
+  
+  // Relacionamentos
+  orderId         String
+  userId          String
+  
+  // Status
+  status          ReturnStatus  @default(REQUESTED)
+  
+  // Motivo
+  reason          ReturnReason
+  reasonDetails   String?       // Descrição detalhada do cliente
+  
+  // Itens sendo devolvidos
+  items           ReturnItem[]
+  
+  // Mídia (Imagem e Vídeo do Produto)
+  imageUrl        String?       // URL da imagem do produto em devolução
+  videoUrl        String?       // URL do vídeo do produto em devolução
+  
+  // Valores
+  refundAmount    Float?        // Valor a ser reembolsado
+  shippingRefund  Float?        // Reembolso do frete original
+  
+  // Logística Reversa (Melhor Envio)
+  melhorEnvioOrderId   String?  // ID no carrinho do ME
+  melhorEnvioLabelId   String?  // ID da etiqueta reversa
+  melhorEnvioLabelUrl  String?  // URL para impressão
+  trackingCode         String?  // Código de rastreio da devolução
+  trackingUrl          String?  // URL de rastreamento
+  
+  // Análise Admin
+  adminNotes      String?       // Notas internas do admin
+  reviewedBy      String?       // ID do admin que analisou
+  reviewedAt      DateTime?     // Data da análise
+  
+  // Reembolso
+  refundMethod    String?       // "original_payment", "store_credit", "bank_transfer"
+  refundedAt      DateTime?
+  refundReference String?       // Referência do reembolso (ID transação)
+  
+  // Datas
+  shippedAt       DateTime?     // Cliente enviou o produto
+  receivedAt      DateTime?     // Loja recebeu o produto
+  inspectedAt     DateTime?     // Data da inspeção
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  // Relations
+  order           Order         @relation(fields: [orderId], references: [id])
+  user            User          @relation(fields: [userId], references: [id])
+
+  @@index([orderId])
+  @@index([userId])
+  @@index([status])
+  @@index([returnNumber])
+  @@map("returns")
+}
+
+model Notification {
+  id              String   @id @default(cuid())
+  userId          String
+  
+  // Tipo de notificação
+  type            NotificationType // ORDER_STATUS, RETURN_STATUS, PAYMENT, PROMO
+  
+  // Dados da notificação
+  title           String
+  message         String
+  data            String?  // JSON com dados adicionais (orderId, returnId, etc)
+  
+  // Status
+  isRead          Boolean  @default(false)
+  readAt          DateTime?
+  
+  // Datas
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  ORDER_STATUS    // Notificações de status de pedido
+  RETURN_STATUS   // Notificações de status de devolução
+  PAYMENT         // Notificações de pagamento
+  PROMO           // Promoções e ofertas
+}
+
+model ReturnItem {
+  id          String   @id @default(cuid())
+  returnId    String
+  orderItemId String   // Referência ao item original do pedido
+  productId   String
+  quantity    Int      // Quantidade sendo devolvida
+  reason      String?  // Motivo específico deste item
+  condition   String?  // Estado do produto quando recebido
+  
+  createdAt   DateTime @default(now())
+  
+  return      Return   @relation(fields: [returnId], references: [id], onDelete: Cascade)
+
+  @@index([returnId])
+  @@map("return_items")
+}
+
+// ============================================
+// REVIEWS & RATINGS
+// ============================================
+
+model Review {
+  id          String   @id @default(cuid())
+  productId   String
+  userId      String
+  orderId     String?  // Opcional: vincular à compra verificada
+  
+  rating      Int      // 1 a 5 estrelas
+  title       String?  // Título opcional da avaliação
+  comment     String?  // Comentário detalhado
+  
+  // Flags
+  isVerifiedPurchase Boolean @default(false) // Comprou o produto
+  isApproved  Boolean  @default(true)  // Moderação
+  isHelpful   Int      @default(0)     // Contador de "útil"
+  
+  // Resposta do vendedor
+  sellerResponse String?
+  sellerResponseAt DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order       Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  
+  @@unique([productId, userId]) // Um usuário só pode avaliar um produto uma vez
+  @@index([productId])
+  @@index([userId])
+  @@index([rating])
+  @@map("reviews")
 }
 
 // ============================================

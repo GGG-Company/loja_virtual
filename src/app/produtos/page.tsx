@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { SlidersHorizontal } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
+import { Suspense } from 'react';
 
 type ProductListItem = {
   id: string;
@@ -26,7 +27,7 @@ type ProductListItem = {
   };
 };
 
-export default function ProductsPage() {
+function ProductsContent() {
   const searchParams = useSearchParams();
   const [products, setProducts] = useState<ProductListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -194,5 +195,13 @@ export default function ProductsPage() {
       </main>
       <Footer />
     </>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<div>Carregando produtos...</div>}>
+      <ProductsContent />
+    </Suspense>
   );
 }

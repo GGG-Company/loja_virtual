@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const session = await auth();
@@ -30,25 +32,26 @@ export async function GET(req: NextRequest) {
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '10')));
     const search = (searchParams.get('search') || '').trim();
 
-    const where = {
+    const where: any = {
       status: {
         in: ['SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED'],
       },
       ...(search
         ? {
             OR: [
-              { orderNumber: { contains: search } },
-              { user: { name: { contains: search } } },
-              { user: { email: { contains: search } } },
+              { orderNumber: { contains: search, mode: 'insensitive' as const } },
+              { user: { name: { contains: search, mode: 'insensitive' as const } } },
+              { user: { email: { contains: search, mode: 'insensitive' as const } } },
             ],
           }
         : {}),
-    } as const;
+    };
 
     const skip = (page - 1) * limit;
 
     const [orders, total] = await Promise.all([
       prisma.order.findMany({
+        // @ts-ignore - Prisma type inference issue with conditional where clause
         where,
         include: {
           user: {

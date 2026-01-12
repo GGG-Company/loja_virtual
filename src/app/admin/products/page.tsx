@@ -9,8 +9,10 @@ interface Product {
   name: string;
   slug: string;
   price: number;
+  promotionalPrice: number | null;
   stock: number;
   isActive: boolean;
+  isPromo: boolean;
   category: {
     name: string;
   };
@@ -47,7 +49,9 @@ export default function AdminProductsPage() {
     <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Produtos</h1>
-        {/* Criação desabilitada: catálogo vem do banco externo. */}
+        <Button asChild>
+          <Link href="/admin/products/new">Novo Produto</Link>
+        </Button>
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -85,16 +89,32 @@ export default function AdminProductsPage() {
               products.map((product) => (
                 <tr key={product.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {product.name}
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium text-gray-900">
+                        {product.name}
+                      </span>
+                      <div className="flex gap-1 mt-1">
+                        <span className="text-xs text-gray-500">{product.slug}</span>
+                        {product.isPromo && (
+                          <span className="bg-red-100 text-red-700 text-[10px] uppercase font-bold px-1.5 rounded">
+                            Em Oferta
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-500">{product.slug}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {product.category.name}
+                    {product.category?.name || 'S/ Categoria'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    R$ {product.price.toFixed(2)}
+                    <div className="flex flex-col">
+                      <span>R$ {product.price.toFixed(2)}</span>
+                      {product.promotionalPrice && (
+                        <span className="text-xs text-green-600 font-medium">
+                          Promo: R$ {product.promotionalPrice.toFixed(2)}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {product.stock}

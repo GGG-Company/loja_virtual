@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { sendOrderStatusUpdate } from '@/lib/webhooks';
+import { notifyOrderStatusChange } from '@/lib/notifications';
+import type { OrderStatus } from '@/lib/i18n';
 
 export async function PATCH(
   req: NextRequest,
@@ -32,7 +34,12 @@ export async function PATCH(
 
     const order = await prisma.order.findUnique({
       where: { id: params.id },
-      select: { status: true },
+      select: { 
+        status: true, 
+        trackingCode: true, 
+        trackingUrl: true,
+        melhorEnvioLabelUrl: true,
+      },
     });
 
     if (!order) {
@@ -49,13 +56,22 @@ export async function PATCH(
       return NextResponse.json({ error: 'Só pedidos confirmados ou em separação podem ser enviados' }, { status: 400 });
     }
 
+    // Se não foi informado código de rastreio, usar o existente do pedido (gerado pelo Melhor Envio)
+    const finalTrackingCode = trackingCode || order.trackingCode || undefined;
+    
+    // Gerar URL de rastreio se tiver código mas não tiver URL
+    let finalTrackingUrl = trackingUrl || order.trackingUrl || undefined;
+    if (finalTrackingCode && !finalTrackingUrl) {
+      finalTrackingUrl = `https://www.melhorrastreio.com.br/rastreio/${finalTrackingCode}`;
+    }
+
     const updated = await prisma.order.update({
       where: { id: params.id },
       data: {
         status,
         shippedAt: status === 'SHIPPED' ? new Date() : undefined,
-        trackingCode: status === 'SHIPPED' ? trackingCode ?? undefined : undefined,
-        trackingUrl: status === 'SHIPPED' ? trackingUrl ?? undefined : undefined,
+        trackingCode: status === 'SHIPPED' ? finalTrackingCode : undefined,
+        trackingUrl: status === 'SHIPPED' ? finalTrackingUrl : undefined,
       },
       include: {
         user: true,
@@ -70,14 +86,25 @@ export async function PATCH(
     });
 
     await sendOrderStatusUpdate({
-      orderId: (updated as any).id,
+      orderId: updated.id,
+      orderNumber: updated.orderNumber,
       status,
-      shippedAt: (updated as any).shippedAt,
-      trackingCode: (updated as any).trackingCode,
-      trackingUrl: (updated as any).trackingUrl,
-      user: (updated as any).user,
-      total: (updated as any).total,
-      items: (updated as any).items,
+      shippedAt: updated.shippedAt,
+      trackingCode: updated.trackingCode,
+      trackingUrl: updated.trackingUrl,
+      user: updated.user,
+      total: updated.total,
+      items: updated.items,
+    });
+
+    // Criar notificação para o usuário
+    await notifyOrderStatusChange({
+      userId: updated.userId,
+      orderId: updated.id,
+      orderNumber: updated.orderNumber,
+      status: status as OrderStatus,
+      trackingCode: updated.trackingCode,
+      trackingUrl: updated.trackingUrl,
     });
 
     return NextResponse.json(updated);

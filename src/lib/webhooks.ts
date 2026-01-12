@@ -66,3 +66,26 @@ export async function sendOrderStatusUpdate(payload: {
     // Silently ignore network/config errors
   }
 }
+
+// Generic webhook sender function
+export async function sendWebhook(event: string, payload: Record<string, unknown>) {
+  const url = process.env.N8N_ORDERS_WEBHOOK_URL || process.env.N8N_WEBHOOK_URL;
+  if (!url) return;
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: event,
+        timestamp: new Date().toISOString(),
+        ...payload,
+      }),
+    });
+    if (!res.ok) {
+      await res.text().catch(() => {});
+    }
+  } catch {
+    // Silently ignore network/config errors
+  }
+}

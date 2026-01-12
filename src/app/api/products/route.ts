@@ -2,15 +2,19 @@ import { NextResponse } from 'next/server';
 import type { Prisma } from '@prisma/client';
 import { listProducts, isExternalEnabled } from '@/lib/products-repository';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const featured = searchParams.get('featured');
+    const promo = searchParams.get('promo');
     const category = searchParams.get('categoria');
     const limit = searchParams.get('limit');
 
     const products = await listProducts({
       featured: featured === 'true',
+      promo: promo === 'true',
       categorySlug: category,
       limit: limit ? parseInt(limit) : null,
     });

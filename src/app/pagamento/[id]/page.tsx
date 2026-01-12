@@ -60,9 +60,9 @@ export default function PagamentoPage() {
         }
         
         setOrder(response.data);
-        // Inicializa contagem: 30 segundos a partir de createdAt
+        // Inicializa contagem: 2 minutos a partir de createdAt
         const created = new Date(response.data.createdAt).getTime();
-        const expiresAt = created + 30 * 1000;
+        const expiresAt = created + 120 * 1000;
         const now = Date.now();
         const initial = Math.max(0, Math.floor((expiresAt - now) / 1000));
         setTimeLeft(initial);

@@ -68,7 +68,7 @@ export default function ContactPage() {
                   {
                     icon: Phone,
                     title: 'Telefone',
-                    content: '(71) 3333-4444',
+                    content: '(75) 3333-4444',
                     subcontent: 'Seg - Sex, 8h às 18h',
                   },
                   {
@@ -81,7 +81,7 @@ export default function ContactPage() {
                     icon: MapPin,
                     title: 'Endereço',
                     content: 'Av. Principal, 1234',
-                    subcontent: 'Salvador, BA - CEP 40000-000',
+                    subcontent: 'Feira de Santana, BA - CEP 44002-264',
                   },
                   {
                     icon: Clock,

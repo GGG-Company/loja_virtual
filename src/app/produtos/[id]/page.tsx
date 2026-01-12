@@ -1,19 +1,20 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { ShoppingCart, Truck, Shield, CreditCard, Heart } from 'lucide-react';
+import { ShoppingCart, Truck, Shield, CreditCard, Heart, Star } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { toast } from 'sonner';
 import { usePrice } from '@/hooks/use-price';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
 import Script from 'next/script';
+import { ProductReviews } from '@/components/product-reviews';
 
 type ProductVariant = {
   id: string;
@@ -44,7 +45,7 @@ type ProductDetail = {
   specs?: Record<string, unknown>;
 };
 
-export default function ProductDetailPage() {
+function ProductDetailContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -53,6 +54,7 @@ export default function ProductDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedVoltage, setSelectedVoltage] = useState('');
   const [quantity, setQuantity] = useState(1);
+  const [reviewStats, setReviewStats] = useState<{ averageRating: number; totalReviews: number } | null>(null);
   const displayPrice = product?.promotionalPrice ?? product?.price ?? 0;
   const { bestInstallment } = usePrice(displayPrice);
 
@@ -62,6 +64,14 @@ export default function ProductDetailPage() {
       setProduct(response.data.product);
       if (response.data.product.variants && response.data.product.variants.length > 0) {
         setSelectedVoltage(response.data.product.variants[0].name);
+      }
+      
+      // Buscar estatísticas de avaliações
+      try {
+        const reviewsRes = await apiClient.get<{ stats: { averageRating: number; totalReviews: number } }>(`/api/products/${params?.id}/reviews?limit=1`);
+        setReviewStats(reviewsRes.data.stats);
+      } catch {
+        // Ignora erro de reviews
       }
     } catch (error) {
       console.error('Erro ao carregar produto:', error);
@@ -184,13 +194,13 @@ export default function ProductDetailPage() {
               animate={{ opacity: 1, x: 0 }}
               className="space-y-4"
             >
-              <div className="aspect-square bg-metallic-100 rounded-2xl flex items-center justify-center overflow-hidden">
+              <div className="aspect-square bg-metallic-100 rounded-2xl flex items-center justify-center overflow-hidden relative">
                 {product.imageUrl || product.images?.[0]?.url ? (
                   <Image
                     src={product.imageUrl || product.images?.[0]?.url || ''}
                     alt={product.name}
                     fill
-                    className="object-cover"
+                    className="object-contain"
                     sizes="(min-width: 1024px) 50vw, 100vw"
                     priority
                   />
@@ -218,10 +228,23 @@ export default function ProductDetailPage() {
 
               {/* Rating */}
               <div className="flex items-center gap-2">
-                <div className="flex text-yellow-400">
-                  {'★'.repeat(5)}
+                <div className="flex gap-0.5">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      className={`h-5 w-5 ${
+                        star <= Math.round(reviewStats?.averageRating || 0)
+                          ? 'fill-yellow-400 text-yellow-400'
+                          : 'fill-gray-200 text-gray-200'
+                      }`}
+                    />
+                  ))}
                 </div>
-                <span className="text-sm text-metallic-600">(48 avaliações)</span>
+                <span className="text-sm text-metallic-600">
+                  {reviewStats?.totalReviews 
+                    ? `(${reviewStats.totalReviews} ${reviewStats.totalReviews === 1 ? 'avaliação' : 'avaliações'})`
+                    : '(Sem avaliações)'}
+                </span>
               </div>
 
               {/* Price */}
@@ -348,9 +371,29 @@ export default function ProductDetailPage() {
               </div>
             )}
           </div>
+
+          {/* Seção de Avaliações */}
+          <div className="mt-16">
+            <h2 className="text-2xl font-bold text-metallic-900 mb-6">
+              Avaliações dos Clientes
+            </h2>
+            <ProductReviews productId={product.id} productName={product.name} />
+          </div>
         </div>
       </main>
       {!searchParams.get('embed') && <Footer />}
     </>
+  );
+}
+
+export default function ProductDetailPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    }>
+      <ProductDetailContent />
+    </Suspense>
   );
 }

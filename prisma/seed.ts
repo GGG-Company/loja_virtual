@@ -1,10 +1,7 @@
 import { PrismaClient } from '@prisma/client';
-import { PrismaLibSql } from '@prisma/adapter-libsql';
 import bcrypt from 'bcryptjs';
 
-const dbUrl = process.env.DATABASE_URL || 'file:./dev.db';
-const adapter = new PrismaLibSql({ url: dbUrl });
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Iniciando seed do banco de dados...\n');
@@ -106,6 +103,21 @@ async function main() {
     },
   });
 
+  const categoryPlainas = await prisma.category.upsert({
+    where: { slug: 'plainas-e-lixadeiras' },
+    update: {
+      name: 'Plainas e Lixadeiras',
+      description: 'Ferramentas de desbaste e acabamento',
+      image: '/categories/plainas.jpg',
+    },
+    create: {
+      name: 'Plainas e Lixadeiras',
+      slug: 'plainas-e-lixadeiras',
+      description: 'Ferramentas de desbaste e acabamento',
+      image: '/categories/plainas.jpg',
+    },
+  });
+
   console.log(`✅ Categorias criadas\n`);
 
   // ============================================
@@ -129,6 +141,7 @@ async function main() {
       stock: 15,
       stockLocation: 'Corredor A - Prateleira 2',
       categoryId: categoryFuradeiras.id,
+      imageUrl: '/products/martelete-rotativo-makita-dhr243z-1.jpg',
       specs: {
         voltagem: '18V',
         potencia: '1200W',
@@ -152,10 +165,32 @@ async function main() {
       stock: 28,
       stockLocation: 'Corredor A - Prateleira 3',
       categoryId: categoryFuradeiras.id,
+      imageUrl: '/products/parafusadeira-furadeira-makita-ddf483z-1.jpg',
       specs: {
         voltagem: '18V',
         torque: '140 Nm',
         peso: '1.8kg',
+        marca: 'Makita',
+      },
+      isFeatured: true,
+      isActive: true,
+    },
+    {
+      sku: 'MAKITA-5007N',
+      ean: '7896011234572',
+      slug: 'serra-circular-makita-5007n',
+      name: 'Serra Circular Makita 5007N 7.1/4" 1800W',
+      description:
+        'Serra circular profissional com alta potência e durabilidade. Base de alumínio e ajuste de profundidade de corte.',
+      shortDescription: 'Serra Circular 1800W 7.1/4" Profissional',
+      price: 749.0,
+      stock: 10,
+      stockLocation: 'Corredor C - Prateleira 1',
+      categoryId: categorySerras.id,
+      imageUrl: '/products/serra-circular-makita-5007n-1.jpg',
+      specs: {
+        potencia: '1800W',
+        disco: '7.1/4"',
         marca: 'Makita',
       },
       isFeatured: true,
@@ -176,6 +211,7 @@ async function main() {
       stock: 20,
       stockLocation: 'Corredor A - Prateleira 4',
       categoryId: categoryFuradeiras.id,
+      imageUrl: '/products/parafusadeira-furadeira-bosch-gsb-180-li-1.jpg',
       specs: {
         voltagem: '18V',
         torque: '63 Nm',
@@ -198,11 +234,32 @@ async function main() {
       stock: 45,
       stockLocation: 'Corredor B - Prateleira 1',
       categoryId: categoryEsmerilhadeiras.id,
+      imageUrl: '/products/esmerilhadeira-angular-bosch-gws-850-1.jpg',
       specs: {
         voltagem: '220V',
         potencia: '850W',
         disco: '4.1/2 polegadas',
         peso: '1.8kg',
+        marca: 'Bosch',
+      },
+      isFeatured: false,
+      isActive: true,
+    },
+    {
+      sku: 'BOSCH-GST-75-E',
+      ean: '7896011234573',
+      slug: 'serra-tico-tico-bosch-gst-75-e',
+      name: 'Serra Tico-Tico Bosch GST 75 E 710W',
+      description:
+        'Serra tico-tico com sistema de troca de lâmina sem ferramentas. Alta precisão e controle. Motor de 710W para cortes rápidos.',
+      shortDescription: 'Serra Tico-Tico 710W Bosch Profissional',
+      price: 599.0,
+      stock: 18,
+      stockLocation: 'Corredor C - Prateleira 2',
+      categoryId: categorySerras.id,
+      imageUrl: '/products/serra-tico-tico-bosch-gst-75-e-1.jpg',
+      specs: {
+        potencia: '710W',
         marca: 'Bosch',
       },
       isFeatured: false,
@@ -223,11 +280,53 @@ async function main() {
       stock: 12,
       stockLocation: 'Corredor A - Prateleira 5',
       categoryId: categoryFuradeiras.id,
+      imageUrl: '/products/furadeira-impacto-dewalt-dcd996b-1.jpg',
       specs: {
         voltagem: '20V',
         torque: '142 Nm',
         peso: '2.0kg',
         marca: 'DeWalt',
+      },
+      isFeatured: true,
+      isActive: true,
+    },
+    {
+      sku: 'DEWALT-DWE4010',
+      ean: '7896011234574',
+      slug: 'esmerilhadeira-dewalt-dwe4010',
+      name: 'Esmerilhadeira Angular DeWalt DWE4010 4.1/2" 700W',
+      description:
+        'Esmerilhadeira resistente e ergonômica. Engrenagens helicoidais para maior durabilidade. Sistema de ventilação avançado.',
+      shortDescription: 'Esmerilhadeira DeWalt 700W 4.1/2"',
+      price: 349.0,
+      stock: 30,
+      stockLocation: 'Corredor B - Prateleira 2',
+      categoryId: categoryEsmerilhadeiras.id,
+      imageUrl: '/products/esmerilhadeira-dewalt-dwe4010-1.jpg',
+      specs: {
+        potencia: '700W',
+        disco: '4.1/2"',
+        marca: 'DeWalt',
+      },
+      isFeatured: false,
+      isActive: true,
+    },
+    {
+      sku: 'BOSCH-GHO-700',
+      ean: '7896011234575',
+      slug: 'plaina-eletrica-bosch-gho-700',
+      name: 'Plaina Elétrica Bosch GHO 700 700W',
+      description:
+        'Plaina elétrica para acabamentos perfeitos em madeira. Ajuste de profundidade preciso e saída de cavacos otimizada.',
+      shortDescription: 'Plaina Bosch 700W Profissional',
+      price: 689.0,
+      stock: 8,
+      stockLocation: 'Corredor D - Prateleira 1',
+      categoryId: categoryPlainas.id,
+      imageUrl: '/products/plaina-eletrica-bosch-gho-700-1.jpg',
+      specs: {
+        potencia: '700W',
+        marca: 'Bosch',
       },
       isFeatured: true,
       isActive: true,
@@ -460,16 +559,186 @@ async function main() {
   }
 
   console.log('');
+
+  // ============================================
+  // 9. CRIAR AVALIAÇÕES (REVIEWS)
+  // ============================================
+  console.log('⭐️ Criando avaliações...');
+
+  const allProducts = await prisma.product.findMany();
+  
+  for (const product of allProducts) {
+    await prisma.review.upsert({
+      where: {
+        productId_userId: {
+          productId: product.id,
+          userId: customer.id,
+        },
+      },
+      update: {},
+      create: {
+        productId: product.id,
+        userId: customer.id,
+        rating: 5,
+        title: 'Excelente produto!',
+        comment: 'Superou minhas expectativas, entrega rápida e material de qualidade.',
+        isVerifiedPurchase: true,
+        isApproved: true,
+      },
+    });
+  }
+  console.log('✅ Avaliações criadas');
+
+  console.log('');
+
+  // ============================================
+  // 10. CRIAR DEVOLUÇÃO (RETURNS)
+  // ============================================
+  console.log('🔄 Criando devolução de exemplo...');
+
+  const orderForReturn = await prisma.order.findUnique({
+    where: { orderNumber: 'ORD-2025-000001' },
+    include: { items: true },
+  });
+
+  if (orderForReturn && orderForReturn.items.length > 0) {
+    const returnNumber = 'DEV-2026-000001';
+    const firstItem = orderForReturn.items[0];
+
+    const returnRequest = await prisma.return.upsert({
+      where: { returnNumber },
+      update: {},
+      create: {
+        returnNumber,
+        orderId: orderForReturn.id,
+        userId: customer.id,
+        status: 'PENDING_REVIEW',
+        reason: 'DEFECTIVE',
+        reasonDetails: 'O motor apresentou um ruído estranho no primeiro uso.',
+        refundAmount: firstItem.price,
+        items: {
+          create: {
+            productId: firstItem.productId,
+            orderItemId: firstItem.id,
+            quantity: 1,
+            reason: 'Defeito de fábrica',
+          },
+        },
+      },
+    });
+    console.log(`✅ Devolução ${returnRequest.returnNumber} criada`);
+  }
+
+  console.log('');
+
+  // ============================================
+  // 11. CRIAR NOTIFICAÇÕES
+  // ============================================
+  console.log('🔔 Criando notificações...');
+
+  const notifications = [
+    {
+      userId: customer.id,
+      type: 'ORDER_STATUS' as const,
+      title: 'Pedido Confirmado',
+      message: 'Seu pedido ORD-2025-000001 foi confirmado e está em processamento.',
+      isRead: true,
+    },
+    {
+      userId: customer.id,
+      type: 'RETURN_STATUS' as const,
+      title: 'Solicitação de Devolução Recebida',
+      message: 'Recebemos seu pedido de devolução DEV-2026-000001 e estamos analisando.',
+      isRead: false,
+    },
+  ];
+
+  for (const notification of notifications) {
+    await prisma.notification.create({
+      data: notification,
+    });
+  }
+  console.log('✅ Notificações criadas');
+
+  console.log('');
+
+  // ============================================
+  // 12. CONFIGURAÇÕES DE INTEGRAÇÃO
+  // ============================================
+  console.log('🔌 Inicializando configurações de integração...');
+
+  await prisma.melhorEnvioToken.upsert({
+    where: { id: 'singleton' },
+    update: {},
+    create: {
+      id: 'singleton',
+      environment: 'sandbox',
+    },
+  });
+
+  await prisma.mercadoPagoConfig.upsert({
+    where: { id: 'singleton' },
+    update: {},
+    create: {
+      id: 'singleton',
+      environment: 'sandbox',
+      active: false,
+    },
+  });
+
+  console.log('✅ Configurações de integração inicializadas');
+
+  console.log('');
+
+  // ============================================
+  // 13. CRIAR REGRAS DE FRETE (SHIPPING RULES)
+  // ============================================
+  console.log('🚚 Criando regras de frete...');
+
+  const shippingRules = [
+    {
+      name: 'Frete Grátis Brasil (Acima de R$ 500)',
+      type: 'ALL' as const,
+      isFree: true,
+      minValue: 500,
+      priority: 1,
+      active: true,
+    },
+    {
+      name: 'Frete Fixo Nordeste',
+      type: 'STATE' as const,
+      states: ['BA', 'PE', 'CE', 'AL', 'SE', 'MA', 'PI', 'PB', 'RN'],
+      isFree: false,
+      price: 29.90,
+      priority: 10,
+      active: true,
+    },
+  ];
+
+  for (const rule of shippingRules) {
+    await prisma.shippingRule.create({
+      data: rule,
+    });
+  }
+
+  console.log('✅ Regras de frete criadas');
+
+  console.log('');
   console.log('✅ Seed concluído com sucesso! 🎉\n');
   console.log('📋 Resumo:');
   console.log('   - 3 usuários (Owner, Admin, Customer)');
-  console.log('   - 3 categorias');
-  console.log('   - 5 produtos reais (Makita, Bosch, DeWalt)');
+  console.log('   - 4 categorias (Furadeiras, Serras, Esmerilhadeiras, Plainas)');
+  console.log('   - 9 produtos reais (Makita, Bosch, DeWalt)');
   console.log('   - 2 variantes de voltagem');
   console.log('   - 2 cupons');
   console.log('   - 2 banners');
   console.log('   - 1 configuração financeira');
-  console.log('   - 1 pedido de exemplo\n');
+  console.log('   - 1 pedido de exemplo');
+  console.log('   - Avaliações em todos os produtos');
+  console.log('   - 1 solicitação de devolução');
+  console.log('   - 2 notificações de exemplo');
+  console.log('   - 2 regras de frete (Nacional e Regional)');
+  console.log('   - Configurações de integração (Singleton)\n');
 }
 
 main()

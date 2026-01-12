@@ -132,7 +132,8 @@ export default function ShippedOrdersPage() {
         ) : (
           <div className="space-y-4">
             {orders.map((order) => (
-              <div key={order.id} className="bg-white rounded-lg shadow p-5 border border-metallic-100">
+              <Link key={order.id} href={`/admin/orders/${order.id}`} className="block">
+              <div className="bg-white rounded-lg shadow p-5 border border-metallic-100 hover:border-primary-300 hover:shadow-md transition-all cursor-pointer">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                   <div>
                     <p className="text-sm text-metallic-600">Pedido</p>
@@ -171,7 +172,7 @@ export default function ShippedOrdersPage() {
                         <div className="mt-1 space-y-1">
                           <p className="text-xs text-metallic-600">Rastreio: {order.trackingCode}</p>
                           <button
-                            onClick={() => refreshTracking(order.id, order.trackingCode)}
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); refreshTracking(order.id, order.trackingCode); }}
                             className="inline-flex items-center gap-1 text-xs text-primary-700 hover:underline"
                             disabled={trackingLoadingId === order.id}
                           >
@@ -192,6 +193,7 @@ export default function ShippedOrdersPage() {
                         <a
                           href={order.trackingUrl}
                           target="_blank"
+                          onClick={(e) => e.stopPropagation()}
                           rel="noopener noreferrer"
                           className="text-xs text-primary-700 underline"
                         >
@@ -236,6 +238,7 @@ export default function ShippedOrdersPage() {
                   ))}
                 </div>
               </div>
+              </Link>
             ))}
           </div>
         )}

@@ -121,21 +121,36 @@ async function quoteWithMelhorEnvio(params: { items: ShippingItem[]; destination
   const servicesStr = (process.env.MELHOR_ENVIO_SERVICES || '1,2').trim(); // API exige string com ids separados por vírgula
   const baseUrl = melhorEnvioBaseUrl();
 
-  const pkg = aggregatePackage(params.items);
+  // Preparar produtos no formato correto da API do Melhor Envio
+  // Cada produto deve ter: id, width, height, length, weight, insurance_value, quantity
+  const products = params.items.map((item, index) => {
+    const dims = item.dimensions || { height: 12, width: 18, length: 24 };
+    const weight = item.weightKg || 1;
+    const price = item.price || 0;
+    
+    return {
+      id: item.productId || `produto-${index}`,
+      width: Math.max(11, Math.round(dims.width || 11)), // mínimo 11cm
+      height: Math.max(2, Math.round(dims.height || 2)), // mínimo 2cm
+      length: Math.max(16, Math.round(dims.length || 16)), // mínimo 16cm
+      weight: Math.max(0.3, Number(weight.toFixed(2))), // mínimo 0.3kg
+      insurance_value: Number(price.toFixed(2)), // valor segurado unitário
+      quantity: item.quantity || 1,
+    };
+  });
+
   const body = {
     from: { postal_code: params.originZip },
     to: { postal_code: params.destinationZip },
-    products: [{
-      id: 'bundle',
-      width: pkg.width,
-      height: pkg.height,
-      length: pkg.length,
-      weight: pkg.totalWeightGrams / 1000,
-      insurance_value: pkg.totalPrice,
-      quantity: 1,
-    }],
+    products,
+    options: {
+      receipt: false,
+      own_hand: false,
+    },
     services: servicesStr,
   };
+
+  console.log('[shipping] Cotação Melhor Envio - Request:', JSON.stringify(body, null, 2));
 
   try {
     const res = await fetch(`${baseUrl}/api/v2/me/shipment/calculate`, {
@@ -144,23 +159,31 @@ async function quoteWithMelhorEnvio(params: { items: ShippingItem[]; destination
       body: JSON.stringify(body),
     });
 
+    const responseText = await res.text();
+    console.log('[shipping] Cotação Melhor Envio - Response status:', res.status);
+    console.log('[shipping] Cotação Melhor Envio - Response body:', responseText?.slice(0, 500));
+
     if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      console.warn('[shipping] melhor envio quote error', res.status, body?.slice(0, 300));
+      console.warn('[shipping] melhor envio quote error', res.status, responseText?.slice(0, 300));
       return null;
     }
 
-    const data = await res.json();
+    const data = JSON.parse(responseText);
     if (!Array.isArray(data)) return null;
 
+    console.log('[shipping] Dados brutos do Melhor Envio:', JSON.stringify(data.slice(0, 2), null, 2));
+
+    // Usar custom_price e custom_delivery_time conforme documentação
     const mapped = data.map((d: any) => ({
-      id: String(d.service_id || d.id || d.name),
+      id: String(d.id || d.service_id || d.name),
       service: d.name || d.delivery_service || 'Frete',
       carrier: d.company?.name || 'Melhor Envio',
-      price: roundPrice(Number(d.price || d.cost || 0)),
-      etaDays: d.delivery_time?.days || d.custom_delivery_time || null,
-      notes: d.observations || d.company?.alias || undefined,
-    })).filter((o: ShippingOption) => o.price >= 0);
+      price: roundPrice(Number(d.custom_price || d.price || d.cost || 0)), // Preferir custom_price
+      etaDays: d.custom_delivery_time || d.delivery_time || null, // Preferir custom_delivery_time
+      notes: d.error || d.observations || d.company?.alias || undefined,
+    })).filter((o: ShippingOption) => o.price > 0 && !o.notes?.includes('erro'));
+
+    console.log('[shipping] Opções mapeadas:', JSON.stringify(mapped, null, 2));
 
     console.info('[shipping] melhor envio quote ok', mapped.length, 'opcoes');
     return mapped;
@@ -284,7 +307,15 @@ export async function loadShippingItems(rawItems: ShippingItem[]) {
 }
 
 export async function getShippingOptions(params: { items: ShippingItem[]; destinationZip: string; originZip?: string; }) {
+  console.log('[shipping] getShippingOptions chamado com:', {
+    itemsCount: params.items.length,
+    destinationZip: params.destinationZip,
+    originZip: params.originZip,
+  });
+  
   const normalized = await loadShippingItems(params.items);
+  console.log('[shipping] Itens normalizados:', JSON.stringify(normalized, null, 2));
+  
   const originZip = normalizeZip(params.originZip || process.env.SHIPPING_ORIGIN_ZIP || '44002264');
 
   const pickup: ShippingOption = {
@@ -298,12 +329,15 @@ export async function getShippingOptions(params: { items: ShippingItem[]; destin
   };
 
   const melhorEnvio = await quoteWithMelhorEnvio({ items: normalized, destinationZip: normalizeZip(params.destinationZip), originZip });
+  
   if (melhorEnvio && melhorEnvio.length) {
+    console.log('[shipping] Opções do Melhor Envio recebidas:', melhorEnvio.length);
     const merged = [...melhorEnvio, pickup];
     const unique = Array.from(new Map(merged.map((o) => [o.id, o])).values());
     return unique;
   }
 
+  console.warn('[shipping] Nenhuma opção do Melhor Envio, retornando apenas retirada em loja');
   // Sem fallback mock: se a cotação falhar, exibe apenas retirada em loja.
   return [pickup];
 }

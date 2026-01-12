@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Package, Truck, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, Package, Truck, CheckCircle, XCircle, RotateCcw } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -407,6 +407,18 @@ export default function PedidoDetalhePage() {
                       className="min-w-[200px]"
                     >
                       {isConfirming ? 'Confirmando...' : '✓ Confirmar Recebimento'}
+                    </Button>
+                  )}
+
+                  {order.status === 'DELIVERED' && (
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      onClick={() => router.push(`/minha-conta/pedidos/${order.id}/devolucao`)}
+                      className="min-w-[200px] text-orange-600 border-orange-200 hover:bg-orange-50"
+                    >
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Solicitar Devolução
                     </Button>
                   )}
                 </div>

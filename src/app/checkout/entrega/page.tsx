@@ -62,19 +62,50 @@ export default function CheckoutEntregaPage() {
     if (cep.replace(/\D/g, '').length !== 8) return;
     
     setLoadingShipping(true);
+    setShippingOptions([]);
+    setSelectedShipping(null);
+    
     try {
-      // Simular opções de frete (substitua pela API real do Melhor Envio)
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const options: ShippingOption[] = [
-        { id: 'pac', name: 'PAC - Correios', price: 15.90, delivery_time: 10 },
-        { id: 'sedex', name: 'SEDEX - Correios', price: 25.50, delivery_time: 5 },
-        { id: 'transportadora', name: 'Transportadora', price: 35.00, delivery_time: 7 },
-      ];
-      
-      setShippingOptions(options);
-      toast.success('Opções de frete calculadas!');
+      // Buscar itens do carrinho
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      if (cart.length === 0) {
+        toast.error('Carrinho vazio');
+        return;
+      }
+
+      const items = cart.map((item: any) => ({
+        productId: item.id,
+        quantity: item.quantity,
+        weightKg: item.weight || 0.5,
+        dimensions: item.dimensions || { height: 10, width: 15, length: 20 },
+        price: item.price,
+      }));
+
+      const response = await fetch('/api/shipping/quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          destinationZip: cep.replace(/\D/g, ''),
+          items,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.options && data.options.length > 0) {
+        const options: ShippingOption[] = data.options.map((opt: any) => ({
+          id: opt.id.toString(),
+          name: opt.name,
+          price: opt.price,
+          delivery_time: opt.delivery_time,
+        }));
+        setShippingOptions(options);
+        toast.success('Opções de frete calculadas!');
+      } else {
+        toast.error(data.error || 'Nenhuma opção de frete disponível');
+      }
     } catch (error) {
+      console.error('[ENTREGA] Erro ao calcular frete:', error);
       toast.error('Erro ao calcular frete');
     } finally {
       setLoadingShipping(false);
