@@ -45,6 +45,15 @@ export async function POST(req: NextRequest) {
     const orderId = paymentInfo.external_reference;
     
     if (orderId) {
+      // 1. Buscar o pedido ANTES de atualizar para verificar o estado atual
+      const currentOrder = await prisma.order.findUnique({
+        where: { id: orderId }
+      });
+
+      if (!currentOrder) {
+        return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
+      }
+
       let orderStatus: OrderStatus = OrderStatus.PENDING;
       
       switch (paymentInfo.status) {
@@ -64,11 +73,22 @@ export async function POST(req: NextRequest) {
           orderStatus = OrderStatus.PENDING;
       }
 
+      // 2. Só disparar webhooks se o status mudou OU se o status de pagamento do MP mudou
+      // Isso evita webhooks duplicados em notificações repetidas do Mercado Pago
+      const statusChanged = currentOrder.status !== orderStatus;
+      const paymentStatusChanged = currentOrder.paymentStatus !== paymentInfo.status;
+
+      if (!statusChanged && !paymentStatusChanged) {
+        console.log(`Pedido ${orderId} já está com status ${orderStatus}. Ignorando duplicata.`);
+        return NextResponse.json({ received: true, ignored: true });
+      }
+
       const updated = await prisma.order.update({
         where: { id: orderId },
         data: {
           status: orderStatus,
           paymentStatus: paymentInfo.status,
+          updatedAt: new Date(),
         },
         include: { 
           user: true,
@@ -82,38 +102,43 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      await sendOrderStatusUpdate({
-        orderId: updated.id,
-        orderNumber: updated.orderNumber,
-        status: orderStatus as any,
-        total: updated.total,
-        user: updated.user,
-        paymentMethod: updated.paymentMethod,
-        items: updated.items,
-      });
+      // 3. Só enviar para o n8n se o status do pedido mudou
+      if (statusChanged) {
+        await sendOrderStatusUpdate({
+          orderId: updated.id,
+          orderNumber: updated.orderNumber,
+          status: orderStatus as any,
+          total: updated.total,
+          user: updated.user,
+          paymentMethod: updated.paymentMethod,
+          items: updated.items,
+        });
 
-      // Criar notificação de pagamento
-      await notifyPaymentStatus({
-        userId: updated.userId,
-        orderId: updated.id,
-        orderNumber: updated.orderNumber,
-        status: paymentInfo.status === 'approved' ? 'approved' 
-              : paymentInfo.status === 'rejected' ? 'rejected'
-              : paymentInfo.status === 'refunded' ? 'refunded'
-              : 'pending',
-        amount: updated.total,
-        paymentMethod: updated.paymentMethod,
-      });
+        // Criar notificação de status do pedido
+        await notifyOrderStatusChange({
+          userId: updated.userId,
+          orderId: updated.id,
+          orderNumber: updated.orderNumber,
+          status: orderStatus as OrderStatusType,
+        });
+      }
 
-      // Criar notificação de status do pedido
-      await notifyOrderStatusChange({
-        userId: updated.userId,
-        orderId: updated.id,
-        orderNumber: updated.orderNumber,
-        status: orderStatus as OrderStatusType,
-      });
+      // 4. Criar notificação de pagamento (só se o status do MP mudou)
+      if (paymentStatusChanged) {
+        await notifyPaymentStatus({
+          userId: updated.userId,
+          orderId: updated.id,
+          orderNumber: updated.orderNumber,
+          status: paymentInfo.status === 'approved' ? 'approved' 
+                : paymentInfo.status === 'rejected' ? 'rejected'
+                : paymentInfo.status === 'refunded' ? 'refunded'
+                : 'pending',
+          amount: updated.total,
+          paymentMethod: updated.paymentMethod,
+        });
+      }
 
-      console.log(`Pedido ${orderId} atualizado para ${orderStatus}`);
+      console.log(`Pedido ${orderId} atualizado para ${orderStatus} (Antes: ${currentOrder.status})`);
     }
 
     return NextResponse.json({ received: true });

@@ -61,11 +61,23 @@ export async function POST(req: NextRequest) {
 
     const response = await payment.create({ body: paymentData });
 
+    // 1. Verificar se o webhook já processou este pedido enquanto esperávamos a resposta da API
+    const currentOrder = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: { status: true, paymentStatus: true }
+    });
+
+    const newStatus = response.status === 'approved' ? 'CONFIRMED' : 'PENDING';
+    
+    // Se o status já é o que queremos ou se já foi confirmado por outro meio (webhook),
+    // apenas retornamos a resposta sem disparar webhooks duplicados.
+    const statusAlreadyUpdated = currentOrder?.status === newStatus && currentOrder?.paymentStatus === response.status;
+
     // Atualizar pedido com informações do pagamento
     const updated = await prisma.order.update({
       where: { id: orderId },
       data: {
-        status: response.status === 'approved' ? 'CONFIRMED' : 'PENDING',
+        status: newStatus as any,
         paymentId: String(response.id),
         paymentStatus: response.status,
       },
@@ -81,16 +93,19 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    await sendOrderStatusUpdate({
-      orderId: updated.id,
-      orderNumber: updated.orderNumber,
-      status: updated.status as any,
-      total: updated.total,
-      user: updated.user,
-      paymentMethod: updated.paymentMethod,
-      paidAt: updated.paidAt,
-      items: updated.items,
-    });
+    // 2. Só enviar para o n8n se o status mudou DE FATO ou se ainda não tinha sido atualizado.
+    if (!statusAlreadyUpdated) {
+      await sendOrderStatusUpdate({
+        orderId: updated.id,
+        orderNumber: updated.orderNumber,
+        status: updated.status as any,
+        total: updated.total,
+        user: updated.user,
+        paymentMethod: updated.paymentMethod,
+        paidAt: updated.paidAt,
+        items: updated.items,
+      });
+    }
 
     return NextResponse.json({
       status: response.status,

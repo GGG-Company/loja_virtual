@@ -58,7 +58,6 @@ function CheckoutPagamentoContent() {
     
     // Arredondar para 2 casas decimais (essencial para o Mercado Pago)
     const finalVal = Math.max(0, Math.round(val * 100) / 100);
-    console.log('[CheckoutPagamento] Valor processado:', { total, val, finalVal });
     return finalVal;
   }, [total]);
 

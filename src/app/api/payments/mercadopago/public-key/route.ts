@@ -18,15 +18,12 @@ export async function GET() {
       publicKey = publicKey.replace(/['"]/g, '').trim();
     }
 
-    console.log('[API/MercadoPago] Fornecendo chave pública:', publicKey ? '***' + publicKey.slice(-5) : 'não encontrada');
-
     if (!publicKey || publicKey.length < 10) {
       return NextResponse.json({ error: 'Configuração não encontrada ou inválida' }, { status: 404 });
     }
 
     return NextResponse.json({ publicKey });
   } catch (error) {
-    console.error('[API/MercadoPago] Erro ao buscar chave:', error);
     return NextResponse.json({ error: 'Erro ao buscar chave pública' }, { status: 500 });
   }
 }
