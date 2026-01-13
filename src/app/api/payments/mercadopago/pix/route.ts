@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getMercadoPagoKeys } from '@/lib/mercadopago-config';
 import { prisma } from '@/lib/prisma';
-
-const MercadoPago = require('mercadopago');
+import { MercadoPagoConfig, Payment } from 'mercadopago';
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,11 +24,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const client = new MercadoPago.MercadoPagoConfig({ 
+    const client = new MercadoPagoConfig({ 
       accessToken: accessToken 
     });
 
-    const payment = new MercadoPago.Payment(client);
+    const payment = new Payment(client);
     
     const paymentData = {
       transaction_amount: Number(amount),

@@ -1,94 +1,10 @@
 version: '3.8'
-
 services:
   app:
-    image: ghcr.io/ggg-company/loja_virtual:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: shopping_ferramentas_app
+    build: .
+    container_name: loja_ferramentas
     restart: always
     ports:
-      - "3000:3000"
-    environment:
-      # Database
-      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:%40Apl197512@72.61.37.230:5432/ferramentas?schema=public}
-      
-      # NextAuth
-      - NEXTAUTH_URL=${NEXTAUTH_URL}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      - AUTH_SECRET=${NEXTAUTH_SECRET}
-      - AUTH_TRUST_HOST=true
-      
-      # Google OAuth
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      
-      # API Security
-      - X_INTERNAL_API_KEY=${X_INTERNAL_API_KEY}
-      
-      # AI Assistant
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      
-      # Email
-      - SMTP_HOST=${SMTP_HOST}
-      - SMTP_PORT=${SMTP_PORT}
-      - SMTP_USER=${SMTP_USER}
-      - SMTP_PASSWORD=${SMTP_PASSWORD}
-      
-      # Application
-      - NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME}
-      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
-      
-      # Integration n8n
-      - N8N_ORDERS_WEBHOOK_URL=${N8N_ORDERS_WEBHOOK_URL}
-      
-      # Melhor Envio
-      - MELHOR_ENVIO_TOKEN=${MELHOR_ENVIO_TOKEN}
-      - MELHOR_ENVIO_SANDBOX=${MELHOR_ENVIO_SANDBOX}
-      - MELHOR_ENVIO_CLIENT_ID=${MELHOR_ENVIO_CLIENT_ID}
-      - MELHOR_ENVIO_CLIENT_SECRET=${MELHOR_ENVIO_CLIENT_SECRET}
-      - MELHOR_ENVIO_CALLBACK=${MELHOR_ENVIO_CALLBACK}
-      - MELHOR_ENVIO_USER_AGENT=${MELHOR_ENVIO_USER_AGENT}
-      - MELHOR_ENVIO_SCOPES=${MELHOR_ENVIO_SCOPES}
-      
-      # Frete
-      - SHIPPING_ORIGIN_ZIP=${SHIPPING_ORIGIN_ZIP}
-      - MELHOR_ENVIO_SERVICES=${MELHOR_ENVIO_SERVICES}
-      - ORIGIN_ZIP=${ORIGIN_ZIP}
-      
-      # Dados da Loja
-      - STORE_NAME=${STORE_NAME}
-      - STORE_PHONE=${STORE_PHONE}
-      - STORE_EMAIL=${STORE_EMAIL}
-      - STORE_CPF=${STORE_CPF}
-      - STORE_CNPJ=${STORE_CNPJ}
-      - STORE_IE=${STORE_IE}
-      - STORE_ADDRESS=${STORE_ADDRESS}
-      - STORE_NUMBER=${STORE_NUMBER}
-      - STORE_COMPLEMENT=${STORE_COMPLEMENT}
-      - STORE_DISTRICT=${STORE_DISTRICT}
-      - STORE_CITY=${STORE_CITY}
-      - STORE_STATE=${STORE_STATE}
-      
-      # Mercado Pago
-      - MERCADO_PAGO_PUBLIC_KEY=${MERCADO_PAGO_PUBLIC_KEY}
-      - MERCADO_PAGO_ACCESS_TOKEN=${MERCADO_PAGO_ACCESS_TOKEN}
-      - MERCADO_PAGO_SANDBOX=${MERCADO_PAGO_SANDBOX}
-      - NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY=${NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY}
-    volumes:
-      - ./public/uploads:/app/public/uploads
-
-  mailpit:
-    image: axllent/mailpit:latest
-    container_name: shopping_ferramentas_mail
-    restart: always
-    ports:
-      - '1025:1025' # SMTP server
-      - '8025:8025' # Web UI
-    environment:
-      MP_SMTP_AUTH_ACCEPT_ANY: 1
-      MP_SMTP_AUTH_ALLOW_INSECURE: 1
-
-volumes:
-  postgres_data:
+      - "3001:3000"
+    env_file:
+      - .env

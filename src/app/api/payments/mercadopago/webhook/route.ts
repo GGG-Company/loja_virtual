@@ -5,8 +5,7 @@ import { OrderStatus } from '@prisma/client';
 import { sendOrderStatusUpdate } from '@/lib/webhooks';
 import { notifyOrderStatusChange, notifyPaymentStatus } from '@/lib/notifications';
 import type { OrderStatus as OrderStatusType } from '@/lib/i18n';
-
-const MercadoPago = require('mercadopago');
+import { MercadoPagoConfig, Payment } from 'mercadopago';
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,12 +32,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Configurar SDK
-    const client = new MercadoPago.MercadoPagoConfig({ 
+    const client = new MercadoPagoConfig({ 
       accessToken: accessToken 
     });
 
     // Buscar detalhes do pagamento
-    const payment = new MercadoPago.Payment(client);
+    const payment = new Payment(client);
     const paymentInfo = await payment.get({ id: paymentId });
 
     // Atualizar pedido baseado no status do pagamento
