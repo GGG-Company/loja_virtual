@@ -5,22 +5,32 @@ import { useSession } from 'next-auth/react';
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { 
-  RotateCcw, 
-  ChevronRight,
-  Settings,
-  Package,
-  FileText,
-} from 'lucide-react';
+import { RotateCcw, ChevronRight, Settings, Package, FileText, Tag } from "lucide-react";
 
 const modules = [
   {
-    id: 'devolucoes',
-    title: 'Devoluções',
-    description: 'Gerenciar solicitações de devolução e reembolsos',
+    id: "devolucoes",
+    title: "Devoluções",
+    description: "Gerenciar solicitações de devolução e reembolsos",
     icon: RotateCcw,
-    href: '/admin/gerenciamento/devolucoes',
-    color: 'bg-blue-500',
+    href: "/admin/gerenciamento/devolucoes",
+    color: "bg-blue-500",
+  },
+  {
+    id: "categories",
+    title: "Categorias",
+    description: "Gerenciar categorias do catálogo (criar/editar/remover)",
+    icon: Tag,
+    href: "/admin/gerenciamento/categories",
+    color: "bg-green-500",
+  },
+  {
+    id: "coupons",
+    title: "Cupons",
+    description: "Criar e gerenciar cupons de desconto",
+    icon: Tag,
+    href: "/admin/gerenciamento/coupons",
+    color: "bg-emerald-500",
   },
   // Módulos futuros:
   // {

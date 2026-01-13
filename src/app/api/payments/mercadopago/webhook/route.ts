@@ -10,25 +10,25 @@ import { MercadoPagoConfig, Payment } from 'mercadopago';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    
-    console.log('Webhook Mercado Pago recebido:', body);
+
+    console.log("Webhook Mercado Pago recebido:", body);
 
     // Verificar se é uma notificação de pagamento
-    if (body.type !== 'payment') {
+    if (body.type !== "payment") {
       return NextResponse.json({ received: true });
     }
 
     const paymentId = body.data?.id;
-    
+
     if (!paymentId) {
-      return NextResponse.json({ error: 'Payment ID não encontrado' }, { status: 400 });
+      return NextResponse.json({ error: "Payment ID não encontrado" }, { status: 400 });
     }
 
     // Buscar credenciais
     const { accessToken } = getMercadoPagoKeys();
-    
+
     if (!accessToken) {
-      return NextResponse.json({ error: 'Mercado Pago não configurado' }, { status: 500 });
+      return NextResponse.json({ error: "Mercado Pago não configurado" }, { status: 500 });
     }
 
     // Configurar SDK
@@ -42,30 +42,30 @@ export async function POST(req: NextRequest) {
 
     // Atualizar pedido baseado no status do pagamento
     const orderId = paymentInfo.external_reference;
-    
+
     if (orderId) {
       // 1. Buscar o pedido ANTES de atualizar para verificar o estado atual
       const currentOrder = await prisma.order.findUnique({
-        where: { id: orderId }
+        where: { id: orderId },
       });
 
       if (!currentOrder) {
-        return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
+        return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 });
       }
 
       let orderStatus: OrderStatus = OrderStatus.PENDING;
-      
+
       switch (paymentInfo.status) {
-        case 'approved':
+        case "approved":
           orderStatus = OrderStatus.CONFIRMED;
           break;
-        case 'rejected':
+        case "rejected":
           orderStatus = OrderStatus.CANCELLED;
           break;
-        case 'cancelled':
+        case "cancelled":
           orderStatus = OrderStatus.CANCELLED;
           break;
-        case 'refunded':
+        case "refunded":
           orderStatus = OrderStatus.REFUNDED;
           break;
         default:
@@ -89,15 +89,15 @@ export async function POST(req: NextRequest) {
           paymentStatus: paymentInfo.status,
           updatedAt: new Date(),
         },
-        include: { 
+        include: {
           user: true,
           items: {
             include: {
               product: {
-                select: { id: true, name: true, sku: true, imageUrl: true }
-              }
-            }
-          }
+                select: { id: true, name: true, sku: true, imageUrl: true },
+              },
+            },
+          },
         },
       });
 
@@ -128,10 +128,7 @@ export async function POST(req: NextRequest) {
           userId: updated.userId,
           orderId: updated.id,
           orderNumber: updated.orderNumber,
-          status: paymentInfo.status === 'approved' ? 'approved' 
-                : paymentInfo.status === 'rejected' ? 'rejected'
-                : paymentInfo.status === 'refunded' ? 'refunded'
-                : 'pending',
+          status: paymentInfo.status === "approved" ? "approved" : paymentInfo.status === "rejected" ? "rejected" : paymentInfo.status === "refunded" ? "refunded" : "pending",
           amount: updated.total,
           paymentMethod: updated.paymentMethod,
         });

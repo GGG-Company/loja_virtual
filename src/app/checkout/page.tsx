@@ -148,30 +148,30 @@ export default function CheckoutPage() {
   };
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      toast.error('Faça login para continuar');
-      router.push('/auth/login');
+    if (status === "unauthenticated") {
+      toast.error("Faça login para continuar");
+      router.push("/auth/login");
       return;
     }
 
     if (session?.user) {
-      setDadosForm(prev => ({
+      setDadosForm((prev) => ({
         ...prev,
-        nome: session.user.name || '',
-        email: session.user.email || '',
+        nome: session.user.name || "",
+        email: session.user.email || "",
       }));
     }
 
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
     if (cart.length === 0) {
-      toast.error('Seu carrinho está vazio');
-      router.push('/carrinho');
+      toast.error("Seu carrinho está vazio");
+      router.push("/carrinho");
       return;
     }
     if (cartItems.length === 0) {
       setCartItems(cart);
     }
-  }, [session, status, router]);
+  }, [session, status, router, cartItems.length]);
 
   useEffect(() => {
     if (status === 'authenticated') {

@@ -57,7 +57,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/picking', icon: List, label: 'Separação' },
     { href: '/admin/orders/enviados', icon: Truck, label: 'Pedidos Enviados' },
     { href: '/admin/gerenciamento', icon: Folder, label: 'Gerenciamento' },
-    { href: '/admin/cupons', icon: DollarSign, label: 'Cupons' },
     { href: '/admin/reviews', icon: Star, label: 'Avaliações' },
     ...(userRole === 'OWNER'
       ? [{ href: '/admin/financial', icon: DollarSign, label: 'Financeiro' }]

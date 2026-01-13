@@ -9,10 +9,7 @@ export async function POST(req: NextRequest) {
     const { orderId, amount, userEmail, userName, userCpf } = body;
 
     if (!orderId || !amount) {
-      return NextResponse.json(
-        { error: 'orderId e amount são obrigatórios' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "orderId e amount são obrigatórios" }, { status: 400 });
     }
 
     // Buscar dados do pedido para pegar endereço
@@ -24,22 +21,16 @@ export async function POST(req: NextRequest) {
     });
 
     if (!order) {
-      return NextResponse.json(
-        { error: 'Pedido não encontrado' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 });
     }
 
     // Extrair endereço do JSON
     const address = order.shippingAddress as any;
 
     const { accessToken } = getMercadoPagoKeys();
-    
+
     if (!accessToken) {
-      return NextResponse.json(
-        { error: 'Mercado Pago não configurado' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Mercado Pago não configurado" }, { status: 500 });
     }
 
     const client = new MercadoPagoConfig({ 
@@ -51,26 +42,26 @@ export async function POST(req: NextRequest) {
     // Data de vencimento: 3 dias úteis
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 3);
-    
+
     const paymentData = {
       transaction_amount: Number(amount),
       description: `Pedido #${orderId}`,
-      payment_method_id: 'bolbradesco',
+      payment_method_id: "bolbradesco",
       payer: {
-        email: userEmail || 'test@test.com',
-        first_name: userName?.split(' ')[0] || 'Cliente',
-        last_name: userName?.split(' ').slice(1).join(' ') || 'Teste',
+        email: userEmail || "test@test.com",
+        first_name: userName?.split(" ")[0] || "Cliente",
+        last_name: userName?.split(" ").slice(1).join(" ") || "Teste",
         identification: {
-          type: 'CPF',
-          number: userCpf?.replace(/\D/g, '') || '12345678909',
+          type: "CPF",
+          number: userCpf?.replace(/\D/g, "") || "12345678909",
         },
         address: {
-          zip_code: address?.zipCode?.replace(/\D/g, '') || '01310100',
-          street_name: address?.street || 'Rua Exemplo',
-          street_number: address?.number || '123',
-          neighborhood: address?.neighborhood || 'Centro',
-          city: address?.city || 'São Paulo',
-          federal_unit: address?.state || 'SP',
+          zip_code: address?.zipCode?.replace(/\D/g, "") || "01310100",
+          street_name: address?.street || "Rua Exemplo",
+          street_number: address?.number || "123",
+          neighborhood: address?.neighborhood || "Centro",
+          city: address?.city || "São Paulo",
+          federal_unit: address?.state || "SP",
         },
       },
       date_of_expiration: dueDate.toISOString(),
@@ -97,10 +88,7 @@ export async function POST(req: NextRequest) {
       dueDate: response.date_of_expiration,
     });
   } catch (error: any) {
-    console.error('Erro ao gerar Boleto:', error);
-    return NextResponse.json(
-      { error: error.message || 'Erro ao gerar Boleto' },
-      { status: 500 }
-    );
+    console.error("Erro ao gerar Boleto:", error);
+    return NextResponse.json({ error: error.message || "Erro ao gerar Boleto" }, { status: 500 });
   }
 }

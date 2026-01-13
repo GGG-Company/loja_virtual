@@ -27,15 +27,15 @@ const currency = (v: number) =>
 
 const percent = (v: number) => `${(v * 100).toFixed(1)}%`;
 
-function printHtml(html: string) {
+function _printHtml(html: string) {
   let cleaned = false;
-  const iframe = document.createElement('iframe');
-  iframe.style.position = 'fixed';
-  iframe.style.right = '0';
-  iframe.style.bottom = '0';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
-  iframe.style.border = '0';
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
   document.body.appendChild(iframe);
 
   const cleanup = () => {
@@ -48,7 +48,7 @@ function printHtml(html: string) {
     const win = iframe.contentWindow;
     if (!win) return cleanup();
     win.focus();
-    win.addEventListener('afterprint', cleanup, { once: true });
+    win.addEventListener("afterprint", cleanup, { once: true });
     setTimeout(cleanup, 2000);
     win.print();
   };
@@ -63,10 +63,8 @@ function printHtml(html: string) {
   doc.close();
 }
 
-const buildReportHtml = (data: Summary) => {
-  const conversion = data.ordersCount > 0
-    ? (data.ordersCount - data.pendingCount - data.refundedCount) / data.ordersCount
-    : 0;
+const _buildReportHtml = (data: Summary) => {
+  const conversion = data.ordersCount > 0 ? (data.ordersCount - data.pendingCount - data.refundedCount) / data.ordersCount : 0;
 
   const head = `
     <style>
@@ -100,13 +98,9 @@ const buildReportHtml = (data: Summary) => {
     </table>
   `;
 
-  const monthlyRows = data.monthlyRevenue
-    .map((m) => `<tr><td>${m.month}</td><td class="right">${m.orders}</td><td class="right">${currency(m.total)}</td></tr>`)
-    .join('') || '<tr><td colspan="3">Sem dados no período</td></tr>';
+  const monthlyRows = data.monthlyRevenue.map((m) => `<tr><td>${m.month}</td><td class="right">${m.orders}</td><td class="right">${currency(m.total)}</td></tr>`).join("") || '<tr><td colspan="3">Sem dados no período</td></tr>';
 
-  const productsRows = data.topProducts
-    .map((p) => `<tr><td>${p.name}</td><td class="right">${p.qty}</td><td class="right">${currency(p.revenue)}</td></tr>`)
-    .join('') || '<tr><td colspan="3">Sem vendas no período</td></tr>';
+  const productsRows = data.topProducts.map((p) => `<tr><td>${p.name}</td><td class="right">${p.qty}</td><td class="right">${currency(p.revenue)}</td></tr>`).join("") || '<tr><td colspan="3">Sem vendas no período</td></tr>';
 
   const tables = `
     <div class="wrap">
@@ -129,7 +123,7 @@ const buildReportHtml = (data: Summary) => {
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8" />${head}</head><body>
     <h1>Relatório Financeiro</h1>
-    <p class="muted">Período: ${data.filters?.startDate || 'Últimos 6 meses'} até ${data.filters?.endDate || 'Hoje'} · Status: ${data.filters?.status || 'ALL'} · Gerado em ${new Date().toLocaleString('pt-BR')}</p>
+    <p class="muted">Período: ${data.filters?.startDate || "Últimos 6 meses"} até ${data.filters?.endDate || "Hoje"} · Status: ${data.filters?.status || "ALL"} · Gerado em ${new Date().toLocaleString("pt-BR")}</p>
     ${summary}
     ${tables}
   </body></html>`;
@@ -139,22 +133,22 @@ export default function AdminFinancialPage() {
   const [data, setData] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const queryString = useMemo(() => 'includeStatusBreakdown=true', []); // default 6-month window handled by API
+  const queryString = useMemo(() => "includeStatusBreakdown=true", []); // default 6-month window handled by API
 
   useEffect(() => {
     const load = async () => {
       const started = performance.now();
-      toast.dismiss('financial-feedback');
-      toast.loading('Carregando dados financeiros...', { id: 'financial-feedback' });
+      toast.dismiss("financial-feedback");
+      toast.loading("Carregando dados financeiros...", { id: "financial-feedback" });
       try {
         const res = await fetch(`/api/admin/financial/summary?${queryString}`);
-        if (!res.ok) throw new Error('Falha ao carregar resumo financeiro');
+        if (!res.ok) throw new Error("Falha ao carregar resumo financeiro");
         const json = await res.json();
         setData(json);
-        toast.success('Resumo atualizado', { id: 'financial-feedback', duration: 2000 });
+        toast.success("Resumo atualizado", { id: "financial-feedback", duration: 2000 });
       } catch (e: any) {
-        setError(e?.message || 'Erro ao carregar');
-        toast.error(e?.message || 'Erro ao carregar', { id: 'financial-feedback', duration: 2800 });
+        setError(e?.message || "Erro ao carregar");
+        toast.error(e?.message || "Erro ao carregar", { id: "financial-feedback", duration: 2800 });
       } finally {
         const elapsed = performance.now() - started;
         const remaining = 2000 - elapsed;
@@ -174,7 +168,7 @@ export default function AdminFinancialPage() {
     monthlyRevenue: d.monthlyRevenue,
     topProducts: d.topProducts,
     statusBreakdown: d.statusBreakdown || undefined,
-    filters: { includeOrders: true, includeStock: false, includeStatusBreakdown: true, startDate: d.filters?.startDate, endDate: d.filters?.endDate, status: d.filters?.status ?? 'ALL' },
+    filters: { includeOrders: true, includeStock: false, includeStatusBreakdown: true, startDate: d.filters?.startDate, endDate: d.filters?.endDate, status: d.filters?.status ?? "ALL" },
   });
 
   const exportPdf = () => {
@@ -182,9 +176,9 @@ export default function AdminFinancialPage() {
     const summary = toFinancialSummary(data);
     generateFinancialReportPdf(summary).then((blob) => {
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.download = 'relatorio-financeiro.pdf';
+      a.download = "relatorio-financeiro.pdf";
       a.click();
       URL.revokeObjectURL(url);
     });
@@ -195,9 +189,9 @@ export default function AdminFinancialPage() {
     const summary = toFinancialSummary(data);
     buildFinancialReportExcel(summary).then((blob) => {
       const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.download = 'relatorio-financeiro.xlsx';
+      link.download = "relatorio-financeiro.xlsx";
       link.click();
       URL.revokeObjectURL(url);
     });
@@ -214,9 +208,7 @@ export default function AdminFinancialPage() {
   if (error) {
     return (
       <div className="container mx-auto p-6">
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
-          {error}
-        </div>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">{error}</div>
       </div>
     );
   }
@@ -233,10 +225,7 @@ export default function AdminFinancialPage() {
           <div key={r.month} className="flex items-center gap-3">
             <span className="w-24 text-sm text-gray-600">{r.month}</span>
             <div className="flex-1 h-3 rounded bg-gray-100 overflow-hidden">
-              <div
-                className="h-3 rounded bg-indigo-500"
-                style={{ width: `${max ? (r.total / max) * 100 : 0}%` }}
-              />
+              <div className="h-3 rounded bg-indigo-500" style={{ width: `${max ? (r.total / max) * 100 : 0}%` }} />
             </div>
             <span className="w-28 text-right text-sm font-medium">{currency(r.total)}</span>
           </div>
@@ -276,7 +265,9 @@ export default function AdminFinancialPage() {
           <Button asChild>
             <Link href="/admin/financial/reports">Ir para relatórios</Link>
           </Button>
-          <Button variant="outline" onClick={exportExcel}>Exportar Excel</Button>
+          <Button variant="outline" onClick={exportExcel}>
+            Exportar Excel
+          </Button>
           <Button onClick={exportPdf}>Exportar PDF</Button>
         </div>
       </div>
@@ -306,13 +297,7 @@ export default function AdminFinancialPage() {
             <h2 className="text-lg font-semibold">Faturamento mensal</h2>
             <span className="text-xs text-gray-500">Últimos 6 meses</span>
           </div>
-          <div className="space-y-3">
-            {data.monthlyRevenue.length === 0 ? (
-              <p className="text-gray-500 text-sm">Sem dados no período.</p>
-            ) : (
-              <MonthlyBarChart rows={data.monthlyRevenue.map(({ month, total }) => ({ month, total }))} />
-            )}
-          </div>
+          <div className="space-y-3">{data.monthlyRevenue.length === 0 ? <p className="text-gray-500 text-sm">Sem dados no período.</p> : <MonthlyBarChart rows={data.monthlyRevenue.map(({ month, total }) => ({ month, total }))} />}</div>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
@@ -324,15 +309,17 @@ export default function AdminFinancialPage() {
             {data.topProducts.length === 0 ? (
               <p className="text-gray-500 text-sm">Sem vendas no período.</p>
             ) : (
-              data.topProducts.map((p) => (
-                <div key={p.productId} className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">{p.name}</p>
-                    <p className="text-xs text-gray-500">{p.qty} unidades</p>
+              <>
+                {data.topProducts.map((p) => (
+                  <div key={p.productId} className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{p.name}</p>
+                      <p className="text-xs text-gray-500">{p.qty} unidades</p>
+                    </div>
+                    <p className="font-semibold">{currency(p.revenue)}</p>
                   </div>
-                  <p className="font-semibold">{currency(p.revenue)}</p>
-                </div>
-              ))
+                ))}
+              </>
             )}
           </div>
         </div>

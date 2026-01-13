@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { statusToPt, statusBadgeClass, paymentToPt } from '@/lib/i18n';
-import { Button } from '@/components/ui/button';
-import { Printer, FileText, Truck, RefreshCw, ExternalLink } from 'lucide-react';
-import { toast } from 'sonner';
+import { useEffect, useState, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { statusToPt, statusBadgeClass, paymentToPt } from "@/lib/i18n";
+import { Button } from "@/components/ui/button";
+import { Printer, FileText, Truck, RefreshCw, ExternalLink } from "lucide-react";
+import { toast } from "sonner";
 
 interface OrderDetail {
   id: string;
@@ -50,19 +50,7 @@ export default function OrderDetailPage() {
     melhorEnvioStatus?: string;
   } | null>(null);
 
-  useEffect(() => {
-    if (!orderId) return;
-    fetch(`/api/admin/orders/${orderId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setOrder(data);
-        // Verificar info da etiqueta
-        checkLabelStatus();
-      })
-      .finally(() => setLoading(false));
-  }, [orderId]);
-
-  const checkLabelStatus = async () => {
+  const checkLabelStatus = useCallback(async () => {
     try {
       const res = await fetch(`/api/admin/orders/${orderId}/label`);
       const data = await res.json();
@@ -75,20 +63,32 @@ export default function OrderDetailPage() {
         });
       }
     } catch (e) {
-      console.error('Erro ao verificar etiqueta:', e);
+      console.error("Erro ao verificar etiqueta:", e);
     }
-  };
+  }, [orderId]);
+
+  useEffect(() => {
+    if (!orderId) return;
+    fetch(`/api/admin/orders/${orderId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setOrder(data);
+        // Verificar info da etiqueta
+        checkLabelStatus();
+      })
+      .finally(() => setLoading(false));
+  }, [orderId, checkLabelStatus]);
 
   const handleGenerateLabel = async () => {
     setGeneratingLabel(true);
     try {
       const res = await fetch(`/api/admin/orders/${orderId}/label`, {
-        method: 'POST',
+        method: "POST",
       });
       const data = await res.json();
-      
+
       if (data.success) {
-        toast.success(data.message || 'Etiqueta gerada com sucesso!');
+        toast.success(data.message || "Etiqueta gerada com sucesso!");
         setLabelInfo({
           hasLabel: true,
           labelUrl: data.labelUrl,
@@ -99,11 +99,11 @@ export default function OrderDetailPage() {
         const orderData = await orderRes.json();
         setOrder(orderData);
       } else {
-        toast.error(data.error || 'Erro ao gerar etiqueta');
+        toast.error(data.error || "Erro ao gerar etiqueta");
       }
     } catch (e) {
-      console.error('Erro ao gerar etiqueta:', e);
-      toast.error('Erro ao gerar etiqueta');
+      console.error("Erro ao gerar etiqueta:", e);
+      toast.error("Erro ao gerar etiqueta");
     } finally {
       setGeneratingLabel(false);
     }
@@ -111,9 +111,9 @@ export default function OrderDetailPage() {
 
   const handlePrintLabel = () => {
     if (labelInfo?.labelUrl) {
-      window.open(labelInfo.labelUrl, '_blank');
+      window.open(labelInfo.labelUrl, "_blank");
     } else if (order?.melhorEnvioLabelUrl) {
-      window.open(order.melhorEnvioLabelUrl, '_blank');
+      window.open(order.melhorEnvioLabelUrl, "_blank");
     }
   };
 
@@ -126,14 +126,10 @@ export default function OrderDetailPage() {
         <div>
           <p className="text-sm text-gray-500">Pedido</p>
           <h1 className="text-3xl font-bold">{order.orderNumber}</h1>
-          <p className="text-sm text-gray-500 mt-1">{new Date(order.createdAt).toLocaleString('pt-BR')}</p>
+          <p className="text-sm text-gray-500 mt-1">{new Date(order.createdAt).toLocaleString("pt-BR")}</p>
         </div>
         <div className="flex items-center gap-3">
-            <span
-              className={`px-3 py-1 rounded-full text-sm font-semibold ${statusBadgeClass(order.status)}`}
-            >
-              {statusToPt(order.status)}
-            </span>
+          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${statusBadgeClass(order.status)}`}>{statusToPt(order.status)}</span>
           <Link href="/admin/orders" className="text-primary-600 text-sm hover:underline">
             Voltar
           </Link>
@@ -168,7 +164,7 @@ export default function OrderDetailPage() {
             <p className="text-sm text-gray-700">CPF: {order.shippingAddress?.cpf}</p>
             <p className="text-sm text-gray-700 mt-2">
               {order.shippingAddress?.street}, {order.shippingAddress?.number}
-              {order.shippingAddress?.complement ? ` - ${order.shippingAddress?.complement}` : ''}
+              {order.shippingAddress?.complement ? ` - ${order.shippingAddress?.complement}` : ""}
             </p>
             <p className="text-sm text-gray-700">
               {order.shippingAddress?.neighborhood} - {order.shippingAddress?.city}/{order.shippingAddress?.state}
@@ -189,19 +185,14 @@ export default function OrderDetailPage() {
               <Truck className="h-5 w-5" />
               Etiqueta de Envio
             </h2>
-            
+
             {order.trackingCode && (
               <div className="mb-3 p-3 bg-blue-50 rounded-lg">
                 <p className="text-sm text-blue-800">
                   <strong>Rastreio:</strong> {order.trackingCode}
                 </p>
                 {order.trackingUrl && (
-                  <a 
-                    href={order.trackingUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-xs text-blue-600 hover:underline flex items-center gap-1 mt-1"
-                  >
+                  <a href={order.trackingUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline flex items-center gap-1 mt-1">
                     <ExternalLink className="h-3 w-3" />
                     Ver rastreamento
                   </a>
@@ -222,20 +213,13 @@ export default function OrderDetailPage() {
             )}
 
             <div className="flex flex-col gap-2">
-              {(labelInfo?.hasLabel || order.melhorEnvioLabelUrl) ? (
-                <Button 
-                  onClick={handlePrintLabel}
-                  className="w-full"
-                >
+              {labelInfo?.hasLabel || order.melhorEnvioLabelUrl ? (
+                <Button onClick={handlePrintLabel} className="w-full">
                   <Printer className="h-4 w-4 mr-2" />
                   Imprimir Etiqueta
                 </Button>
               ) : order.shipping > 0 ? (
-                <Button 
-                  onClick={handleGenerateLabel}
-                  disabled={generatingLabel}
-                  className="w-full"
-                >
+                <Button onClick={handleGenerateLabel} disabled={generatingLabel} className="w-full">
                   {generatingLabel ? (
                     <>
                       <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
@@ -249,19 +233,12 @@ export default function OrderDetailPage() {
                   )}
                 </Button>
               ) : (
-                <p className="text-xs text-gray-500 text-center">
-                  Pedido sem frete (retirada na loja)
-                </p>
+                <p className="text-xs text-gray-500 text-center">Pedido sem frete (retirada na loja)</p>
               )}
 
               {(labelInfo?.hasLabel || order.melhorEnvioLabelUrl) && (
-                <Button 
-                  variant="outline"
-                  onClick={handleGenerateLabel}
-                  disabled={generatingLabel}
-                  size="sm"
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${generatingLabel ? 'animate-spin' : ''}`} />
+                <Button variant="outline" onClick={handleGenerateLabel} disabled={generatingLabel} size="sm">
+                  <RefreshCw className={`h-4 w-4 mr-2 ${generatingLabel ? "animate-spin" : ""}`} />
                   Regenerar Etiqueta
                 </Button>
               )}

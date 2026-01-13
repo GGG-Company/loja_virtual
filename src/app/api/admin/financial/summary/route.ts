@@ -158,7 +158,7 @@ export async function GET(request: Request) {
         },
       });
 
-      let totalItems = products.length;
+      const totalItems = products.length;
       let lowStockCount = 0;
       let zeroStockCount = 0;
       let negativeStockCount = 0;
