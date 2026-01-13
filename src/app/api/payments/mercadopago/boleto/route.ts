@@ -83,8 +83,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       paymentId: response.id,
       status: response.status,
-      boletoUrl: response.transaction_details?.external_resource_url,
-      barcode: response.barcode?.content,
+      boletoUrl: (response as any).point_of_interaction?.transaction_data?.ticket_url || (response as any).transaction_details?.external_resource_url,
+      barcode: (response as any).point_of_interaction?.transaction_data?.barcode?.content,
       dueDate: response.date_of_expiration,
     });
   } catch (error: any) {
