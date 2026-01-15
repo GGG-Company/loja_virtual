@@ -9,7 +9,11 @@ const INTERNAL_KEY = process.env.X_INTERNAL_API_KEY;
 const io = new Server(PORT, {
   maxHttpBufferSize: 1e6,
   cors: {
-    origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['https://loja.azura.dev.br','http://localhost:3000"'],
+    origin: (() => {
+      const defaultOrigins = ['https://loja.azura.dev.br', 'http://localhost:3000'];
+      if (!process.env.ALLOWED_ORIGINS) return defaultOrigins;
+      return process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean);
+    })(),
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -119,10 +123,17 @@ init().catch((e) => { console.error('[REMOTE] init error', e); process.exit(1); 
 // handshake auth
 io.use((socket, next) => {
   const token = socket.handshake.auth && socket.handshake.auth.token;
+  // mark socket as internal when token matches INTERNAL_KEY
+  socket.data = socket.data || {};
   if (token) {
-    if (token === INTERNAL_KEY) return next();
+    if (token === INTERNAL_KEY) {
+      socket.data.isInternal = true;
+      return next();
+    }
     return next(new Error('unauthorized'));
   }
+  // no token: allow (public/browser) but mark as not-internal
+  socket.data.isInternal = false;
   return next();
 });
 
