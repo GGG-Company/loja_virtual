@@ -158,7 +158,7 @@ font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 </Button>
 
 // Ghost
-<Button variant="ghost" className="text-metallic-700 hover:bg-metallic-100">
+<Button variant="outline"className="text-metallic-700 hover:bg-metallic-100">
   Cancelar
 </Button>
 

@@ -11,11 +11,11 @@ export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const { data: session } = useSession();
-  type UserRole = 'CUSTOMER' | 'ADMIN' | 'OWNER';
+  type UserRole = "CUSTOMER" | "ADMIN" | "OWNER";
   const role = (session?.user as { role?: UserRole } | undefined)?.role;
 
   const updateCartCount = () => {
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
     const total = cart.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
     setCartCount(total);
   };
@@ -25,12 +25,17 @@ export function Header() {
     updateCartCount();
 
     // Escuta evento de atualização do carrinho
-    window.addEventListener('cartUpdated', updateCartCount);
-    
+    window.addEventListener("cartUpdated", updateCartCount);
+
     return () => {
-      window.removeEventListener('cartUpdated', updateCartCount);
+      window.removeEventListener("cartUpdated", updateCartCount);
     };
   }, []);
+
+  // Atualiza contagem sempre que a sessão muda (ex: login/logout)
+  useEffect(() => {
+    updateCartCount();
+  }, [session]);
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-metallic-200 shadow-sm">
@@ -41,23 +46,15 @@ export function Header() {
           <Link href="/" className="flex items-center space-x-2">
             <div className="text-2xl">🔨</div>
             <div>
-              <h1 className="text-xl font-bold text-metallic-900">
-                Shopping das Ferramentas
-              </h1>
-              <p className="text-xs text-metallic-600">
-                Qualidade Profissional
-              </p>
+              <h1 className="text-xl font-bold text-metallic-900">Shopping das Ferramentas</h1>
+              <p className="text-xs text-metallic-600">Qualidade Profissional</p>
             </div>
           </Link>
 
           {/* Search Bar - Desktop */}
           <div className="hidden md:flex flex-1 max-w-2xl mx-8">
             <div className="relative w-full">
-              <input
-                type="text"
-                placeholder="Buscar ferramentas, marcas..."
-                className="w-full px-4 py-2.5 pl-10 border border-metallic-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
+              <input type="text" placeholder="Buscar ferramentas, marcas..." className="w-full px-4 py-2.5 pl-10 border border-metallic-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
               <Search className="absolute left-3 top-3 h-5 w-5 text-metallic-400" />
             </div>
           </div>
@@ -71,18 +68,18 @@ export function Header() {
                 <Link href="/minha-conta">
                   <Button variant="ghost" size="sm">
                     <User className="h-5 w-5 mr-2" />
-                    <span className="hidden lg:inline">{session.user?.name?.split(' ')[0]}</span>
+                    <span className="hidden lg:inline">{session.user?.name?.split(" ")[0]}</span>
                   </Button>
                 </Link>
-                
-                {role !== 'CUSTOMER' && role && (
+
+                {role !== "CUSTOMER" && role && (
                   <Link href="/admin">
                     <Button variant="outline" size="sm">
                       Admin
                     </Button>
                   </Link>
                 )}
-                
+
                 <Button variant="ghost" size="sm" onClick={() => signOut()}>
                   Sair
                 </Button>
@@ -96,25 +93,14 @@ export function Header() {
               </Link>
             )}
 
-            {session && (
-              <Link href="/carrinho">
-                <Button variant="ghost" size="sm" className="relative">
-                  <ShoppingCart className="h-5 w-5" />
-                  {cartCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-primary-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {cartCount}
-                    </span>
-                  )}
-                </Button>
-              </Link>
-            )}
+            <Link href="/carrinho">
+              <Button variant="ghost" size="sm" className="relative">
+                <ShoppingCart className="h-5 w-5" />
+                {cartCount > 0 && <span className="absolute -top-1 -right-1 bg-primary-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">{cartCount}</span>}
+              </Button>
+            </Link>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              className="lg:hidden"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
+            <Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
               <Menu className="h-5 w-5" />
             </Button>
           </div>

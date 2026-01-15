@@ -21,8 +21,8 @@ CREATE TABLE "accounts" (
     "providerAccountId" TEXT NOT NULL,
     "refresh_token" TEXT,
     "access_token" TEXT,
-    "expires_at" INTEGER,
-    "token_type" TEXT,
+"createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+"updatedAt" TIMESTAMP NOT NULL
     "scope" TEXT,
     "id_token" TEXT,
     "session_state" TEXT,
@@ -43,13 +43,13 @@ CREATE TABLE "verification_tokens" (
     "identifier" TEXT NOT NULL,
     "token" TEXT NOT NULL,
     "expires" DATETIME NOT NULL
-);
+"expires" TIMESTAMP NOT NULL,
 
 -- CreateTable
 CREATE TABLE "categories" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
-    "slug" TEXT NOT NULL,
+"expires" TIMESTAMP NOT NULL
     "description" TEXT,
     "image" TEXT,
     "parentId" TEXT,
@@ -58,8 +58,8 @@ CREATE TABLE "categories" (
     CONSTRAINT "categories_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "categories" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
--- CreateTable
-CREATE TABLE "products" (
+"createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+"updatedAt" TIMESTAMP NOT NULL,
     "id" TEXT NOT NULL PRIMARY KEY,
     "sku" TEXT NOT NULL,
     "ean" TEXT,
@@ -86,8 +86,8 @@ CREATE TABLE "products" (
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
     CONSTRAINT "products_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "categories" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
-);
-
+"createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+"updatedAt" TIMESTAMP NOT NULL,
 -- CreateTable
 CREATE TABLE "product_variants" (
     "id" TEXT NOT NULL PRIMARY KEY,
@@ -98,8 +98,8 @@ CREATE TABLE "product_variants" (
     "stock" INTEGER NOT NULL DEFAULT 0,
     "attributes" JSONB NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "product_variants_productId_fkey" FOREIGN KEY ("productId") REFERENCES "products" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+"createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+"updatedAt" TIMESTAMP NOT NULL,
 );
 
 -- CreateTable
@@ -108,15 +108,15 @@ CREATE TABLE "product_images" (
     "productId" TEXT NOT NULL,
     "url" TEXT NOT NULL,
     "alt" TEXT,
-    "order" INTEGER NOT NULL DEFAULT 0,
+"createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "product_images_productId_fkey" FOREIGN KEY ("productId") REFERENCES "products" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
 CREATE TABLE "carts" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "userId" TEXT,
+"createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+"updatedAt" TIMESTAMP NOT NULL,
     "sessionId" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
@@ -124,8 +124,8 @@ CREATE TABLE "carts" (
 );
 
 -- CreateTable
-CREATE TABLE "cart_items" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+"createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+"updatedAt" TIMESTAMP NOT NULL,
     "cartId" TEXT NOT NULL,
     "productId" TEXT NOT NULL,
     "quantity" INTEGER NOT NULL DEFAULT 1,
@@ -140,15 +140,15 @@ CREATE TABLE "orders" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "orderNumber" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
-    "status" TEXT NOT NULL DEFAULT 'PENDING',
-    "subtotal" REAL NOT NULL,
+"status" TEXT NOT NULL DEFAULT 'PENDING',
     "discount" REAL NOT NULL DEFAULT 0,
     "shipping" REAL NOT NULL DEFAULT 0,
     "total" REAL NOT NULL,
-    "paymentMethod" TEXT NOT NULL,
-    "installments" INTEGER NOT NULL DEFAULT 1,
-    "paymentId" TEXT,
-    "paidAt" DATETIME,
+"paidAt" TIMESTAMP,
+"shippedAt" TIMESTAMP,
+"deliveredAt" TIMESTAMP,
+"createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+"updatedAt" TIMESTAMP NOT NULL,
     "shippingAddress" JSONB NOT NULL,
     "trackingCode" TEXT,
     "trackingUrl" TEXT,
@@ -160,7 +160,7 @@ CREATE TABLE "orders" (
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
     CONSTRAINT "orders_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT "orders_couponId_fkey" FOREIGN KEY ("couponId") REFERENCES "coupons" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+"createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 );
 
 -- CreateTable
@@ -171,10 +171,10 @@ CREATE TABLE "order_items" (
     "quantity" INTEGER NOT NULL,
     "price" REAL NOT NULL,
     "discount" REAL NOT NULL DEFAULT 0,
-    "subtotal" REAL NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "order_items_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "orders" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "order_items_productId_fkey" FOREIGN KEY ("productId") REFERENCES "products" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+"startDate" TIMESTAMP,
+"endDate" TIMESTAMP,
+"createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+"updatedAt" TIMESTAMP NOT NULL
 );
 
 -- CreateTable
@@ -190,10 +190,10 @@ CREATE TABLE "banners" (
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL
 );
-
--- CreateTable
-CREATE TABLE "coupons" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+"startDate" TIMESTAMP,
+"endDate" TIMESTAMP,
+"createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+"updatedAt" TIMESTAMP NOT NULL
     "code" TEXT NOT NULL,
     "description" TEXT,
     "discountType" TEXT NOT NULL,
@@ -203,7 +203,7 @@ CREATE TABLE "coupons" (
     "minPurchase" REAL,
     "maxDiscount" REAL,
     "usageLimit" INTEGER,
-    "usagePerUser" INTEGER,
+"updatedAt" TIMESTAMP NOT NULL,
     "currentUsage" INTEGER NOT NULL DEFAULT 0,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "startDate" DATETIME,
@@ -215,7 +215,7 @@ CREATE TABLE "coupons" (
 -- CreateTable
 CREATE TABLE "financial_config" (
     "id" TEXT NOT NULL PRIMARY KEY DEFAULT 'singleton',
-    "creditCardInterestRate" REAL NOT NULL DEFAULT 1.99,
+"createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "debitCardInterestRate" REAL NOT NULL DEFAULT 0,
     "maxInstallments" INTEGER NOT NULL DEFAULT 12,
     "minInstallmentValue" REAL NOT NULL DEFAULT 50.00,
@@ -227,7 +227,7 @@ CREATE TABLE "financial_config" (
 
 -- CreateTable
 CREATE TABLE "stock_logs" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+"createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     "productId" TEXT NOT NULL,
     "source" TEXT NOT NULL,
     "previousQty" INTEGER NOT NULL,
@@ -236,7 +236,7 @@ CREATE TABLE "stock_logs" (
     "reason" TEXT,
     "userId" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "stock_logs_productId_fkey" FOREIGN KEY ("productId") REFERENCES "products" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+"createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- CreateTable

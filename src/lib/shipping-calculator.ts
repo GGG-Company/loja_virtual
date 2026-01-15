@@ -313,11 +313,18 @@ export async function loadShippingItems(rawItems: ShippingItem[]) {
   const productMap = new Map(products.map((p) => [p.id, p]));
   return rawItems.map((item) => {
     const db = productMap.get(item.productId);
-    const weight = item.weightKg ?? db?.weight ?? 1;
-    const dimensions = item.dimensions ?? parseDimensions(db?.dimensions) ?? { height: 12, width: 18, length: 24 };
+    // Sempre usar valores do banco de dados quando disponíveis.
+    // NÃO confiar em valores enviados pelo cliente para peso/dimensões — isso causava divergências.
+    const weight = db?.weight ?? 1;
+    const dimensions = parseDimensions(db?.dimensions) ?? { height: 12, width: 18, length: 24 };
+    if (!db) {
+      console.warn("[shipping] Produto não encontrado no DB para cotação, usando defaults:", item.productId);
+    } else if (!db.weight || !db.dimensions) {
+      console.warn("[shipping] Produto com dados incompletos no DB (peso/dimensions), usando defaults ou parciais:", { id: db.id, weight: db.weight, dimensions: db.dimensions });
+    }
     return {
       ...item,
-      name: item.name ?? db?.name ?? 'Produto',
+      name: item.name ?? db?.name ?? "Produto",
       weightKg: weight,
       dimensions,
       price: item.price ?? db?.price ?? 0,

@@ -39,7 +39,11 @@ export default function LoginPage() {
         toast.success('Login realizado com sucesso!');
         // Pequeno delay para garantir que a sessão foi criada
         setTimeout(() => {
-          router.push('/');
+          // Atualiza o header/carrinho a partir do localStorage
+          try {
+            window.dispatchEvent(new Event("cartUpdated"));
+          } catch {}
+          router.push("/");
           router.refresh();
         }, 100);
       }

@@ -8,8 +8,7 @@ import { usePrice } from '@/hooks/use-price';
 import { Heart, ShoppingCart } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+// Permitimos adicionar ao carrinho sem exigir login — cache local em localStorage
 
 interface ProductCardProps {
   product: {
@@ -31,8 +30,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
   const finalPrice = product.promotionalPrice || product.price;
   const { formatPrice, bestInstallmentText } = usePrice(finalPrice);
   const [isFavorite, setIsFavorite] = useState(false);
-  const { data: session } = useSession();
-  const router = useRouter();
+  // Não exigimos sessão aqui; o carrinho é mantido em localStorage para usuários anônimos
 
   const imageSrc = (() => {
     const candidate = product.imageUrl || product.images?.[0]?.url;
@@ -52,13 +50,6 @@ export function ProductCard({ product, className }: ProductCardProps) {
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    // Verifica se usuário está logado
-    if (!session) {
-      toast.error('Faça login para adicionar produtos ao carrinho');
-      router.push('/auth/login');
-      return;
-    }
     
     // Adiciona ao carrinho no localStorage
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');

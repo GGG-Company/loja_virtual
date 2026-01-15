@@ -5,83 +5,98 @@ import { auth } from '@/auth';
 export async function middleware(request: NextRequest) {
   const session = await auth();
   const { pathname } = request.nextUrl;
+  const originHeader = request.headers.get("origin") || "";
+  const allowedOrigins = ["http://localhost:3000", "https://loja.azura.dev.br", "https://socket.azura.dev.br"];
+  const allowOrigin = allowedOrigins.includes(originHeader) ? originHeader : "https://loja.azura.dev.br";
+  const corsHeaders = {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Credentials": "true",
+    "Access-Control-Allow-Methods": "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, X-Internal-Api-Key",
+  };
+
+  const applyCors = (res: NextResponse | Response) => {
+    try {
+      // NextResponse exposes headers.set
+      // For native Response, create a new Response preserving body/status
+      if (res instanceof NextResponse) {
+        Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v as string));
+        return res;
+      }
+      const cloned = new Response(res.body, { status: res.status, statusText: res.statusText, headers: res.headers });
+      Object.entries(corsHeaders).forEach(([k, v]) => cloned.headers.set(k, v as string));
+      return cloned;
+    } catch (e) {
+      return res;
+    }
+  };
 
   // ============================================
   // 1. PROTEÇÃO DE ROTAS ADMIN
   // ============================================
-  
+
   // Rotas financeiras: apenas OWNER
-  if (pathname.startsWith('/admin/financial')) {
+  if (pathname.startsWith("/admin/financial")) {
     if (!session?.user) {
-      return NextResponse.redirect(new URL('/auth/login', request.url));
+      return NextResponse.redirect(new URL("/auth/login", request.url));
     }
-    
-    if (session.user.role !== 'OWNER') {
-      return NextResponse.redirect(new URL('/admin/unauthorized', request.url));
+
+    if (session.user.role !== "OWNER") {
+      return NextResponse.redirect(new URL("/admin/unauthorized", request.url));
     }
   }
 
   // Rotas administrativas: ADMIN ou OWNER
-  if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/financial')) {
+  if (pathname.startsWith("/admin") && !pathname.startsWith("/admin/financial")) {
     if (!session?.user) {
-      return NextResponse.redirect(new URL('/auth/login', request.url));
+      return NextResponse.redirect(new URL("/auth/login", request.url));
     }
-    
-    if (session.user.role === 'CUSTOMER') {
-      return NextResponse.redirect(new URL('/admin/unauthorized', request.url));
+
+    if (session.user.role === "CUSTOMER") {
+      return NextResponse.redirect(new URL("/admin/unauthorized", request.url));
     }
   }
 
   // ============================================
   // 2. PROTEÇÃO DE API ROUTES
   // ============================================
-  
+
   // APIs de integração: requer X-INTERNAL-API-KEY
-  if (pathname.startsWith('/api/integrations')) {
+  if (pathname.startsWith("/api/integrations")) {
     // Whitelist para fluxo OAuth do Melhor Envio (não usa API key)
-    const oauthWhitelist = [
-      '/api/integrations/melhor-envio/authorize',
-      '/api/integrations/melhor-envio/callback',
-    ];
+    const oauthWhitelist = ["/api/integrations/melhor-envio/authorize", "/api/integrations/melhor-envio/callback"];
     if (oauthWhitelist.includes(pathname)) {
-      return NextResponse.next();
+      return applyCors(NextResponse.next());
     }
 
-    const apiKey = request.headers.get('X-INTERNAL-API-KEY');
+    const apiKey = request.headers.get("X-INTERNAL-API-KEY");
     const validKey = process.env.X_INTERNAL_API_KEY;
 
     if (!apiKey || apiKey !== validKey) {
-      return NextResponse.json(
-        { error: 'Unauthorized - Invalid API Key' },
-        { status: 401 }
-      );
+      return applyCors(NextResponse.json({ error: "Unauthorized - Invalid API Key" }, { status: 401 }));
     }
   }
 
   // APIs admin: requer sessão ADMIN ou OWNER
-  if (pathname.startsWith('/api/admin')) {
+  if (pathname.startsWith("/api/admin")) {
     if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized - Authentication required' },
-        { status: 401 }
-      );
+      return applyCors(NextResponse.json({ error: "Unauthorized - Authentication required" }, { status: 401 }));
     }
 
-    if (session.user.role === 'CUSTOMER') {
-      return NextResponse.json(
-        { error: 'Forbidden - Insufficient permissions' },
-        { status: 403 }
-      );
+    if (session.user.role === "CUSTOMER") {
+      return applyCors(NextResponse.json({ error: "Forbidden - Insufficient permissions" }, { status: 403 }));
     }
   }
 
-  return NextResponse.next();
+  // Handle CORS preflight for any /api/* route
+  if (pathname.startsWith("/api") && request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
+
+  const res = NextResponse.next();
+  return applyCors(res);
 }
 
 export const config = {
-  matcher: [
-    '/admin/:path*',
-    '/api/admin/:path*',
-    '/api/integrations/:path*',
-  ],
+  matcher: ["/admin/:path*", "/api/:path*", "/api/admin/:path*", "/api/integrations/:path*"],
 };

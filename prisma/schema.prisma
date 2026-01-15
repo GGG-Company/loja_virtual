@@ -92,6 +92,9 @@ model User {
   returns       Return[]  // Devoluções solicitadas pelo usuário
   notifications Notification[]  // Notificações do usuário
   reviews       Review[]  // Avaliações feitas pelo usuário
+  supportChats  SupportChat[]   // Chats de suporte criados
+  assignedChats SupportChat[] @relation("AssignedChats")  // Chats atribuídos como atendente
+  conversations Conversation[]
 
   @@index([email])
   @@map("users")
@@ -754,4 +757,86 @@ model MercadoPagoConfig {
   updatedAt     DateTime @updatedAt
 
   @@map("mercado_pago_config")
+}
+
+// ============================================
+// SITE CONFIGURATION
+// ============================================
+
+model SiteConfig {
+  id               String   @id @default("singleton")
+  assistantMode    String   @default("smart") // "smart" ou "ai"
+  updatedAt        DateTime @updatedAt
+
+  @@map("site_config")
+}
+
+// ============================================
+// SUPPORT CHAT / ATENDIMENTO HUMANIZADO
+// ============================================
+
+enum SupportChatStatus {
+  OPEN         // Aguardando atendimento
+  BOT          // Atendimento ainda com o assistente (bot)
+  IN_PROGRESS  // Sendo atendido
+  RESOLVED     // Resolvido
+  CLOSED       // Fechado
+}
+
+model SupportChat {
+  id          String            @id @default(cuid())
+  userId      String?
+  user        User?             @relation(fields: [userId], references: [id])
+  userName    String            // Nome do visitante (mesmo sem login)
+  userEmail   String?           // Email opcional
+  status      SupportChatStatus @default(OPEN)
+  subject     String?           // Assunto/motivo do contato
+  assignedTo  String?           // ID do atendente
+  attendant   User?             @relation("AssignedChats", fields: [assignedTo], references: [id])
+  messages    SupportMessage[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  closedAt    DateTime?
+
+  @@map("support_chats")
+}
+
+model SupportMessage {
+  id        String       @id @default(cuid())
+  chatId    String
+  chat      SupportChat  @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender    String       // "customer" ou "attendant"
+  senderName String      // Nome de quem enviou
+  message   String       @db.Text
+  createdAt DateTime     @default(now())
+
+  @@map("support_messages")
+}
+
+// ============================================
+// CONVERSATIONS (Histórico do Assistente)
+// ============================================
+
+model Conversation {
+  id          String               @id @default(cuid())
+  userId      String
+  user        User                 @relation(fields: [userId], references: [id])
+  title       String?
+  messages    ConversationMessage[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@map("conversations")
+}
+
+model ConversationMessage {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         String       // 'user' | 'assistant'
+  senderName     String?
+  message        String       @db.Text
+  createdAt      DateTime     @default(now())
+
+  @@map("conversation_messages")
 }

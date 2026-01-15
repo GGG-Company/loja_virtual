@@ -160,7 +160,7 @@ export default function AdminDevolucoesPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link href="/admin/gerenciamento">
-            <Button variant="ghost" size="icon">
+            <Button variant="outline" size="icon">
               <ChevronLeft className="h-5 w-5" />
             </Button>
           </Link>
@@ -287,7 +287,7 @@ export default function AdminDevolucoesPage() {
                       <td className="px-4 py-4 text-sm text-gray-500">{new Date(ret.createdAt).toLocaleDateString("pt-BR")}</td>
                       <td className="px-4 py-4 text-right">
                         <Link href={`/admin/gerenciamento/devolucoes/${ret.id}`}>
-                          <Button size="sm" variant="ghost">
+                          <Button size="sm" variant="outline">
                             <Eye className="h-4 w-4 mr-1" />
                             Ver
                           </Button>
