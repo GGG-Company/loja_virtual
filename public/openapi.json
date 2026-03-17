@@ -1,0 +1,1865 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Shopping das Ferramentas API",
+    "version": "1.0.0",
+    "description": "API REST completa para e-commerce de ferramentas com integração Mercado Livre e Mercado Pago",
+    "contact": {
+      "name": "Suporte API",
+      "email": "suporte@shoppingdasferramentas.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Ambiente de Desenvolvimento"
+    },
+    {
+      "url": "https://loja.azura.dev.br",
+      "description": "Ambiente de Produção"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Autenticação",
+      "description": "Endpoints de autenticação e registro de usuários"
+    },
+    {
+      "name": "Produtos",
+      "description": "Operações com produtos"
+    },
+    {
+      "name": "Categorias",
+      "description": "Gerenciamento de categorias"
+    },
+    {
+      "name": "Pedidos",
+      "description": "Gestão de pedidos"
+    },
+    {
+      "name": "Pagamentos",
+      "description": "Processamento de pagamentos via Mercado Pago"
+    },
+    {
+      "name": "Envio",
+      "description": "Cálculo e rastreamento de envios"
+    },
+    {
+      "name": "Avaliações",
+      "description": "Sistema de avaliações de produtos"
+    },
+    {
+      "name": "Devoluções",
+      "description": "Gestão de devoluções e trocas"
+    },
+    {
+      "name": "Admin",
+      "description": "Endpoints administrativos"
+    },
+    {
+      "name": "Integrações",
+      "description": "Webhooks e integrações externas"
+    },
+    {
+      "name": "Webhooks N8N",
+      "description": "Webhooks enviados automaticamente para n8n"
+    },
+    {
+      "name": "Perfil",
+      "description": "Gerenciamento de perfil do usuário"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "SessionAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "next-auth.session-token",
+        "description": "Autenticação via cookie de sessão NextAuth"
+      },
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-INTERNAL-API-KEY",
+        "description": "Chave de API para integrações externas"
+      }
+    },
+    "schemas": {
+      "Product": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "clx123abc456"
+          },
+          "name": {
+            "type": "string",
+            "example": "Furadeira de Impacto Bosch 650W"
+          },
+          "description": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number",
+            "format": "float",
+            "example": 299.99
+          },
+          "promotionalPrice": {
+            "type": "number",
+            "format": "float",
+            "example": 249.99,
+            "nullable": true
+          },
+          "stock": {
+            "type": "integer",
+            "example": 50
+          },
+          "sku": {
+            "type": "string",
+            "example": "BOSCH-GSB-650"
+          },
+          "imageUrl": {
+            "type": "string",
+            "example": "/products/furadeira-bosch.jpg"
+          },
+          "category": {
+            "$ref": "#/components/schemas/Category"
+          },
+          "reviews": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Review"
+            }
+          }
+        }
+      },
+      "Category": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "example": "Ferramentas Elétricas"
+          },
+          "slug": {
+            "type": "string",
+            "example": "ferramentas-eletricas"
+          }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "orderNumber": {
+            "type": "string",
+            "example": "ORD-2026-000001"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["PENDING", "PAID", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"]
+          },
+          "total": {
+            "type": "number",
+            "format": "float",
+            "example": 599.99
+          },
+          "paymentMethod": {
+            "type": "string",
+            "enum": ["PIX", "CREDIT_CARD", "BOLETO"]
+          },
+          "trackingCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderItem"
+            }
+          }
+        }
+      },
+      "OrderItem": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer",
+            "example": 2
+          },
+          "price": {
+            "type": "number",
+            "format": "float"
+          }
+        }
+      },
+      "Review": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "rating": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5,
+            "example": 5
+          },
+          "comment": {
+            "type": "string",
+            "example": "Produto excelente, superou minhas expectativas!"
+          },
+          "verified": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ShippingQuote": {
+        "type": "object",
+        "properties": {
+          "service": {
+            "type": "string",
+            "example": "SEDEX"
+          },
+          "price": {
+            "type": "number",
+            "format": "float",
+            "example": 25.50
+          },
+          "deliveryTime": {
+            "type": "integer",
+            "example": 3,
+            "description": "Prazo em dias úteis"
+          }
+        }
+      },
+      "Return": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "enum": ["DEFECTIVE", "WRONG_PRODUCT", "NOT_AS_DESCRIBED", "CHANGED_MIND"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["PENDING", "APPROVED", "REJECTED", "COMPLETED"]
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "WebhookOrderStatusUpdate": {
+        "type": "object",
+        "description": "Payload enviado ao n8n quando status de pedido é atualizado",
+        "properties": {
+          "type": {
+            "type": "string",
+            "example": "order.status.update",
+            "description": "Tipo do evento"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-14T10:30:00Z"
+          },
+          "orderId": {
+            "type": "string"
+          },
+          "orderNumber": {
+            "type": "string",
+            "example": "ORD-2026-000001"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["PENDING", "CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED", "REFUNDED", "QUOTE"]
+          },
+          "total": {
+            "type": "number"
+          },
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "phone": {
+                "type": "string"
+              }
+            }
+          },
+          "trackingCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "trackingUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "paymentMethod": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "productId": {
+                  "type": "string"
+                },
+                "quantity": {
+                  "type": "integer"
+                },
+                "price": {
+                  "type": "number"
+                },
+                "product": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "sku": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "WebhookReturnCreated": {
+        "type": "object",
+        "description": "Payload enviado ao n8n quando uma devolução é criada",
+        "properties": {
+          "type": {
+            "type": "string",
+            "example": "returns.created"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "returnId": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string"
+          },
+          "orderNumber": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "user": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "WebhookGeneric": {
+        "type": "object",
+        "description": "Formato genérico de webhook enviado ao n8n",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Tipo do evento (ex: returns.approved, shipping.label_ready)"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": true
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Produto não encontrado"
+          },
+          "code": {
+            "type": "string",
+            "example": "PRODUCT_NOT_FOUND"
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/auth/register": {
+      "post": {
+        "tags": ["Autenticação"],
+        "summary": "Registrar novo usuário",
+        "description": "Cria uma nova conta de usuário no sistema",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "email", "password"],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "example": "João Silva"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "joao@email.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "SenhaSegura123!"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Usuário criado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/products": {
+      "get": {
+        "tags": ["Produtos"],
+        "summary": "Listar produtos",
+        "description": "Retorna lista paginada de produtos com filtros opcionais",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Número da página"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "Itens por página"
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filtrar por ID de categoria"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Buscar por nome ou descrição"
+          },
+          {
+            "name": "minPrice",
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "maxPrice",
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de produtos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "products": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Product"
+                      }
+                    },
+                    "total": {
+                      "type": "integer"
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "totalPages": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/products/{id}": {
+      "get": {
+        "tags": ["Produtos"],
+        "summary": "Obter produto por ID",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalhes do produto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Produto não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/categories": {
+      "get": {
+        "tags": ["Categorias"],
+        "summary": "Listar categorias",
+        "responses": {
+          "200": {
+            "description": "Lista de categorias",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Category"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orders": {
+      "post": {
+        "tags": ["Pedidos"],
+        "summary": "Criar novo pedido",
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["items", "shippingAddress"],
+                "properties": {
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "productId": {
+                          "type": "string"
+                        },
+                        "quantity": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  },
+                  "shippingAddress": {
+                    "type": "object",
+                    "properties": {
+                      "street": {
+                        "type": "string"
+                      },
+                      "number": {
+                        "type": "string"
+                      },
+                      "complement": {
+                        "type": "string"
+                      },
+                      "neighborhood": {
+                        "type": "string"
+                      },
+                      "city": {
+                        "type": "string"
+                      },
+                      "state": {
+                        "type": "string"
+                      },
+                      "zipCode": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "paymentMethod": {
+                    "type": "string",
+                    "enum": ["PIX", "CREDIT_CARD", "BOLETO"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Pedido criado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autorizado"
+          }
+        }
+      }
+    },
+    "/api/user/orders": {
+      "get": {
+        "tags": ["Pedidos"],
+        "summary": "Listar pedidos do usuário",
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de pedidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Order"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shipping/quote": {
+      "post": {
+        "tags": ["Envio"],
+        "summary": "Calcular frete",
+        "description": "Calcula opções de frete para um CEP destino",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["cep", "items"],
+                "properties": {
+                  "cep": {
+                    "type": "string",
+                    "example": "01310-100",
+                    "pattern": "^[0-9]{5}-?[0-9]{3}$"
+                  },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "productId": {
+                          "type": "string"
+                        },
+                        "quantity": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "examples": {
+                "exemplo1": {
+                  "summary": "Cálculo simples",
+                  "value": {
+                    "cep": "01310-100",
+                    "items": [
+                      {
+                        "productId": "clx123abc",
+                        "quantity": 2
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Opções de frete calculadas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ShippingQuote"
+                  }
+                },
+                "examples": {
+                  "exemplo1": {
+                    "summary": "Resposta com opções",
+                    "value": [
+                      {
+                        "service": "SEDEX",
+                        "price": 25.50,
+                        "deliveryTime": 3
+                      },
+                      {
+                        "service": "PAC",
+                        "price": 15.80,
+                        "deliveryTime": 7
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "CEP inválido ou itens ausentes"
+          }
+        }
+      }
+    },
+    "/api/payments/mercadopago/pix": {
+      "post": {
+        "tags": ["Pagamentos"],
+        "summary": "Gerar pagamento PIX",
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["orderId"],
+                "properties": {
+                  "orderId": {
+                    "type": "string"
+                  }
+                }
+              },
+              "examples": {
+                "exemplo1": {
+                  "value": {
+                    "orderId": "clx789xyz"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "QR Code PIX gerado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "qrCode": {
+                      "type": "string",
+                      "description": "Código PIX copia e cola"
+                    },
+                    "qrCodeBase64": {
+                      "type": "string",
+                      "description": "Imagem QR Code em base64"
+                    },
+                    "paymentId": {
+                      "type": "string"
+                    },
+                    "expiresAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                },
+                "examples": {
+                  "exemplo1": {
+                    "value": {
+                      "qrCode": "00020126580014br.gov.bcb.pix...",
+                      "qrCodeBase64": "data:image/png;base64,iVBORw0KGgo...",
+                      "paymentId": "123456789",
+                      "expiresAt": "2026-01-14T15:30:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/products/{id}/reviews": {
+      "get": {
+        "tags": ["Avaliações"],
+        "summary": "Listar avaliações de um produto",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de avaliações",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Review"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Avaliações"],
+        "summary": "Criar avaliação",
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["rating", "comment"],
+                "properties": {
+                  "rating": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "comment": {
+                    "type": "string"
+                  }
+                }
+              },
+              "examples": {
+                "exemplo1": {
+                  "value": {
+                    "rating": 5,
+                    "comment": "Produto excelente, entrega rápida!"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Avaliação criada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "rating": {
+                      "type": "integer"
+                    },
+                    "comment": {
+                      "type": "string"
+                    },
+                    "verified": {
+                      "type": "boolean"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                },
+                "examples": {
+                  "exemplo1": {
+                    "value": {
+                      "id": "review123",
+                      "rating": 5,
+                      "comment": "Produto excelente, entrega rápida!",
+                      "verified": true,
+                      "createdAt": "2026-01-14T10:30:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/returns": {
+      "get": {
+        "tags": ["Devoluções"],
+        "summary": "Listar devoluções (Admin)",
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de devoluções",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Return"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Devoluções"],
+        "summary": "Solicitar devolução",
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["orderId", "reason"],
+                "properties": {
+                  "orderId": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "enum": ["DEFECTIVE", "WRONG_PRODUCT", "NOT_AS_DESCRIBED", "CHANGED_MIND"]
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Devolução criada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "orderId": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                },
+                "examples": {
+                  "exemplo1": {
+                    "value": {
+                      "id": "return123",
+                      "orderId": "order123",
+                      "status": "PENDING",
+                      "reason": "DEFECTIVE",
+                      "description": "Produto chegou com defeito na embalagem",
+                      "createdAt": "2026-01-14T10:30:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/integrations/stock/sync": {
+      "post": {
+        "tags": ["Integrações"],
+        "summary": "Sincronizar estoque",
+        "description": "Atualiza estoque de produtos via integração externa (requer API Key)",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["sku", "quantity"],
+                "properties": {
+                  "sku": {
+                    "type": "string",
+                    "example": "MAKITA-DHR243Z"
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "example": 50
+                  },
+                  "source": {
+                    "type": "string",
+                    "enum": ["MERCADO_LIVRE", "HIPER", "MANUAL"],
+                    "example": "MERCADO_LIVRE"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "example": "Venda ML #MLB123456"
+                  }
+                }
+              },
+              "examples": {
+                "venda_ml": {
+                  "summary": "Sincronização por venda ML",
+                  "value": {
+                    "sku": "MAKITA-DHR243Z",
+                    "quantity": 45,
+                    "source": "MERCADO_LIVRE",
+                    "reason": "Venda ML #MLB123456"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Estoque sincronizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "product": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "sku": {
+                          "type": "string"
+                        },
+                        "previousStock": {
+                          "type": "integer"
+                        },
+                        "newStock": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API Key inválida ou ausente"
+          },
+          "404": {
+            "description": "Produto não encontrado"
+          }
+        }
+      }
+    },
+    "/api/profile": {
+      "get": {
+        "tags": ["Perfil"],
+        "summary": "Obter perfil do usuário",
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dados do perfil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string"
+                    },
+                    "phone": {
+                      "type": "string"
+                    },
+                    "cpf": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Perfil"],
+        "summary": "Atualizar perfil",
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "phone": {
+                    "type": "string"
+                  },
+                  "cpf": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Perfil atualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string"
+                    },
+                    "phone": {
+                      "type": "string"
+                    },
+                    "cpf": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "examples": {
+                  "exemplo1": {
+                    "value": {
+                      "id": "user123",
+                      "name": "João Silva",
+                      "email": "joao@email.com",
+                      "phone": "(11) 98765-4321",
+                      "cpf": "123.456.789-00"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/products": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Listar todos os produtos (Admin)",
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista completa de produtos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Product"
+                  }
+                },
+                "examples": {
+                  "exemplo1": {
+                    "value": [
+                      {
+                        "id": "clx123abc",
+                        "name": "Furadeira Bosch",
+                        "price": 299.99,
+                        "stock": 50,
+                        "sku": "BOSCH-GSB-650"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Admin"],
+        "summary": "Criar produto (Admin)",
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "price", "categoryId", "sku"],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "price": {
+                    "type": "number"
+                  },
+                  "promotionalPrice": {
+                    "type": "number"
+                  },
+                  "stock": {
+                    "type": "integer"
+                  },
+                  "categoryId": {
+                    "type": "string"
+                  },
+                  "sku": {
+                    "type": "string"
+                  },
+                  "imageUrl": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Produto criado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                },
+                "examples": {
+                  "exemplo1": {
+                    "value": {
+                      "id": "clx123abc",
+                      "name": "Furadeira Bosch 650W",
+                      "description": "Furadeira profissional",
+                      "price": 299.99,
+                      "promotionalPrice": null,
+                      "stock": 50,
+                      "sku": "BOSCH-GSB-650",
+                      "imageUrl": "/products/furadeira.jpg",
+                      "categoryId": "cat123"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/stats": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Estatísticas da loja (Admin)",
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estatísticas gerais",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "totalOrders": {
+                      "type": "integer"
+                    },
+                    "totalRevenue": {
+                      "type": "number"
+                    },
+                    "pendingReturns": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {
+    "orderStatusUpdate": {
+      "post": {
+        "tags": ["Webhooks N8N"],
+        "summary": "Atualização de status do pedido",
+        "description": "Enviado automaticamente ao n8n quando o status de um pedido muda. Sempre com type='order.status.update', diferenciando pelo campo 'status'. Veja os 8 exemplos possíveis abaixo.",
+        "x-webhook-url": "$N8N_ORDERS_WEBHOOK_URL ou $N8N_WEBHOOK_URL",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookOrderStatusUpdate"
+              },
+              "examples": {
+                "status_PENDING": {
+                  "summary": "Status: PENDING - Pedido criado",
+                  "value": {
+                    "type": "order.status.update",
+                    "timestamp": "2026-01-14T10:30:00Z",
+                    "orderId": "clx123abc",
+                    "orderNumber": "ORD-2026-000001",
+                    "status": "PENDING",
+                    "total": 599.99,
+                    "user": {
+                      "id": "user123",
+                      "name": "João Silva",
+                      "email": "joao@email.com",
+                      "phone": "(11) 98765-4321"
+                    },
+                    "paymentMethod": "PIX",
+                    "items": [
+                      {
+                        "productId": "prod123",
+                        "quantity": 2,
+                        "price": 299.99,
+                        "product": {
+                          "name": "Furadeira Bosch",
+                          "sku": "BOSCH-GSB-650"
+                        }
+                      }
+                    ]
+                  }
+                },
+                "status_CONFIRMED": {
+                  "summary": "Status: CONFIRMED - Pagamento aprovado",
+                  "value": {
+                    "type": "order.status.update",
+                    "timestamp": "2026-01-14T11:00:00Z",
+                    "orderId": "clx123abc",
+                    "orderNumber": "ORD-2026-000001",
+                    "status": "CONFIRMED",
+                    "total": 599.99,
+                    "paymentMethod": "PIX",
+                    "paidAt": "2026-01-14T11:00:00Z"
+                  }
+                },
+                "status_PROCESSING": {
+                  "summary": "Status: PROCESSING - Em separação",
+                  "value": {
+                    "type": "order.status.update",
+                    "timestamp": "2026-01-14T14:00:00Z",
+                    "orderId": "clx123abc",
+                    "orderNumber": "ORD-2026-000001",
+                    "status": "PROCESSING"
+                  }
+                },
+                "status_SHIPPED": {
+                  "summary": "Status: SHIPPED - Enviado",
+                  "value": {
+                    "type": "order.status.update",
+                    "timestamp": "2026-01-14T15:30:00Z",
+                    "orderId": "clx123abc",
+                    "orderNumber": "ORD-2026-000001",
+                    "status": "SHIPPED",
+                    "trackingCode": "BR123456789",
+                    "trackingUrl": "https://rastreio.correios.com.br/app/index.php",
+                    "shippedAt": "2026-01-14T15:00:00Z"
+                  }
+                },
+                "status_DELIVERED": {
+                  "summary": "Status: DELIVERED - Entregue",
+                  "value": {
+                    "type": "order.status.update",
+                    "timestamp": "2026-01-14T18:00:00Z",
+                    "orderId": "clx123abc",
+                    "orderNumber": "ORD-2026-000001",
+                    "status": "DELIVERED",
+                    "deliveredAt": "2026-01-14T18:00:00Z"
+                  }
+                },
+                "status_CANCELLED": {
+                  "summary": "Status: CANCELLED - Cancelado",
+                  "value": {
+                    "type": "order.status.update",
+                    "timestamp": "2026-01-14T12:00:00Z",
+                    "orderId": "clx123abc",
+                    "orderNumber": "ORD-2026-000001",
+                    "status": "CANCELLED"
+                  }
+                },
+                "status_REFUNDED": {
+                  "summary": "Status: REFUNDED - Reembolsado",
+                  "value": {
+                    "type": "order.status.update",
+                    "timestamp": "2026-01-14T16:00:00Z",
+                    "orderId": "clx123abc",
+                    "orderNumber": "ORD-2026-000001",
+                    "status": "REFUNDED"
+                  }
+                },
+                "status_QUOTE": {
+                  "summary": "Status: QUOTE - Cotação/Orçamento",
+                  "value": {
+                    "type": "order.status.update",
+                    "timestamp": "2026-01-14T09:00:00Z",
+                    "orderId": "clx123abc",
+                    "orderNumber": "ORD-2026-000001",
+                    "status": "QUOTE",
+                    "total": 599.99,
+                    "extra": {
+                      "validityDays": 7
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Webhook recebido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                "examples": {
+                  "sucesso": {
+                    "value": {
+                      "success": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "returnCreated": {
+      "post": {
+        "tags": ["Webhooks N8N"],
+        "summary": "Webhook de devolução criada",
+        "description": "Enviado quando um cliente solicita uma devolução",
+        "x-webhook-url": "$N8N_ORDERS_WEBHOOK_URL ou $N8N_WEBHOOK_URL",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookReturnCreated"
+              },
+              "examples": {
+                "devolucao_criada": {
+                  "summary": "Nova devolução",
+                  "value": {
+                    "type": "returns.created",
+                    "timestamp": "2026-01-14T10:30:00Z",
+                    "returnId": "return123",
+                    "orderId": "order123",
+                    "orderNumber": "ORD-2026-000001",
+                    "reason": "DEFECTIVE",
+                    "status": "PENDING",
+                    "user": {
+                      "name": "João Silva",
+                      "email": "joao@email.com"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Webhook recebido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                "examples": {
+                  "sucesso": {
+                    "value": {
+                      "success": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "returnApproved": {
+      "post": {
+        "tags": ["Webhooks N8N"],
+        "summary": "Webhook de devolução aprovada",
+        "description": "Enviado quando admin aprova uma solicitação de devolução",
+        "x-webhook-url": "$N8N_ORDERS_WEBHOOK_URL ou $N8N_WEBHOOK_URL",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookGeneric"
+              },
+              "examples": {
+                "aprovada": {
+                  "value": {
+                    "type": "returns.approved",
+                    "timestamp": "2026-01-14T11:00:00Z",
+                    "returnId": "return123",
+                    "orderId": "order123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Webhook recebido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                "examples": {
+                  "sucesso": {
+                    "value": {
+                      "success": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "returnRejected": {
+      "post": {
+        "tags": ["Webhooks N8N"],
+        "summary": "Webhook de devolução rejeitada",
+        "description": "Enviado quando admin rejeita uma solicitação de devolução",
+        "x-webhook-url": "$N8N_ORDERS_WEBHOOK_URL ou $N8N_WEBHOOK_URL",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookGeneric"
+              },
+              "examples": {
+                "rejeitada": {
+                  "value": {
+                    "type": "returns.rejected",
+                    "timestamp": "2026-01-14T11:00:00Z",
+                    "returnId": "return123",
+                    "orderId": "order123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Webhook recebido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                "examples": {
+                  "sucesso": {
+                    "value": {
+                      "success": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "shippingLabelReady": {
+      "post": {
+        "tags": ["Webhooks N8N"],
+        "summary": "Webhook de etiqueta de envio pronta",
+        "description": "Enviado quando uma etiqueta de envio é gerada",
+        "x-webhook-url": "$N8N_ORDERS_WEBHOOK_URL ou $N8N_WEBHOOK_URL",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookGeneric"
+              },
+              "examples": {
+                "etiqueta_pronta": {
+                  "value": {
+                    "type": "shipping.label_ready",
+                    "timestamp": "2026-01-14T14:00:00Z",
+                    "orderId": "order123",
+                    "orderNumber": "ORD-2026-000001",
+                    "labelUrl": "https://melhorenvio.com.br/labels/123.pdf"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Webhook recebido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                "examples": {
+                  "sucesso": {
+                    "value": {
+                      "success": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

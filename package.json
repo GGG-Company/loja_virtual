@@ -13,7 +13,8 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "socket": "node src/socket/server.js"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.0.0",
@@ -55,6 +56,9 @@
     "react-confetti": "^6.4.0",
     "react-dom": "^19.2.4",
     "react-hook-form": "^7.51.0",
+    "redis": "^5.10.0",
+    "socket.io": "^4.8.0",
+    "socket.io-client": "^4.8.0",
     "sonner": "^1.4.0",
     "tailwind-merge": "^2.3.0",
     "tailwindcss-animate": "^1.0.7",

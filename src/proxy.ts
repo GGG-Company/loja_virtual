@@ -5,30 +5,55 @@ import { auth } from '@/auth';
 export async function proxy(request: NextRequest) {
   const session = await auth();
   const { pathname } = request.nextUrl;
+  const originHeader = request.headers.get("origin") || "";
+  const allowedOrigins = ["http://localhost:3000", "https://loja.azura.dev.br", "https://socket.azura.dev.br"];
+  const allowOrigin = allowedOrigins.includes(originHeader) ? originHeader : "https://loja.azura.dev.br";
+  
+  const corsHeaders = {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Credentials": "true",
+    "Access-Control-Allow-Methods": "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, X-Internal-Api-Key",
+  };
+
+  const applyCors = (res: NextResponse | Response) => {
+    try {
+      if (res instanceof NextResponse) {
+        Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v as string));
+        return res;
+      }
+      const cloned = new Response(res.body, { status: res.status, statusText: res.statusText, headers: res.headers });
+      Object.entries(corsHeaders).forEach(([k, v]) => cloned.headers.set(k, v as string));
+      return cloned;
+    } catch (e) {
+      return res;
+    }
+  };
+
+  // Handle CORS preflight for any /api/* route
+  if (pathname.startsWith("/api") && request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
 
   // ============================================
-  // 1. PROTEÇÃO DE ROTAS ADMIN
+  // 1. PROTEÇÃO DE ROTAS ADMIN (Páginas)
   // ============================================
-  
-  // Rotas financeiras: apenas OWNER
-  if (pathname.startsWith('/admin/financial')) {
+
+  if (pathname.startsWith("/admin/financial")) {
     if (!session?.user) {
-      return NextResponse.redirect(new URL('/auth/login', request.url));
+      return NextResponse.redirect(new URL("/auth/login", request.url));
     }
-    
-    if (session.user.role !== 'OWNER') {
-      return NextResponse.redirect(new URL('/admin/unauthorized', request.url));
+    if (session.user.role !== "OWNER") {
+      return NextResponse.redirect(new URL("/admin/unauthorized", request.url));
     }
   }
 
-  // Rotas administrativas: ADMIN ou OWNER
-  if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/financial')) {
+  if (pathname.startsWith("/admin") && !pathname.startsWith("/admin/financial")) {
     if (!session?.user) {
-      return NextResponse.redirect(new URL('/auth/login', request.url));
+      return NextResponse.redirect(new URL("/auth/login", request.url));
     }
-    
-    if (session.user.role === 'CUSTOMER') {
-      return NextResponse.redirect(new URL('/admin/unauthorized', request.url));
+    if (session.user.role === "CUSTOMER") {
+      return NextResponse.redirect(new URL("/admin/unauthorized", request.url));
     }
   }
 
@@ -36,9 +61,7 @@ export async function proxy(request: NextRequest) {
   // 2. PROTEÇÃO DE API ROUTES
   // ============================================
   
-  // APIs globais: requer X-INTERNAL-API-KEY ou Sessão válida
   if (pathname.startsWith('/api')) {
-    // 1. Whitelist: Rotas que PRECISAM ser públicas (Webhooks, Auth, etc)
     const publicApiRoutes = [
       '/api/auth',
       '/api/payments/mercadopago/webhook',
@@ -47,42 +70,34 @@ export async function proxy(request: NextRequest) {
     ];
 
     if (publicApiRoutes.some(route => pathname.includes(route))) {
-      return NextResponse.next();
+      return applyCors(NextResponse.next());
     }
 
-    // 2. Validação por Chave de API (Útil para n8n, scripts, Postman)
     const apiKey = request.headers.get('X-INTERNAL-API-KEY');
     const validKey = process.env.X_INTERNAL_API_KEY;
 
     if (apiKey && apiKey === validKey) {
-      return NextResponse.next();
+      return applyCors(NextResponse.next());
     }
 
-    // 3. Validação por Sessão (Útil para o próprio Frontend da loja)
     if (session?.user) {
-      // Se for rota de Admin, verifica a Role
       if (pathname.startsWith('/api/admin')) {
         if (session.user.role === 'CUSTOMER') {
-          return NextResponse.json({ error: 'Proibido' }, { status: 403 });
+          return applyCors(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
         }
       }
-      return NextResponse.next();
+      return applyCors(NextResponse.next());
     }
 
-    // Se não tem chave válida E não tem sessão, bloqueia
-    return NextResponse.json(
+    return applyCors(NextResponse.json(
       { error: 'Não autorizado - Chave de API ou Login necessário' },
       { status: 401 }
-    );
+    ));
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    '/admin/:path*',
-    '/api/admin/:path*',
-    '/api/integrations/:path*',
-  ],
+  matcher: ["/admin/:path*", "/api/:path*"],
 };

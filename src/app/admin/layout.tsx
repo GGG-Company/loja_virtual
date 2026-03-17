@@ -69,21 +69,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b border-metallic-200 px-4 py-3 flex items-center justify-between">
         <h1 className="text-lg font-bold text-metallic-900">Admin Panel</h1>
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="p-2 hover:bg-metallic-100 rounded-lg"
-        >
+        <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-metallic-100 rounded-lg">
           {sidebarOpen ? <X /> : <Menu />}
         </button>
       </div>
 
       {/* Sidebar */}
-      <aside
-        className={`fixed left-0 top-0 h-screen w-64 bg-gradient-to-b from-metallic-900 to-metallic-800 text-white z-50 transition-transform lg:translate-x-0 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        <div className="p-6">
+      <aside className={`fixed left-0 top-0 h-screen w-64 bg-gradient-to-b from-metallic-900 to-metallic-800 text-white z-50 transition-transform lg:translate-x-0 overflow-y-auto ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+        <div className="p-6 flex flex-col h-full">
           {/* Logo */}
           <div className="mb-8">
             <h2 className="text-2xl font-bold">🔨 Admin</h2>
@@ -94,27 +87,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="mb-8 p-4 bg-white/10 rounded-lg backdrop-blur-sm">
             <p className="font-semibold text-sm">{session.user?.name}</p>
             <p className="text-xs text-metallic-400">{session.user?.email}</p>
-            <span className="mt-2 inline-block px-2 py-1 bg-primary-500/20 text-primary-300 rounded text-xs font-medium">
-              {userRole}
-            </span>
+            <span className="mt-2 inline-block px-2 py-1 bg-primary-500/20 text-primary-300 rounded text-xs font-medium">{userRole}</span>
           </div>
 
           {/* Navigation */}
-          <nav className="space-y-1">
+          <nav className="space-y-1 flex-1 overflow-y-auto">
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                    isActive
-                      ? 'bg-primary-600 text-white shadow-lg'
-                      : 'hover:bg-white/10 text-metallic-300'
-                  }`}
-                >
+                <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive ? "bg-primary-600 text-white shadow-lg" : "hover:bg-white/10 text-metallic-300"}`}>
                   <Icon className="h-5 w-5" />
                   <span className="font-medium">{item.label}</span>
                 </Link>
@@ -123,36 +105,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </nav>
 
           {/* Logout */}
-          <button
-            onClick={() => signOut({ callbackUrl: '/' })}
-            className="mt-8 w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-500/20 text-red-300 transition-colors"
-          >
-            <LogOut className="h-5 w-5" />
-            <span className="font-medium">Sair</span>
-          </button>
+          <div className="mt-4">
+            <button onClick={() => signOut({ callbackUrl: "/" })} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-500/20 text-red-300 transition-colors">
+              <LogOut className="h-5 w-5" />
+              <span className="font-medium">Sair</span>
+            </button>
+          </div>
         </div>
       </aside>
 
       {/* Main Content */}
       <main className="lg:ml-64 pt-16 lg:pt-0">
         <div className="p-6 lg:p-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
             {children}
           </motion.div>
         </div>
       </main>
 
       {/* Mobile Overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
     </div>
   );
 }

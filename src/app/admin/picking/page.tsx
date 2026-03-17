@@ -338,7 +338,7 @@ export default function AdminPickingPage() {
               Exportar PDF
             </Button>
             {pickingReport.length > 5 && (
-              <Button size="sm" variant="ghost" onClick={() => setShowAllModal(true)}>
+              <Button size="sm" variant="outline" onClick={() => setShowAllModal(true)}>
                 Ver todos
               </Button>
             )}
@@ -562,7 +562,7 @@ export default function AdminPickingPage() {
               </table>
             </div>
             <div className="flex items-center justify-end gap-2 p-4 border-t border-metallic-100">
-              <Button variant="ghost" onClick={() => setShowAllModal(false)}>
+              <Button variant="outline" onClick={() => setShowAllModal(false)}>
                 Fechar
               </Button>
             </div>
@@ -595,7 +595,7 @@ export default function AdminPickingPage() {
               </div>
             </div>
             <div className="flex items-center justify-end gap-2 p-4 border-t border-metallic-100">
-              <Button variant="ghost" onClick={() => setTrackingModal(null)}>
+              <Button variant="outline" onClick={() => setTrackingModal(null)}>
                 Cancelar
               </Button>
               <Button onClick={handleShipWithTracking} disabled={updatingId === trackingModal.orderId}>

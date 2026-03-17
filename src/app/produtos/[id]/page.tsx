@@ -2,20 +2,20 @@
 
 import logger from "@/lib/logger";
 import { useEffect, useState, useCallback, Suspense } from 'react';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { Header } from '@/components/header';
-import { Footer } from '@/components/footer';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { ShoppingCart, Truck, Shield, CreditCard, Heart, Star } from 'lucide-react';
-import { apiClient } from '@/lib/api-client';
-import { toast } from 'sonner';
-import { usePrice } from '@/hooks/use-price';
-import Image from 'next/image';
-import { useSession } from 'next-auth/react';
-import Script from 'next/script';
-import { ProductReviews } from '@/components/product-reviews';
+import { useParams, useSearchParams } from "next/navigation";
+import { motion } from "framer-motion";
+import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { ShoppingCart, Truck, Shield, CreditCard, Heart, Star } from "lucide-react";
+import { apiClient } from "@/lib/api-client";
+import { toast } from "sonner";
+import { usePrice } from "@/hooks/use-price";
+import Image from "next/image";
+// Não exigimos sessão para adicionar ao carrinho — usamos cache local
+import Script from "next/script";
+import { ProductReviews } from "@/components/product-reviews";
 
 type ProductVariant = {
   id: string;
@@ -48,12 +48,10 @@ type ProductDetail = {
 
 function ProductDetailContent() {
   const params = useParams();
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: session } = useSession();
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedVoltage, setSelectedVoltage] = useState('');
+  const [selectedVoltage, setSelectedVoltage] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [reviewStats, setReviewStats] = useState<{ averageRating: number; totalReviews: number } | null>(null);
   const displayPrice = product?.promotionalPrice ?? product?.price ?? 0;
@@ -66,7 +64,7 @@ function ProductDetailContent() {
       if (response.data.product.variants && response.data.product.variants.length > 0) {
         setSelectedVoltage(response.data.product.variants[0].name);
       }
-      
+
       // Buscar estatísticas de avaliações
       try {
         const reviewsRes = await apiClient.get<{ stats: { averageRating: number; totalReviews: number } }>(`/api/products/${params?.id}/reviews?limit=1`);
@@ -88,14 +86,8 @@ function ProductDetailContent() {
     }
   }, [params?.id, fetchProduct]);
   const handleAddToCart = () => {
-    // Verifica se usuário está logado somente ao adicionar ao carrinho
-    if (!session) {
-      toast.error('Faça login para adicionar produtos ao carrinho');
-      router.push('/auth/login');
-      return;
-    }
     if (product?.variants && product.variants.length > 0 && !selectedVoltage) {
-      toast.error('Selecione uma voltagem');
+      toast.error("Selecione uma voltagem");
       return;
     }
 
@@ -104,9 +96,9 @@ function ProductDetailContent() {
     const unitPrice = product.promotionalPrice ?? product.price;
 
     // Adiciona ao carrinho no localStorage
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
     const existingItem = cart.find((item: any) => item.id === product.id);
-    
+
     if (existingItem) {
       existingItem.quantity += quantity;
     } else {
@@ -116,29 +108,29 @@ function ProductDetailContent() {
         ean: product.ean,
         name: product.name,
         price: unitPrice,
-        imageUrl: product.imageUrl || product.images?.[0]?.url || '/placeholder.jpg',
+        imageUrl: product.imageUrl || product.images?.[0]?.url || "/placeholder.jpg",
         quantity: quantity,
         selectedVoltage: selectedVoltage,
         weightKg: product.weight ?? undefined,
         dimensions: product.dimensions ?? undefined,
       });
     }
-    
-    localStorage.setItem('cart', JSON.stringify(cart));
-    toast.success(`${quantity} ${quantity > 1 ? 'itens adicionados' : 'item adicionado'} ao carrinho!`);
-    
+
+    localStorage.setItem("cart", JSON.stringify(cart));
+    toast.success(`${quantity} ${quantity > 1 ? "itens adicionados" : "item adicionado"} ao carrinho!`);
+
     // Dispara evento customizado para atualizar o header
-    window.dispatchEvent(new Event('cartUpdated'));
+    window.dispatchEvent(new Event("cartUpdated"));
   };
 
   if (isLoading) {
     return (
       <>
-        {!searchParams.get('embed') && <Header />}
+        {!searchParams.get("embed") && <Header />}
         <div className="min-h-screen flex items-center justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
         </div>
-        {!searchParams.get('embed') && <Footer />}
+        {!searchParams.get("embed") && <Footer />}
       </>
     );
   }
@@ -146,11 +138,11 @@ function ProductDetailContent() {
   if (!product) {
     return (
       <>
-        {!searchParams.get('embed') && <Header />}
+        {!searchParams.get("embed") && <Header />}
         <div className="min-h-screen flex items-center justify-center">
           <p>Produto não encontrado</p>
         </div>
-        {!searchParams.get('embed') && <Footer />}
+        {!searchParams.get("embed") && <Footer />}
       </>
     );
   }
@@ -164,8 +156,8 @@ function ProductDetailContent() {
           strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
-              '@context': 'https://schema.org/',
-              '@type': 'Product',
+              "@context": "https://schema.org/",
+              "@type": "Product",
               name: product.name,
               image: product.imageUrl || product.images?.[0]?.url || undefined,
               description: product.description,
@@ -173,91 +165,49 @@ function ProductDetailContent() {
               gtin13: product.ean,
               productID: product.id,
               category: product.category?.name,
-              brand: 'Shopping das Ferramentas',
+              brand: "Shopping das Ferramentas",
               offers: {
-                '@type': 'Offer',
-                priceCurrency: 'BRL',
+                "@type": "Offer",
+                priceCurrency: "BRL",
                 price: displayPrice,
-                availability: (product.stock ?? 0) > 0 ? 'http://schema.org/InStock' : 'http://schema.org/OutOfStock',
-                url: typeof window !== 'undefined' ? window.location.href : undefined,
+                availability: (product.stock ?? 0) > 0 ? "http://schema.org/InStock" : "http://schema.org/OutOfStock",
+                url: typeof window !== "undefined" ? window.location.href : undefined,
               },
             }),
           }}
         />
       )}
-      {!searchParams.get('embed') && <Header />}
+      {!searchParams.get("embed") && <Header />}
       <main className="min-h-screen bg-white py-12">
         <div className="container mx-auto px-4">
           <div className="grid lg:grid-cols-2 gap-12">
             {/* Image Gallery */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="space-y-4"
-            >
-              <div className="aspect-square bg-metallic-100 rounded-2xl flex items-center justify-center overflow-hidden relative">
-                {product.imageUrl || product.images?.[0]?.url ? (
-                  <Image
-                    src={product.imageUrl || product.images?.[0]?.url || ''}
-                    alt={product.name}
-                    fill
-                    className="object-contain"
-                    sizes="(min-width: 1024px) 50vw, 100vw"
-                    priority
-                  />
-                ) : (
-                  <p className="text-6xl">🔨</p>
-                )}
-              </div>
+            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+              <div className="aspect-square bg-metallic-100 rounded-2xl flex items-center justify-center overflow-hidden relative">{product.imageUrl || product.images?.[0]?.url ? <Image src={product.imageUrl || product.images?.[0]?.url || ""} alt={product.name} fill className="object-contain" sizes="(min-width: 1024px) 50vw, 100vw" priority /> : <p className="text-6xl">🔨</p>}</div>
             </motion.div>
 
             {/* Product Info - Buy Box */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="space-y-6"
-            >
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
               {/* Category */}
-              <div className="text-sm text-primary-600 font-semibold">
-                {product.category?.name}
-              </div>
+              <div className="text-sm text-primary-600 font-semibold">{product.category?.name}</div>
 
               {/* Title */}
-              <h1 className="text-4xl font-bold text-metallic-900">
-                {product.name}
-              </h1>
+              <h1 className="text-4xl font-bold text-metallic-900">{product.name}</h1>
 
               {/* Rating */}
               <div className="flex items-center gap-2">
                 <div className="flex gap-0.5">
                   {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                      key={star}
-                      className={`h-5 w-5 ${
-                        star <= Math.round(reviewStats?.averageRating || 0)
-                          ? 'fill-yellow-400 text-yellow-400'
-                          : 'fill-gray-200 text-gray-200'
-                      }`}
-                    />
+                    <Star key={star} className={`h-5 w-5 ${star <= Math.round(reviewStats?.averageRating || 0) ? "fill-yellow-400 text-yellow-400" : "fill-gray-200 text-gray-200"}`} />
                   ))}
                 </div>
-                <span className="text-sm text-metallic-600">
-                  {reviewStats?.totalReviews 
-                    ? `(${reviewStats.totalReviews} ${reviewStats.totalReviews === 1 ? 'avaliação' : 'avaliações'})`
-                    : '(Sem avaliações)'}
-                </span>
+                <span className="text-sm text-metallic-600">{reviewStats?.totalReviews ? `(${reviewStats.totalReviews} ${reviewStats.totalReviews === 1 ? "avaliação" : "avaliações"})` : "(Sem avaliações)"}</span>
               </div>
 
               {/* Price */}
               <div className="border-t border-b border-metallic-200 py-6 space-y-2">
-                {product.compareAtPrice && (
-                  <p className="text-sm text-metallic-600 line-through">
-                    De R$ {product.compareAtPrice.toFixed(2)}
-                  </p>
-                )}
-                <p className="text-4xl font-bold text-primary-600">
-                  R$ {displayPrice.toFixed(2)}
-                </p>
+                {product.compareAtPrice && <p className="text-sm text-metallic-600 line-through">De R$ {product.compareAtPrice.toFixed(2)}</p>}
+                <p className="text-4xl font-bold text-primary-600">R$ {displayPrice.toFixed(2)}</p>
                 {bestInstallment && (
                   <p className="text-sm text-metallic-600">
                     ou {bestInstallment.installments}x de R$ {bestInstallment.installmentValue.toFixed(2)}
@@ -271,15 +221,7 @@ function ProductDetailContent() {
                   <Label>Voltagem*</Label>
                   <div className="flex gap-3">
                     {product.variants.map((variant) => (
-                      <button
-                        key={variant.id}
-                        onClick={() => setSelectedVoltage(variant.name)}
-                        className={`px-6 py-3 rounded-lg border-2 font-semibold transition-all ${
-                          selectedVoltage === variant.name
-                            ? 'border-primary-600 bg-primary-50 text-primary-700'
-                            : 'border-metallic-300 hover:border-metallic-400'
-                        }`}
-                      >
+                      <button key={variant.id} onClick={() => setSelectedVoltage(variant.name)} className={`px-6 py-3 rounded-lg border-2 font-semibold transition-all ${selectedVoltage === variant.name ? "border-primary-600 bg-primary-50 text-primary-700" : "border-metallic-300 hover:border-metallic-400"}`}>
                         {variant.name}
                       </button>
                     ))}
@@ -291,19 +233,11 @@ function ProductDetailContent() {
               <div className="space-y-3">
                 <Label>Quantidade</Label>
                 <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="px-4 py-2 border border-metallic-300 rounded-lg hover:bg-metallic-50"
-                  >
+                  <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="px-4 py-2 border border-metallic-300 rounded-lg hover:bg-metallic-50">
                     -
                   </button>
-                  <span className="px-6 py-2 border border-metallic-300 rounded-lg font-semibold">
-                    {quantity}
-                  </span>
-                  <button
-                    onClick={() => setQuantity(quantity + 1)}
-                    className="px-4 py-2 border border-metallic-300 rounded-lg hover:bg-metallic-50"
-                  >
+                  <span className="px-6 py-2 border border-metallic-300 rounded-lg font-semibold">{quantity}</span>
+                  <button onClick={() => setQuantity(quantity + 1)} className="px-4 py-2 border border-metallic-300 rounded-lg hover:bg-metallic-50">
                     +
                   </button>
                 </div>
@@ -311,11 +245,7 @@ function ProductDetailContent() {
 
               {/* CTA Buttons */}
               <div className="flex gap-3">
-                <Button
-                  size="lg"
-                  className="flex-1 h-14 text-lg"
-                  onClick={handleAddToCart}
-                >
+                <Button size="lg" className="flex-1 h-14 text-lg" onClick={handleAddToCart}>
                   <ShoppingCart className="mr-2 h-5 w-5" />
                   Adicionar ao Carrinho
                 </Button>
@@ -348,19 +278,13 @@ function ProductDetailContent() {
           {/* Description & Specs */}
           <div className="mt-16 grid lg:grid-cols-2 gap-12">
             <div>
-              <h2 className="text-2xl font-bold text-metallic-900 mb-4">
-                Descrição
-              </h2>
-              <p className="text-metallic-700 leading-relaxed">
-                {product.description}
-              </p>
+              <h2 className="text-2xl font-bold text-metallic-900 mb-4">Descrição</h2>
+              <p className="text-metallic-700 leading-relaxed">{product.description}</p>
             </div>
 
             {product.specs && (
               <div>
-                <h2 className="text-2xl font-bold text-metallic-900 mb-4">
-                  Especificações Técnicas
-                </h2>
+                <h2 className="text-2xl font-bold text-metallic-900 mb-4">Especificações Técnicas</h2>
                 <div className="bg-metallic-50 rounded-lg p-6 space-y-3">
                   {Object.entries(product.specs).map(([key, value]) => (
                     <div key={key} className="flex justify-between border-b border-metallic-200 pb-2">
@@ -375,14 +299,12 @@ function ProductDetailContent() {
 
           {/* Seção de Avaliações */}
           <div className="mt-16">
-            <h2 className="text-2xl font-bold text-metallic-900 mb-6">
-              Avaliações dos Clientes
-            </h2>
+            <h2 className="text-2xl font-bold text-metallic-900 mb-6">Avaliações dos Clientes</h2>
             <ProductReviews productId={product.id} productName={product.name} />
           </div>
         </div>
       </main>
-      {!searchParams.get('embed') && <Footer />}
+      {!searchParams.get("embed") && <Footer />}
     </>
   );
 }

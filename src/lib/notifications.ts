@@ -1,12 +1,8 @@
 import { prisma } from '@/lib/prisma';
-import { 
-  OrderStatus, 
-  ReturnStatus, 
-  orderStatusNotificationMessages, 
-  returnStatusNotificationMessages 
-} from '@/lib/i18n';
+import Redis from "ioredis";
+import { OrderStatus, ReturnStatus, orderStatusNotificationMessages, returnStatusNotificationMessages } from "@/lib/i18n";
 
-type NotificationType = 'ORDER_STATUS' | 'RETURN_STATUS' | 'PAYMENT' | 'PROMO';
+type NotificationType = "ORDER_STATUS" | "RETURN_STATUS" | "PAYMENT" | "PROMO";
 
 interface CreateNotificationParams {
   userId: string;
@@ -30,10 +26,21 @@ export async function createNotification(params: CreateNotificationParams) {
         data: params.data ? JSON.stringify(params.data) : null,
       },
     });
-    console.log('[NOTIFICATION] Criada:', notification.id, params.type, params.title);
+    console.log("[NOTIFICATION] Criada:", notification.id, params.type, params.title);
+    // Publish to Redis channel for realtime delivery via socket server
+    try {
+      const REDIS_URL = process.env.REDIS_URL || "redis://127.0.0.1:6379";
+      const pub = new Redis(REDIS_URL);
+      await pub.publish(`notifications:user:${params.userId}`, JSON.stringify(notification));
+      try {
+        pub.quit();
+      } catch (e) {}
+    } catch (e) {
+      console.warn("[NOTIFICATION] Falha ao publicar no Redis para realtime:", e);
+    }
     return notification;
   } catch (error) {
-    console.error('[NOTIFICATION] Erro ao criar:', error);
+    console.error("[NOTIFICATION] Erro ao criar:", error);
     return null;
   }
 }

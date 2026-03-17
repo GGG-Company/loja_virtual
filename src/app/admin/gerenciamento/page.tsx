@@ -5,9 +5,17 @@ import { useSession } from 'next-auth/react';
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { RotateCcw, ChevronRight, Settings, Package, FileText, Tag } from "lucide-react";
+import { RotateCcw, ChevronRight, Settings, Package, FileText, Tag, MessageSquare } from "lucide-react";
 
 const modules = [
+  {
+    id: "atendimento",
+    title: "Atendimento",
+    description: "Gerenciar tickets de suporte e atendimento ao cliente",
+    icon: MessageSquare,
+    href: "/admin/gerenciamento/atendimento",
+    color: "bg-purple-500",
+  },
   {
     id: "devolucoes",
     title: "Devoluções",
