@@ -8,9 +8,10 @@ import type { OrderStatus } from '@/lib/i18n';
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
 
     if (!session?.user) {
@@ -34,7 +35,7 @@ export async function PATCH(
     }
 
     const order = await prisma.order.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { 
         status: true, 
         trackingCode: true, 
@@ -67,7 +68,7 @@ export async function PATCH(
     }
 
     const updated = await prisma.order.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         status,
         shippedAt: status === 'SHIPPED' ? new Date() : undefined,
@@ -110,7 +111,7 @@ export async function PATCH(
 
     return NextResponse.json(updated);
   } catch (error) {
-    logger.error(error, '[ADMIN_PICKING_UPDATE]');
+    logger.error(error as Error, '[ADMIN_PICKING_UPDATE]');
     return NextResponse.json({ error: 'Erro ao atualizar status do pedido' }, { status: 500 });
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import logger from "@/lib/logger";
 
 /**
  * GET /api/notifications
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    logger.error('[NOTIFICATIONS_LIST]', error);
+    logger.error(error as Error, '[NOTIFICATIONS_LIST]');
     return NextResponse.json(
       { error: 'Erro ao buscar notificações' },
       { status: 500 }
@@ -141,7 +142,7 @@ export async function PUT(request: NextRequest) {
       { status: 400 }
     );
   } catch (error) {
-    logger.error('[NOTIFICATIONS_UPDATE]', error);
+    logger.error(error as Error, '[NOTIFICATIONS_UPDATE]');
     return NextResponse.json(
       { error: 'Erro ao atualizar notificação' },
       { status: 500 }
@@ -219,7 +220,7 @@ export async function DELETE(request: NextRequest) {
       { status: 400 }
     );
   } catch (error) {
-    logger.error('[NOTIFICATIONS_DELETE]', error);
+    logger.error(error as Error, '[NOTIFICATIONS_DELETE]');
     return NextResponse.json(
       { error: 'Erro ao deletar notificação' },
       { status: 500 }

@@ -16,9 +16,10 @@ import {
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
@@ -48,7 +49,7 @@ export async function POST(
     } = body;
 
     logger.info({
-      orderId: params.id,
+      orderId: id,
       mode,
       newSenderEmail,
       newSenderPhone,
@@ -56,7 +57,7 @@ export async function POST(
 
     // Buscar pedido
     const order = await prisma.order.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         items: {
           include: {
@@ -88,7 +89,7 @@ export async function POST(
       }
 
       const result = await createReverseShippingForOrder(
-        params.id,
+        id,
         newSenderEmail,
         newSenderPhone
       );
@@ -192,7 +193,7 @@ export async function POST(
     return NextResponse.json({ error: 'Modo inválido. Use "auto" ou "manual"' }, { status: 400 });
 
   } catch (error) {
-    logger.error(error, '[ADMIN_REVERSE]');
+    logger.error(error as Error, '[ADMIN_REVERSE]');
     return NextResponse.json({ error: 'Erro ao processar logística reversa' }, { status: 500 });
   }
 }

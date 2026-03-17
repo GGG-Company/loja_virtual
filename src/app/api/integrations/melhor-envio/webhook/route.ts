@@ -27,11 +27,11 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    logger.info('[MELHOR_ENVIO_WEBHOOK] Notificação recebida:', {
+    logger.info({
       event: body.type,
       serviceOrder: body.data?.service_order,
       status: body.data?.status,
-    });
+    }, '[MELHOR_ENVIO_WEBHOOK] Notificação recebida');
 
     // Validar token de segurança (opcional, mas recomendado)
     const webhookToken = process.env.MELHOR_ENVIO_WEBHOOK_TOKEN;
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!order) {
-      logger.warn('[MELHOR_ENVIO_WEBHOOK] Pedido não encontrado para tracking:', trackingCode);
+      logger.warn({ trackingCode }, '[MELHOR_ENVIO_WEBHOOK] Pedido não encontrado para tracking');
       return NextResponse.json({ received: true });
     }
 
@@ -117,15 +117,15 @@ export async function POST(req: NextRequest) {
       case 'shipment:exception':
         // Exceção/Problema na entrega
         // Não muda o status automaticamente, apenas registra
-        logger.warn('[MELHOR_ENVIO_WEBHOOK] Exceção na entrega:', {
+        logger.warn({
           trackingCode,
           reason: data.reason,
           message: data.message,
-        });
+        }, '[MELHOR_ENVIO_WEBHOOK] Exceção na entrega');
         break;
 
       default:
-        console.info('[MELHOR_ENVIO_WEBHOOK] Evento não mapeado:', type);
+        logger.info({ type }, '[MELHOR_ENVIO_WEBHOOK] Evento não mapeado');
     }
 
     // Atualizar status se necessário
@@ -177,16 +177,16 @@ export async function POST(req: NextRequest) {
         trackingUrl: updated.trackingUrl,
       });
 
-      console.info('[MELHOR_ENVIO_WEBHOOK] Pedido atualizado:', {
+      logger.info({
         orderId: updated.id,
         orderNumber: updated.orderNumber,
         status: orderStatus,
-      });
+      }, '[MELHOR_ENVIO_WEBHOOK] Pedido atualizado');
     }
 
     return NextResponse.json({ received: true });
   } catch (error: any) {
-    logger.error(error, '[MELHOR_ENVIO_WEBHOOK] Erro ao processar:');
+    logger.error(error instanceof Error ? error : new Error(String(error)), '[MELHOR_ENVIO_WEBHOOK] Erro ao processar');
     return NextResponse.json(
       { error: error.message || 'Erro ao processar webhook' },
       { status: 500 }

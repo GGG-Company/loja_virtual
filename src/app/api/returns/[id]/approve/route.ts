@@ -12,9 +12,10 @@ import type { ReturnStatus } from '@/lib/i18n';
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
@@ -38,7 +39,7 @@ export async function PUT(
     const { adminNotes } = body;
 
     const returnRequest = await prisma.return.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         user: {
           select: { id: true, name: true, email: true },
@@ -64,7 +65,7 @@ export async function PUT(
     // Atualizar devolução como aprovada
     const updated = await prisma.$transaction(async (tx) => {
       const updatedReturn = await tx.return.update({
-        where: { id: params.id },
+        where: { id },
         data: {
           status: 'APPROVED',
           reviewedBy: user.id,
@@ -130,7 +131,7 @@ export async function PUT(
       return: updated,
     });
   } catch (error) {
-    logger.error(error, '[RETURN_APPROVE]');
+    logger.error(error as Error, '[RETURN_APPROVE]');
     return NextResponse.json({ error: 'Erro ao aprovar devolução' }, { status: 500 });
   }
 }
@@ -141,9 +142,10 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
@@ -167,7 +169,7 @@ export async function DELETE(
     const { adminNotes } = body;
 
     const returnRequest = await prisma.return.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         user: {
           select: { id: true, name: true, email: true },
@@ -192,7 +194,7 @@ export async function DELETE(
     // Atualizar devolução como rejeitada
     const updated = await prisma.$transaction(async (tx) => {
       const rejectedReturn = await tx.return.update({
-        where: { id: params.id },
+        where: { id },
         data: {
           status: 'REJECTED',
           reviewedBy: user.id,
@@ -237,7 +239,7 @@ export async function DELETE(
         rejectedBy: user.id,
       });
     } catch (webhookError) {
-      logger.error(webhookError, '[RETURNS_REJECT_WEBHOOK_ERROR]');
+      logger.error(webhookError as Error, '[RETURNS_REJECT_WEBHOOK_ERROR]');
       // Não falha a requisição se o webhook falhar
     }
 

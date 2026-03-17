@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
       stats: statusCounts,
     });
   } catch (error) {
-    logger.error(error, '[ADMIN_RETURNS_LIST]');
+    logger.error(error as Error, '[ADMIN_RETURNS_LIST]');
     return NextResponse.json({ error: 'Erro ao listar devoluções' }, { status: 500 });
   }
 }

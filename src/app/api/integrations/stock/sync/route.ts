@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    logger.error(error, '[STOCK SYNC ERROR]');
+    logger.error(error instanceof Error ? error : new Error(String(error)), '[STOCK SYNC ERROR]');
     
     await logIntegration(
       request,

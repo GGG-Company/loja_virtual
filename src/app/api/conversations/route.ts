@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { publish } from '@/lib/redis';
 import { auth } from '@/auth';
+import logger from "@/lib/logger";
 
 // GET - lista as conversas do usuário autenticado
 export async function GET(request: Request) {

@@ -222,7 +222,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    logger.error(error, '[FINANCIAL_SUMMARY_GET]');
+    logger.error(error as Error, '[FINANCIAL_SUMMARY_GET]');
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

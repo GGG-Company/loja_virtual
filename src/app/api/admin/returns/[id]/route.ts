@@ -12,9 +12,10 @@ import type { ReturnStatus } from '@/lib/i18n';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
@@ -30,7 +31,7 @@ export async function GET(
     }
 
     const returnRequest = await prisma.return.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         order: {
           include: {
@@ -68,7 +69,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, return: returnRequest });
   } catch (error) {
-    logger.error(error, '[ADMIN_RETURN_GET]');
+    logger.error(error as Error, '[ADMIN_RETURN_GET]');
     return NextResponse.json({ error: 'Erro ao buscar devolução' }, { status: 500 });
   }
 }
@@ -79,9 +80,10 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
@@ -100,7 +102,7 @@ export async function PUT(
     const { action, adminNotes, refundMethod, refundAmount } = body;
 
     const returnRequest = await prisma.return.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         order: {
           include: {
@@ -130,7 +132,7 @@ export async function PUT(
         }
 
         const updated = await prisma.return.update({
-          where: { id: params.id },
+          where: { id },
           data: {
             status: 'APPROVED',
             adminNotes,
@@ -166,7 +168,7 @@ export async function PUT(
         }
 
         const updated = await prisma.return.update({
-          where: { id: params.id },
+          where: { id },
           data: {
             status: 'REJECTED',
             adminNotes,
@@ -214,7 +216,7 @@ export async function PUT(
           }, { status: 400 });
         }
 
-        logger.info('[ADMIN_RETURN] Gerando etiqueta reversa para:', returnRequest.returnNumber);
+        logger.info({ returnNumber: returnRequest.returnNumber }, '[ADMIN_RETURN] Gerando etiqueta reversa');
 
         const labelResult = await createReverseShippingForOrder(
           returnRequest.orderId,
@@ -231,7 +233,7 @@ export async function PUT(
         }
 
         const updated = await prisma.return.update({
-          where: { id: params.id },
+          where: { id },
           data: {
             status: 'LABEL_GENERATED',
             melhorEnvioOrderId: labelResult.orderId,
@@ -266,7 +268,7 @@ export async function PUT(
         }
 
         const updated = await prisma.return.update({
-          where: { id: params.id },
+          where: { id },
           data: {
             status: 'RECEIVED',
             receivedAt: new Date(),
@@ -296,7 +298,7 @@ export async function PUT(
         }
 
         const updated = await prisma.return.update({
-          where: { id: params.id },
+          where: { id },
           data: {
             status: 'INSPECTING',
           },
@@ -325,7 +327,7 @@ export async function PUT(
         }
 
         const updated = await prisma.return.update({
-          where: { id: params.id },
+          where: { id },
           data: {
             status: 'REFUND_PENDING',
             inspectedAt: new Date(),
@@ -361,7 +363,7 @@ export async function PUT(
         const { refundReference } = body;
 
         const updated = await prisma.return.update({
-          where: { id: params.id },
+          where: { id },
           data: {
             status: 'REFUNDED',
             refundedAt: new Date(),
@@ -395,7 +397,7 @@ export async function PUT(
       case 'update_notes': {
         // Apenas atualizar notas
         const updated = await prisma.return.update({
-          where: { id: params.id },
+          where: { id },
           data: { adminNotes },
         });
 
@@ -410,7 +412,7 @@ export async function PUT(
         return NextResponse.json({ error: 'Ação inválida' }, { status: 400 });
     }
   } catch (error) {
-    logger.error(error, '[ADMIN_RETURN_UPDATE]');
+    logger.error(error as Error, '[ADMIN_RETURN_UPDATE]');
     return NextResponse.json({ error: 'Erro ao atualizar devolução' }, { status: 500 });
   }
 }

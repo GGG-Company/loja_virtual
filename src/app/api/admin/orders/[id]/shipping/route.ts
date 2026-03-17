@@ -17,9 +17,10 @@ import {
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
@@ -36,7 +37,7 @@ export async function GET(
     }
 
     const order = await prisma.order.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         orderNumber: true,
@@ -92,7 +93,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    logger.error(error, '[ADMIN_SHIPPING_GET]');
+    logger.error(error as Error, '[ADMIN_SHIPPING_GET]');
     return NextResponse.json({ error: 'Erro ao buscar dados de envio' }, { status: 500 });
   }
 }
@@ -103,9 +104,10 @@ export async function GET(
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
@@ -124,10 +126,10 @@ export async function POST(
     const body = await request.json();
     const { action } = body;
 
-    logger.info({ action, orderId: params.id }, '[ADMIN_SHIPPING] Ação solicitada');
+    logger.info({ action, orderId: id }, '[ADMIN_SHIPPING] Ação solicitada');
 
     const order = await prisma.order.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         orderNumber: true,
@@ -144,7 +146,7 @@ export async function POST(
       case 'create_label': {
         // Criar etiqueta completa (adicionar ao carrinho + checkout + gerar)
         logger.info({ orderNumber: order.orderNumber }, '[ADMIN_SHIPPING] Criando etiqueta para pedido');
-        const result = await createShippingLabelForOrder(params.id);
+        const result = await createShippingLabelForOrder(id);
         
         if (result.success) {
           return NextResponse.json({
@@ -179,7 +181,7 @@ export async function POST(
         
         if (result.success && result.trackingCode) {
           await prisma.order.update({
-            where: { id: params.id },
+            where: { id },
             data: {
               trackingCode: result.trackingCode,
               melhorEnvioStatus: 'generated',
@@ -200,7 +202,7 @@ export async function POST(
         
         if (result.success && result.url) {
           await prisma.order.update({
-            where: { id: params.id },
+            where: { id },
             data: { melhorEnvioLabelUrl: result.url },
           });
         }
@@ -226,7 +228,7 @@ export async function POST(
         
         if (result.success) {
           await prisma.order.update({
-            where: { id: params.id },
+            where: { id },
             data: {
               melhorEnvioStatus: result.status,
               trackingCode: result.tracking || undefined,
@@ -241,7 +243,7 @@ export async function POST(
         return NextResponse.json({ error: 'Ação inválida' }, { status: 400 });
     }
   } catch (error) {
-    logger.error(error, '[ADMIN_SHIPPING_POST]');
+    logger.error(error as Error, '[ADMIN_SHIPPING_POST]');
     return NextResponse.json({ error: 'Erro ao processar ação de envio' }, { status: 500 });
   }
 }

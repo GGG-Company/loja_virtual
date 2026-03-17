@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
       dueDate: response.date_of_expiration,
     });
   } catch (error: any) {
-    logger.error(error, "Erro ao gerar Boleto");
+    logger.error(error as Error, "Erro ao gerar Boleto");
     return NextResponse.json({ error: error.message || "Erro ao gerar Boleto" }, { status: 500 });
   }
 }

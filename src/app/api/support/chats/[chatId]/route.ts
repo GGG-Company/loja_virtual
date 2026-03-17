@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
+import logger from '@/lib/logger';
 
 // GET - Buscar mensagens de um chat
 export async function GET(
   request: Request,
-  { params }: { params: { chatId: string } }
+  { params }: { params: Promise<{ chatId: string }> }
 ) {
   try {
+    const { chatId } = await params;
     const session = await auth();
-    const { chatId } = params;
     const { searchParams } = new URL(request.url);
     const onlyLast = searchParams.get('onlyLast');
     const before = searchParams.get('before');
@@ -80,7 +81,7 @@ export async function GET(
 
     
   } catch (error) {
-    console.error('[GET SUPPORT CHAT]', error);
+    logger.error(error as Error, '[GET SUPPORT CHAT]');
     return NextResponse.json({ error: 'Erro ao buscar chat' }, { status: 500 });
   }
 }
@@ -88,11 +89,12 @@ export async function GET(
 // POST - Enviar mensagem no chat
 export async function POST(
   request: Request,
-  { params }: { params: { chatId: string } }
+  { params }: { params: Promise<{ chatId: string }> }
 ) {
   try {
+    const { chatId } = await params;
     const session = await auth();
-    const { chatId } = params;
+    
     const body = await request.json();
     
     const { message, asAttendant } = body;

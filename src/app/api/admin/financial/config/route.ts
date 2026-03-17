@@ -25,7 +25,7 @@ export async function GET() {
 
     return NextResponse.json(config);
   } catch (error) {
-    logger.error(error, '[FINANCIAL_CONFIG_GET]');
+    logger.error(error as Error, '[FINANCIAL_CONFIG_GET]');
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
@@ -56,7 +56,7 @@ export async function PUT(request: Request) {
 
     return NextResponse.json(updated);
   } catch (error) {
-    logger.error(error, '[FINANCIAL_CONFIG_PUT]');
+    logger.error(error as Error, '[FINANCIAL_CONFIG_PUT]');
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ message: 'Webhook de teste enviado.' });
   } catch (error) {
-    logger.error(error, '[ADMIN_WEBHOOK_TEST]');
+    logger.error(error as Error, '[ADMIN_WEBHOOK_TEST]');
     return NextResponse.json({ error: 'Erro ao enviar webhook de teste.' }, { status: 500 });
   }
 }

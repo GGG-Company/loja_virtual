@@ -7,7 +7,7 @@ export async function GET() {
     const categories = await prisma.category.findMany({ orderBy: { name: 'asc' } });
     return NextResponse.json({ categories });
   } catch (error) {
-    logger.error(error, '[API][GET] /api/admin/categories');
+    logger.error(error as Error, '[API][GET] /api/admin/categories');
     return NextResponse.json({ error: 'Erro ao listar categorias' }, { status: 500 });
   }
 }
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     const created = await prisma.category.create({ data: { name, slug, description: description || null, image: image || null } });
     return NextResponse.json({ category: created }, { status: 201 });
   } catch (error) {
-    logger.error(error, '[API][POST] /api/admin/categories');
+    logger.error(error as Error, '[API][POST] /api/admin/categories');
     return NextResponse.json({ error: 'Erro ao criar categoria' }, { status: 500 });
   }
 }
@@ -46,7 +46,7 @@ export async function PUT(req: NextRequest) {
     const updated = await prisma.category.update({ where: { id }, data: { name, slug, description: description || null, image: image || null } });
     return NextResponse.json({ category: updated });
   } catch (error) {
-    logger.error(error, '[API][PUT] /api/admin/categories');
+    logger.error(error as Error, '[API][PUT] /api/admin/categories');
     return NextResponse.json({ error: 'Erro ao atualizar categoria' }, { status: 500 });
   }
 }
@@ -60,7 +60,7 @@ export async function DELETE(req: NextRequest) {
     await prisma.category.delete({ where: { id } });
     return NextResponse.json({ ok: true });
   } catch (error) {
-    logger.error(error, '[API][DELETE] /api/admin/categories');
+    logger.error(error as Error, '[API][DELETE] /api/admin/categories');
     return NextResponse.json({ error: 'Erro ao deletar categoria' }, { status: 500 });
   }
 }

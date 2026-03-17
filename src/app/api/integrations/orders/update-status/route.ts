@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    logger.error(error, '[ORDER STATUS UPDATE ERROR]');
+    logger.error(error instanceof Error ? error : new Error(String(error)), '[ORDER STATUS UPDATE ERROR]');
     return NextResponse.json(
       { error: 'Erro ao atualizar status do pedido' },
       { status: 500 }

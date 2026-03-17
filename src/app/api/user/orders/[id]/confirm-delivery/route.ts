@@ -6,9 +6,10 @@ import { sendOrderStatusUpdate } from '@/lib/webhooks';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
 
     if (!session?.user?.email) {
@@ -27,7 +28,7 @@ export async function POST(
     // Verificar se o pedido existe e pertence ao usuário
     const order = await prisma.order.findFirst({
       where: {
-        id: params.id,
+        id,
         userId: user.id,
       },
     });
@@ -46,7 +47,7 @@ export async function POST(
 
     // Atualizar o pedido com a data de confirmação de entrega
     const updatedOrder = await prisma.order.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         deliveredAt: new Date(),
       },
@@ -85,7 +86,7 @@ export async function POST(
       order: updatedOrder,
     });
   } catch (error) {
-    logger.error(error, '[CONFIRM_DELIVERY]');
+    logger.error(error as Error, '[CONFIRM_DELIVERY]');
     return NextResponse.json({ error: 'Erro ao confirmar recebimento' }, { status: 500 });
   }
 }

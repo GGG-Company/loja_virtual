@@ -296,7 +296,7 @@ export async function POST(request: Request) {
           const channel = `support:chat:${chatId}`;
           await publish(channel, { type: "new_message", message: msgObj });
         } catch (e) {
-          console.error("[ASSISTANT] could not publish to redis", e);
+          logger.error(e as Error, "[ASSISTANT] could not publish to redis");
         }
       };
 
@@ -304,7 +304,7 @@ export async function POST(request: Request) {
         forwardedToSupport = true;
         const chat = await prisma.supportChat.findUnique({ where: { id: supportChatId } });
         if (!chat) {
-          console.warn(`[ASSISTANT] support chat not found: ${supportChatId} — creating new chat`);
+          logger.warn(`[ASSISTANT] support chat not found: ${supportChatId} — creating new chat`);
         }
         if (!chat) {
           // create new chat with both customer message (question) and assistant reply
@@ -377,7 +377,7 @@ export async function POST(request: Request) {
         });
       }
     } catch (e) {
-      console.error("[ASSISTANT] forwarding to support failed", e);
+      logger.error(e as Error, "[ASSISTANT] forwarding to support failed");
     }
 
     return NextResponse.json({

@@ -9,7 +9,7 @@ const INTERNAL_KEY = process.env.X_INTERNAL_API_KEY;
 const io = new Server(PORT, {
   maxHttpBufferSize: 1e6,
   cors: {
-    origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['https://loja.azura.dev.br'],
+    origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['https://loja.azura.dev.br', 'http://localhost:3000'],
     methods: ['GET', 'POST'],
     credentials: true,
   },

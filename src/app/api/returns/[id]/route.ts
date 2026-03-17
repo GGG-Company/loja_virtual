@@ -9,9 +9,10 @@ import { prisma } from '@/lib/prisma';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
@@ -27,7 +28,7 @@ export async function GET(
     }
 
     const returnRequest = await prisma.return.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         order: {
           select: {
@@ -64,7 +65,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, return: returnRequest });
   } catch (error) {
-    logger.error(error, '[RETURN_GET]');
+    logger.error(error as Error, '[RETURN_GET]');
     return NextResponse.json({ error: 'Erro ao buscar devolução' }, { status: 500 });
   }
 }
@@ -75,9 +76,10 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
@@ -96,7 +98,7 @@ export async function PUT(
     const { action } = body;
 
     const returnRequest = await prisma.return.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!returnRequest) {
@@ -117,7 +119,7 @@ export async function PUT(
       }
 
       const updated = await prisma.return.update({
-        where: { id: params.id },
+        where: { id },
         data: { status: 'CANCELLED' },
       });
 
@@ -137,7 +139,7 @@ export async function PUT(
       }
 
       const updated = await prisma.return.update({
-        where: { id: params.id },
+        where: { id },
         data: { 
           status: 'IN_TRANSIT',
           shippedAt: new Date(),
@@ -153,7 +155,7 @@ export async function PUT(
 
     return NextResponse.json({ error: 'Ação inválida' }, { status: 400 });
   } catch (error) {
-    logger.error(error, '[RETURN_UPDATE]');
+    logger.error(error as Error, '[RETURN_UPDATE]');
     return NextResponse.json({ error: 'Erro ao atualizar devolução' }, { status: 500 });
   }
 }

@@ -3,8 +3,8 @@ import { auth } from '@/auth';
 
 // SSE endpoint to subscribe to Redis pubsub channel for a chat.
 // Requires REDIS_URL env var. Falls back to 501 if Redis not configured.
-export async function GET(request: Request, { params }: { params: { chatId: string } }) {
-  const { chatId } = params;
+export async function GET(request: Request, context: { params: Promise<{ chatId: string }> }) {
+  const { chatId } = await context.params;
   const session = await auth();
 
   // basic auth check: only admins/owners or chat owner allowed to subscribe

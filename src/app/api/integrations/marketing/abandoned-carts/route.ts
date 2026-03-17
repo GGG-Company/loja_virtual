@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
       carts: enrichedCarts,
     });
   } catch (error) {
-    logger.error(error, '[ABANDONED CARTS ERROR]');
+    logger.error(error instanceof Error ? error : new Error(String(error)), '[ABANDONED CARTS ERROR]');
     return NextResponse.json(
       { error: 'Erro ao buscar carrinhos abandonados' },
       { status: 500 }

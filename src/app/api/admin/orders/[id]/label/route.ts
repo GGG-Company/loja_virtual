@@ -11,9 +11,10 @@ import {
 // POST - Gerar etiqueta para um pedido
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
@@ -25,7 +26,7 @@ export async function POST(
     }
 
     const order = await prisma.order.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         user: true,
         items: {
@@ -75,7 +76,7 @@ export async function POST(
     });
 
   } catch (error) {
-    logger.error(error, '[ADMIN_ORDER_LABEL_POST]');
+    logger.error(error as Error, '[ADMIN_ORDER_LABEL_POST]');
     return NextResponse.json({ error: 'Erro ao gerar etiqueta' }, { status: 500 });
   }
 }
@@ -83,9 +84,10 @@ export async function POST(
 // GET - Obter URL de impressão da etiqueta
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
@@ -97,7 +99,7 @@ export async function GET(
     }
 
     const order = await prisma.order.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         orderNumber: true,
@@ -136,7 +138,7 @@ export async function GET(
         if (printResult.success && printResult.url) {
           // Atualizar no banco
           await prisma.order.update({
-            where: { id: params.id },
+            where: { id },
             data: { melhorEnvioLabelUrl: printResult.url },
           });
 
@@ -149,7 +151,7 @@ export async function GET(
           });
         }
       } catch (e) {
-        logger.error(e, '[LABEL_PRINT_ERROR]');
+        logger.error(e as Error, '[LABEL_PRINT_ERROR]');
       }
     }
 
@@ -161,7 +163,7 @@ export async function GET(
     });
 
   } catch (error) {
-    logger.error(error, '[ADMIN_ORDER_LABEL_GET]');
+    logger.error(error as Error, '[ADMIN_ORDER_LABEL_GET]');
     return NextResponse.json({ error: 'Erro ao buscar etiqueta' }, { status: 500 });
   }
 }

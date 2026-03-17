@@ -2,17 +2,17 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
 import { publish } from '@/lib/redis';
+import logger from "@/lib/logger";
 
 // GET - retorna conversa com mensagens
 export async function GET(
   request: Request,
-  { params }: { params: { conversationId: string } }
+  { params }: { params: Promise<{ conversationId: string }> }
 ) {
   try {
+    const { conversationId } = await params;
     const session = await auth();
     if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-
-    const { conversationId } = params;
 
     const { searchParams } = new URL(request.url);
     const before = searchParams.get('before');
@@ -46,7 +46,7 @@ export async function GET(
 
     return NextResponse.json({ messages: msgs.reverse() });
   } catch (error) {
-    console.error('[GET CONVERSATION]', error);
+    logger.error(error as Error, '[GET CONVERSATION]');
     return NextResponse.json({ error: 'Erro ao buscar conversa' }, { status: 500 });
   }
 }
@@ -54,13 +54,13 @@ export async function GET(
 // POST - adiciona mensagem na conversa
 export async function POST(
   request: Request,
-  { params }: { params: { conversationId: string } }
+  { params }: { params: Promise<{ conversationId: string }> }
 ) {
   try {
+    const { conversationId } = await params;
     const session = await auth();
     if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
 
-    const { conversationId } = params;
     const body = await request.json();
     const { message, senderName, sender } = body;
 
@@ -90,7 +90,7 @@ export async function POST(
       // also notify owner/user channel
       try { await publish(`conversations:user:${convo.userId}`, { type: 'conversation_message', conversationId, message: newMsg }); } catch (e) {}
     } catch (e) {
-      console.warn('[CONVERSATIONS] failed to publish new message', e);
+      logger.warn({ error: e, conversationId }, '[CONVERSATIONS] failed to publish new message');
     }
 
     // Após adicionar mensagem, garante que apenas as 2 conversas mais recentes permaneçam
@@ -104,12 +104,12 @@ export async function POST(
         await prisma.conversation.deleteMany({ where: { id: { in: toDelete } } });
       }
     } catch (err) {
-      console.error('[PRUNE CONVERSATIONS AFTER MESSAGE]', err);
+      logger.error(err as Error, '[PRUNE CONVERSATIONS AFTER MESSAGE]');
     }
 
     return NextResponse.json(newMsg);
   } catch (error) {
-    console.error('[POST CONVERSATION MESSAGE]', error);
+    logger.error(error as Error, '[POST CONVERSATION MESSAGE]');
     return NextResponse.json({ error: 'Erro ao enviar mensagem' }, { status: 500 });
   }
 }

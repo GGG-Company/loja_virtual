@@ -10,9 +10,10 @@ import logger from "@/lib/logger";
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
@@ -33,7 +34,7 @@ export async function POST(
     }
 
     const order = await prisma.order.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         user: {
           select: { id: true, name: true, email: true },
@@ -84,7 +85,7 @@ export async function POST(
         sentBy: user.id,
       });
     } catch (webhookError) {
-      logger.error(webhookError, '[SEND_LABEL_WEBHOOK_ERROR]');
+      logger.error(webhookError as Error, '[SEND_LABEL_WEBHOOK_ERROR]');
       // Não falha a requisição se o webhook falhar
     }
 
@@ -93,7 +94,7 @@ export async function POST(
       message: 'Etiqueta enviada para o cliente com sucesso',
     });
   } catch (error) {
-    logger.error(error, '[SEND_LABEL]');
+    logger.error(error as Error, '[SEND_LABEL]');
     return NextResponse.json(
       { error: 'Erro ao enviar etiqueta' },
       { status: 500 }

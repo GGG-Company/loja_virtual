@@ -6,9 +6,10 @@ import { sendOrderStatusUpdate } from '@/lib/webhooks';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
 
     if (!session?.user?.email) {
@@ -26,7 +27,7 @@ export async function GET(
 
     const order = await prisma.order.findFirst({
       where: {
-        id: params.id,
+        id,
         userId: user.id,
       },
         select: {
@@ -92,7 +93,7 @@ export async function GET(
 
     return NextResponse.json(order);
   } catch (error) {
-    logger.error(error, '[USER_ORDER_GET]');
+    logger.error(error as Error, '[USER_ORDER_GET]');
     return NextResponse.json({ error: 'Erro ao buscar pedido' }, { status: 500 });
   }
 }

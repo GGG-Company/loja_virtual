@@ -90,7 +90,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    logger.error(error, '[ADMIN_SHIPPED_ORDERS_GET]');
+    logger.error(error as Error as Error, '[ADMIN_SHIPPED_ORDERS_GET]');
     return NextResponse.json({ error: 'Erro ao buscar pedidos enviados' }, { status: 500 });
   }
 }

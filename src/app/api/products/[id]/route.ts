@@ -6,10 +6,11 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const product = await getProduct(params.id);
+    const { id } = await params;
+    const product = await getProduct(id);
 
     if (!product) {
       return NextResponse.json(
@@ -20,7 +21,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, source: isExternalEnabled() ? 'external' : 'local', product });
   } catch (error) {
-    logger.error(error, '[PRODUCT_GET]');
+    logger.error(error as Error, '[PRODUCT_GET]');
     return NextResponse.json(
       { error: 'Erro ao buscar produto' },
       { status: 500 }

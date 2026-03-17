@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       ticketUrl: response.point_of_interaction?.transaction_data?.ticket_url,
     });
   } catch (error: any) {
-    logger.error(error, 'Erro ao gerar PIX');
+    logger.error(error as Error, 'Erro ao gerar PIX');
     return NextResponse.json(
       { error: error.message || 'Erro ao gerar PIX' },
       { status: 500 }

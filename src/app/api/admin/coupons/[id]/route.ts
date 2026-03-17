@@ -6,9 +6,10 @@ import logger from "@/lib/logger";
 // GET - Buscar cupom por ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
 
     if (!session?.user) {
@@ -21,7 +22,7 @@ export async function GET(
     }
 
     const coupon = await prisma.coupon.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!coupon) {
@@ -30,7 +31,7 @@ export async function GET(
 
     return NextResponse.json(coupon);
   } catch (error) {
-    logger.error(error, '[ADMIN_COUPON_GET]');
+    logger.error(error as Error, '[ADMIN_COUPON_GET]');
     return NextResponse.json({ error: 'Erro ao buscar cupom' }, { status: 500 });
   }
 }
@@ -38,9 +39,10 @@ export async function GET(
 // DELETE - Excluir cupom
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
 
     if (!session?.user) {
@@ -53,12 +55,12 @@ export async function DELETE(
     }
 
     await prisma.coupon.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    logger.error(error, '[ADMIN_COUPON_DELETE]');
+    logger.error(error as Error, '[ADMIN_COUPON_DELETE]');
     return NextResponse.json({ error: 'Erro ao excluir cupom' }, { status: 500 });
   }
 }
@@ -66,9 +68,10 @@ export async function DELETE(
 // PUT - Atualizar cupom
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
 
     if (!session?.user) {
@@ -83,7 +86,7 @@ export async function PUT(
     const body = await request.json();
 
     const coupon = await prisma.coupon.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         description: body.description,
         discountType: body.discountType,
@@ -102,7 +105,7 @@ export async function PUT(
 
     return NextResponse.json({ coupon });
   } catch (error) {
-    logger.error(error, '[ADMIN_COUPON_PUT]');
+    logger.error(error as Error, '[ADMIN_COUPON_PUT]');
     return NextResponse.json({ error: 'Erro ao atualizar cupom' }, { status: 500 });
   }
 }

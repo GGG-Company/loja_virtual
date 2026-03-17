@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ received: true });
   } catch (error: any) {
-    logger.error(error, 'Erro ao processar webhook');
+    logger.error(error as Error, 'Erro ao processar webhook');
     return NextResponse.json(
       { error: error.message || 'Erro ao processar webhook' },
       { status: 500 }

@@ -5,9 +5,10 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
 
     if (!session?.user) {
@@ -20,7 +21,7 @@ export async function GET(
     }
 
     const product = await prisma.product.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         category: true,
         images: true,
@@ -33,16 +34,17 @@ export async function GET(
 
     return NextResponse.json(product);
   } catch (error) {
-    logger.error(error, '[ADMIN_PRODUCT_GET]');
+    logger.error(error as Error, '[ADMIN_PRODUCT_GET]');
     return NextResponse.json({ error: 'Erro ao buscar produto' }, { status: 500 });
   }
 }
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
 
     if (!session?.user) {
@@ -71,7 +73,7 @@ export async function PUT(
 
     // Garante que o produto existe e captura categoryId atual para fallback
     const existing = await prisma.product.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { id: true, categoryId: true, isActive: true },
     });
 
@@ -110,22 +112,23 @@ export async function PUT(
     };
 
     const product = await prisma.product.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
     });
 
     return NextResponse.json(product);
   } catch (error) {
-    logger.error(error, '[ADMIN_PRODUCT_PUT]');
+    logger.error(error as Error, '[ADMIN_PRODUCT_PUT]');
     return NextResponse.json({ error: 'Erro ao atualizar produto' }, { status: 500 });
   }
 }
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
 
     if (!session?.user) {
@@ -138,7 +141,7 @@ export async function DELETE(
     }
 
     const product = await prisma.product.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         isActive: false,
         isFeatured: false,
@@ -147,7 +150,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, id: product.id, softDeleted: true });
   } catch (error) {
-    logger.error(error, '[ADMIN_PRODUCT_DELETE]');
+    logger.error(error as Error, '[ADMIN_PRODUCT_DELETE]');
     return NextResponse.json({ error: 'Erro ao excluir produto' }, { status: 500 });
   }
 }

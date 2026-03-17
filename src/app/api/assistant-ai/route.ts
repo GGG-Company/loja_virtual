@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import OpenAI from 'openai';
+import logger from '@/lib/logger';
 
 const bodySchema = z.object({
   question: z.string().min(1).max(500),
@@ -221,7 +222,7 @@ ${p.description ? `Descrição: ${p.description.slice(0, 200)}...` : ''}`;
     });
     
   } catch (error: any) {
-    console.error('[ASSISTANT AI ERROR]', error);
+    logger.error(error as Error, '[ASSISTANT AI ERROR]');
     
     // Se erro da OpenAI, retorna mensagem específica
     if (error?.status === 401) {

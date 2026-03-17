@@ -17,9 +17,10 @@ const createReviewSchema = z.object({
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const searchParams = request.nextUrl.searchParams;
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '5', 10);
@@ -44,7 +45,7 @@ export async function GET(
 
     // Filtro por rating
     const where: any = {
-      productId: params.id,
+      productId: id,
       isApproved: true,
     };
     
@@ -71,7 +72,7 @@ export async function GET(
       }),
       prisma.review.count({ where }),
       prisma.review.aggregate({
-        where: { productId: params.id, isApproved: true },
+        where: { productId: id, isApproved: true },
         _avg: { rating: true },
         _count: { rating: true },
       }),
@@ -80,7 +81,7 @@ export async function GET(
     // Distribuição de ratings
     const ratingDistribution = await prisma.review.groupBy({
       by: ['rating'],
-      where: { productId: params.id, isApproved: true },
+      where: { productId: id, isApproved: true },
       _count: { rating: true },
     });
 
@@ -107,7 +108,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    logger.error(error, '[REVIEWS_LIST]');
+    logger.error(error as Error, '[REVIEWS_LIST]');
     return NextResponse.json(
       { error: 'Erro ao buscar avaliações' },
       { status: 500 }
@@ -121,9 +122,10 @@ export async function GET(
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
@@ -140,7 +142,7 @@ export async function POST(
 
     // Verificar se o produto existe
     const product = await prisma.product.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { id: true },
     });
 
@@ -152,7 +154,7 @@ export async function POST(
     const existingReview = await prisma.review.findUnique({
       where: {
         productId_userId: {
-          productId: params.id,
+          productId: id,
           userId: user.id,
         },
       },
@@ -185,7 +187,7 @@ export async function POST(
           id: orderId,
           userId: user.id,
           status: { in: ['DELIVERED', 'SHIPPED'] },
-          items: { some: { productId: params.id } },
+          items: { some: { productId: id } },
         },
       });
       isVerifiedPurchase = !!order;
@@ -195,7 +197,7 @@ export async function POST(
         where: {
           userId: user.id,
           status: { in: ['DELIVERED', 'SHIPPED'] },
-          items: { some: { productId: params.id } },
+          items: { some: { productId: id } },
         },
       });
       isVerifiedPurchase = !!hasOrder;
@@ -203,7 +205,7 @@ export async function POST(
 
     const review = await prisma.review.create({
       data: {
-        productId: params.id,
+        productId: id,
         userId: user.id,
         orderId: isVerifiedPurchase ? orderId : null,
         rating,
@@ -228,7 +230,7 @@ export async function POST(
       review,
     }, { status: 201 });
   } catch (error) {
-    logger.error(error, '[REVIEW_CREATE]');
+    logger.error(error as Error, '[REVIEW_CREATE]');
     return NextResponse.json(
       { error: 'Erro ao criar avaliação' },
       { status: 500 }

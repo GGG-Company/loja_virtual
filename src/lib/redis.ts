@@ -1,17 +1,27 @@
 import Redis from 'ioredis';
+import logger from './logger';
 
-let publisher: Redis.Redis | null = null;
+let publisher: Redis | null = null;
 let _redisErrorLogged = false;
 
 export function getRedisPublisher() {
   if (publisher) return publisher;
   const url = process.env.REDIS_URL;
   if (!url) return null;
-  publisher = new Redis(url);
+  
+  publisher = new Redis(url, {
+    maxRetriesPerRequest: null, // ioredis default for pub/sub
+    enableReadyCheck: true,
+    retryStrategy(times) {
+      const delay = Math.min(times * 50, 2000);
+      return delay;
+    }
+  });
+
   // log the first connection/error once to avoid flooding logs in local dev
-  publisher.on('error', (err) => {
+  publisher.on('error', (err: Error) => {
     if (!_redisErrorLogged) {
-      console.error('[REDIS PUB] error', err);
+      logger.error(err, '[REDIS PUB] error');
       _redisErrorLogged = true;
     }
   });
@@ -26,7 +36,7 @@ export async function publish(channel: string, message: any) {
     return true;
   } catch (e) {
     if (!_redisErrorLogged) {
-      console.error('[REDIS PUB] publish error', e);
+      logger.error(e as Error, '[REDIS PUB] publish error');
       _redisErrorLogged = true;
     }
     return false;

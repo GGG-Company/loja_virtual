@@ -16,11 +16,12 @@ const updateReviewSchema = z.object({
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const review = await prisma.review.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         user: {
           select: {
@@ -46,7 +47,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, review });
   } catch (error) {
-    logger.error(error, '[REVIEW_GET]');
+    logger.error(error as Error, '[REVIEW_GET]');
     return NextResponse.json(
       { error: 'Erro ao buscar avaliação' },
       { status: 500 }
@@ -60,9 +61,10 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
@@ -78,7 +80,7 @@ export async function PUT(
     }
 
     const review = await prisma.review.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!review) {
@@ -101,7 +103,7 @@ export async function PUT(
     }
 
     const updated = await prisma.review.update({
-      where: { id: params.id },
+      where: { id },
       data: parsed.data,
       include: {
         user: {
@@ -120,7 +122,7 @@ export async function PUT(
       review: updated,
     });
   } catch (error) {
-    logger.error(error, '[REVIEW_UPDATE]');
+    logger.error(error as Error, '[REVIEW_UPDATE]');
     return NextResponse.json(
       { error: 'Erro ao atualizar avaliação' },
       { status: 500 }
@@ -134,9 +136,10 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
@@ -152,7 +155,7 @@ export async function DELETE(
     }
 
     const review = await prisma.review.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!review) {
@@ -165,7 +168,7 @@ export async function DELETE(
     }
 
     await prisma.review.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({
@@ -173,7 +176,7 @@ export async function DELETE(
       message: 'Avaliação removida',
     });
   } catch (error) {
-    logger.error(error, '[REVIEW_DELETE]');
+    logger.error(error as Error, '[REVIEW_DELETE]');
     return NextResponse.json(
       { error: 'Erro ao deletar avaliação' },
       { status: 500 }
@@ -187,15 +190,16 @@ export async function DELETE(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     const body = await request.json();
     const { action, sellerResponse } = body;
 
     const review = await prisma.review.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!review) {
@@ -205,7 +209,7 @@ export async function PATCH(
     // Ação: marcar como útil (não precisa estar logado)
     if (action === 'helpful') {
       const updated = await prisma.review.update({
-        where: { id: params.id },
+        where: { id },
         data: { isHelpful: review.isHelpful + 1 },
       });
 
@@ -232,7 +236,7 @@ export async function PATCH(
       }
 
       const updated = await prisma.review.update({
-        where: { id: params.id },
+        where: { id },
         data: {
           sellerResponse,
           sellerResponseAt: new Date(),
@@ -248,7 +252,7 @@ export async function PATCH(
 
     return NextResponse.json({ error: 'Ação inválida' }, { status: 400 });
   } catch (error) {
-    logger.error(error, '[REVIEW_PATCH]');
+    logger.error(error as Error, '[REVIEW_PATCH]');
     return NextResponse.json(
       { error: 'Erro ao processar ação' },
       { status: 500 }

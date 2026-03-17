@@ -60,7 +60,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    logger.error(error, '[ADMIN PRODUCTS ERROR]');
+    logger.error(error as Error, '[ADMIN PRODUCTS ERROR]');
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
@@ -120,7 +120,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(product);
   } catch (error) {
-    logger.error(error, '[ADMIN_PRODUCT_POST]');
+    logger.error(error as Error, '[ADMIN_PRODUCT_POST]');
     return NextResponse.json({ error: 'Erro ao criar produto' }, { status: 500 });
   }
 }

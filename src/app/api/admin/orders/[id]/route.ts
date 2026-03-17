@@ -5,9 +5,10 @@ import logger from "@/lib/logger";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
 
     if (!session?.user) {
@@ -20,7 +21,7 @@ export async function GET(
     }
 
     const order = await prisma.order.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         user: {
           select: { name: true, email: true },
@@ -41,7 +42,7 @@ export async function GET(
 
     return NextResponse.json(order);
   } catch (error) {
-    logger.error(error, '[ADMIN_ORDER_DETAIL]');
+    logger.error(error as Error, '[ADMIN_ORDER_DETAIL]');
     return NextResponse.json({ error: 'Erro ao buscar pedido' }, { status: 500 });
   }
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +19,7 @@ export async function GET() {
 
     return NextResponse.json({ categories });
   } catch (error) {
-    logger.error('[CATEGORIES_GET]', error);
+    logger.error(error as Error, '[CATEGORIES_GET]');
     return NextResponse.json(
       { error: 'Erro ao buscar categorias' },
       { status: 500 }

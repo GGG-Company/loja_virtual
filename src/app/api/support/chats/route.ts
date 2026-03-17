@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
+import logger from '@/lib/logger';
 
 // GET - Listar chats de suporte (admin)
 export async function GET(request: Request) {
@@ -47,7 +48,7 @@ export async function GET(request: Request) {
       where,
       include: {
         user: { select: { id: true, name: true, email: true } },
-        attendant: { select: { id: true, name: true } },
+        // attendant: { select: { id: true, name: true } },
         messages: { orderBy: { createdAt: 'desc' }, take: 1 },
         _count: { select: { messages: true } },
       },
@@ -56,7 +57,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(chats);
   } catch (error) {
-    console.error('[GET SUPPORT CHATS]', error);
+    logger.error(error as Error, '[GET SUPPORT CHATS]');
     return NextResponse.json({ error: 'Erro ao buscar chats' }, { status: 500 });
   }
 }

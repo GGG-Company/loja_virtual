@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    logger.error(error, '[ADMIN_COUPONS_GET]');
+    logger.error(error as Error, '[ADMIN_COUPONS_GET]');
     return NextResponse.json({ error: 'Erro ao listar cupons' }, { status: 500 });
   }
 }
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ coupon }, { status: 201 });
   } catch (error) {
-    logger.error(error, '[ADMIN_COUPONS_POST]');
+    logger.error(error as Error, '[ADMIN_COUPONS_POST]');
     return NextResponse.json({ error: 'Erro ao criar cupom' }, { status: 500 });
   }
 }

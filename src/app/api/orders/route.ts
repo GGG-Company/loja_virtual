@@ -56,46 +56,46 @@ export async function POST(req: Request) {
       const quoteItems = items.map((it) => ({ productId: it.id, quantity: it.quantity, price: it.price }));
       const options = await getShippingOptions({ items: quoteItems, destinationZip: entrega?.cep || "" });
 
-      console.log("[ORDER_CREATE_ME_OPTIONS]", { options, requestedShipping: shippingData });
+      logger.info({ options, requestedShipping: shippingData }, "[ORDER_CREATE_ME_OPTIONS]");
 
       if (!options || options.length === 0) {
-        console.warn("[ORDER_CREATE] Nenhuma opção de frete retornada pelo Melhor Envio", { requestedShipping: shippingData });
+        logger.warn({ requestedShipping: shippingData }, "[ORDER_CREATE] Nenhuma opção de frete retornada pelo Melhor Envio");
         return NextResponse.json({ error: "Não foi possível calcular frete via Melhor Envio" }, { status: 400 });
       }
 
       // Se o cliente enviou um shipping.serviceId, tentamos usar a mesma opção retornada pelo ME
       if (shippingData?.serviceId) {
         const match = options.find((o) => String(o.id) === String(shippingData.serviceId) || (o.service && o.service === shippingData.serviceName));
-        console.log("[ORDER_CREATE_MATCH_ATTEMPT]", { requested: shippingData, found: !!match, foundOption: match });
+        logger.info({ requested: shippingData, found: !!match, foundOption: match }, "[ORDER_CREATE_MATCH_ATTEMPT]");
         if (match) {
           shippingCost = match.price;
           selectedShippingServiceId = match.id;
           selectedShippingServiceName = match.service;
-          console.log("[ORDER_CREATE_SELECTED]", { method: "match", shippingCost, selectedShippingServiceId, selectedShippingServiceName });
+          logger.info({ method: "match", shippingCost, selectedShippingServiceId, selectedShippingServiceName }, "[ORDER_CREATE_SELECTED]");
         } else {
           // Cliente pediu uma opção que não bate com a cotação atual; escolher a primeira disponível como fallback
           shippingCost = options[0].price;
           selectedShippingServiceId = options[0].id;
           selectedShippingServiceName = options[0].service;
-          console.log("[ORDER_CREATE_FALLBACK]", { reason: "requested_not_found", fallbackOption: options[0], clientShipping: shippingData });
+          logger.info({ reason: "requested_not_found", fallbackOption: options[0], clientShipping: shippingData }, "[ORDER_CREATE_FALLBACK]");
         }
       } else {
         // Cliente não enviou preferência: usar a primeira opção do Melhor Envio
         shippingCost = options[0].price;
         selectedShippingServiceId = options[0].id;
         selectedShippingServiceName = options[0].service;
-        console.log("[ORDER_CREATE_SELECTED]", { method: "default_first", shippingCost, selectedShippingServiceId, selectedShippingServiceName });
+        logger.info({ method: "default_first", shippingCost, selectedShippingServiceId, selectedShippingServiceName }, "[ORDER_CREATE_SELECTED]");
       }
 
       // Log de comparação entre preço enviado pelo cliente (se houver) e preço final escolhido
       try {
         const clientPrice = typeof shippingData?.price === "number" ? shippingData.price : null;
-        console.log("[ORDER_CREATE_PRICE_COMPARISON]", { clientPrice, finalPrice: shippingCost, diff: clientPrice !== null ? shippingCost - clientPrice : null });
+        logger.info({ clientPrice, finalPrice: shippingCost, diff: clientPrice !== null ? shippingCost - clientPrice : null }, "[ORDER_CREATE_PRICE_COMPARISON]");
       } catch (e) {
         // ignore
       }
     } catch (err) {
-      console.error("[ORDER_CREATE] Erro ao calcular frete no servidor:", err);
+      logger.error(err as Error, "[ORDER_CREATE] Erro ao calcular frete no servidor");
       return NextResponse.json({ error: "Erro ao calcular frete" }, { status: 500 });
     }
     const discount = 0;

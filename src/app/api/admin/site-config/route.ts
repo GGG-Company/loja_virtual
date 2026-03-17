@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
+import logger from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -23,7 +24,7 @@ export async function GET() {
 
     return NextResponse.json(config);
   } catch (error) {
-    console.error('[GET SITE CONFIG]', error);
+    logger.error(error as Error, '[GET SITE CONFIG]');
     return NextResponse.json({ error: 'Erro ao buscar configurações' }, { status: 500 });
   }
 }
@@ -54,7 +55,7 @@ export async function PUT(request: Request) {
 
     return NextResponse.json(config);
   } catch (error) {
-    console.error('[UPDATE SITE CONFIG]', error);
+    logger.error(error as Error, '[UPDATE SITE CONFIG]');
     return NextResponse.json({ error: 'Erro ao atualizar configurações' }, { status: 500 });
   }
 }

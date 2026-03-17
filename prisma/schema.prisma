@@ -36,6 +36,7 @@ model User {
   reviews             Review[]
   sessions            Session[]
   supportChats        SupportChat[]
+  conversations       Conversation[]
 
   @@index([email])
   @@map("users")
@@ -612,6 +613,38 @@ model SupportMessage {
     chat       SupportChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
 
     @@map("support_messages")
+}
+
+model Conversation {
+    id        String                @id @default(cuid())
+    userId    String
+    title     String?
+    createdAt DateTime              @default(now())
+    updatedAt DateTime              @updatedAt
+    messages  ConversationMessage[]
+    user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@map("conversations")
+}
+
+model ConversationMessage {
+    id             String       @id @default(cuid())
+    conversationId String
+    sender         String // "user" or "admin"
+    senderName     String?
+    message        String       @db.Text
+    createdAt      DateTime     @default(now())
+    conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+    @@map("conversation_messages")
+}
+
+model SiteConfig {
+    id            String @id @default("singleton")
+    assistantMode String @default("smart") // "smart" or "ai"
+    updatedAt     DateTime @updatedAt
+
+    @@map("site_config")
 }
 
 enum SupportStatus {
