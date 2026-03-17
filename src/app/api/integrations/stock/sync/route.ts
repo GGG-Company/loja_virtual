@@ -1,3 +1,4 @@
+import logger from "@/lib/logger";
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
@@ -92,7 +93,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[STOCK SYNC ERROR]', error);
+    logger.error(error, '[STOCK SYNC ERROR]');
     
     await logIntegration(
       request,

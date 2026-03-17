@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import logger from "@/lib/logger";
 
 export const dynamic = 'force-dynamic';
 
@@ -89,7 +90,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[ADMIN_SHIPPED_ORDERS_GET]', error);
+    logger.error(error, '[ADMIN_SHIPPED_ORDERS_GET]');
     return NextResponse.json({ error: 'Erro ao buscar pedidos enviados' }, { status: 500 });
   }
 }

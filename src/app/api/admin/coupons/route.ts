@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import logger from "@/lib/logger";
 
 // GET - Listar cupons
 export async function GET(request: NextRequest) {
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[ADMIN_COUPONS_GET]', error);
+    logger.error(error, '[ADMIN_COUPONS_GET]');
     return NextResponse.json({ error: 'Erro ao listar cupons' }, { status: 500 });
   }
 }
@@ -122,7 +123,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ coupon }, { status: 201 });
   } catch (error) {
-    console.error('[ADMIN_COUPONS_POST]', error);
+    logger.error(error, '[ADMIN_COUPONS_POST]');
     return NextResponse.json({ error: 'Erro ao criar cupom' }, { status: 500 });
   }
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import logger from "@/lib/logger";
 import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -74,7 +75,7 @@ function ProductDetailContent() {
         // Ignora erro de reviews
       }
     } catch (error) {
-      console.error('Erro ao carregar produto:', error);
+      logger.error(error, 'Erro ao carregar produto');
       toast.error('Produto não encontrado');
     } finally {
       setIsLoading(false);

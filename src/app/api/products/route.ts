@@ -26,7 +26,7 @@ export async function GET(request: Request) {
       products,
     });
   } catch (error) {
-    console.error('[PRODUCTS_GET]', error);
+    logger.error('[PRODUCTS_GET]', error);
     return NextResponse.json(
       { error: 'Erro ao buscar produtos' },
       { status: 500 }

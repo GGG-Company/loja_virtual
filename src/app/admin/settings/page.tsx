@@ -1,5 +1,6 @@
 'use client';
 
+import logger from "@/lib/logger";
 import { useEffect, useState } from 'react';
 
 type MelhorEnvioStatus = {
@@ -81,7 +82,7 @@ export default function AdminSettingsPage() {
       }
     } catch (error) {
       alert('Erro ao salvar configuração');
-      console.error(error);
+      logger.error(error);
     } finally {
       setMpConfigLoading(false);
     }
@@ -101,7 +102,7 @@ export default function AdminSettingsPage() {
 
       setWebhookFeedback(data?.message || 'Webhook de teste enviado');
     } catch (error) {
-      console.error(error);
+      logger.error(error);
       setWebhookFeedback('Erro ao enviar webhook de teste');
     } finally {
       setWebhookSending(false);

@@ -1,3 +1,4 @@
+import logger from "@/lib/logger";
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
@@ -109,7 +110,7 @@ export async function PATCH(
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error('[ADMIN_PICKING_UPDATE]', error);
+    logger.error(error, '[ADMIN_PICKING_UPDATE]');
     return NextResponse.json({ error: 'Erro ao atualizar status do pedido' }, { status: 500 });
   }
 }

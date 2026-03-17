@@ -1,3 +1,4 @@
+import logger from "@/lib/logger";
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getShippingOptions } from '@/lib/shipping-calculator';
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, options });
   } catch (error) {
-    console.error('[SHIPPING_QUOTE]', error);
+    logger.error(error, '[SHIPPING_QUOTE]');
     return NextResponse.json({ error: 'Erro ao calcular frete' }, { status: 500 });
   }
 }

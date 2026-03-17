@@ -1,5 +1,6 @@
 'use server';
 
+import logger from "@/lib/logger";
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
@@ -67,7 +68,7 @@ export async function createProduct(formData: FormData) {
 
     return { success: true, product };
   } catch (error) {
-    console.error('[CREATE PRODUCT ERROR]', error);
+    logger.error(error, '[CREATE PRODUCT ERROR]');
     return { success: false, error: 'Erro ao criar produto' };
   }
 }
@@ -110,7 +111,7 @@ export async function updateProductStock(productId: string, newStock: number) {
 
     return { success: true, product: updated };
   } catch (error) {
-    console.error('[UPDATE STOCK ERROR]', error);
+    logger.error(error, '[UPDATE STOCK ERROR]');
     return { success: false, error: 'Erro ao atualizar estoque' };
   }
 }

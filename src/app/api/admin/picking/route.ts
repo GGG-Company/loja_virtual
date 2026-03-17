@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import logger from "@/lib/logger";
 
 export const dynamic = 'force-dynamic';
 
@@ -84,7 +85,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[ADMIN_PICKING_GET]', error);
+    logger.error(error, '[ADMIN_PICKING_GET]');
     return NextResponse.json({ error: 'Erro ao buscar picking' }, { status: 500 });
   }
 }

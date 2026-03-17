@@ -1,3 +1,4 @@
+import logger from "@/lib/logger";
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
@@ -119,7 +120,7 @@ export async function PUT(
         approvedBy: user.id,
       });
     } catch (webhookError) {
-      console.error('[RETURNS_APPROVE_WEBHOOK_ERROR]', webhookError);
+      logger.error(webhookError, '[RETURNS_APPROVE_WEBHOOK_ERROR]');
       // Não falha a requisição se o webhook falhar
     }
 
@@ -129,7 +130,7 @@ export async function PUT(
       return: updated,
     });
   } catch (error) {
-    console.error('[RETURN_APPROVE]', error);
+    logger.error(error, '[RETURN_APPROVE]');
     return NextResponse.json({ error: 'Erro ao aprovar devolução' }, { status: 500 });
   }
 }
@@ -236,7 +237,7 @@ export async function DELETE(
         rejectedBy: user.id,
       });
     } catch (webhookError) {
-      console.error('[RETURNS_REJECT_WEBHOOK_ERROR]', webhookError);
+      logger.error(webhookError, '[RETURNS_REJECT_WEBHOOK_ERROR]');
       // Não falha a requisição se o webhook falhar
     }
 
@@ -246,7 +247,7 @@ export async function DELETE(
       return: updated,
     });
   } catch (error) {
-    console.error('[RETURN_REJECT]', error);
+    logger.error(error, '[RETURN_REJECT]');
     return NextResponse.json({ error: 'Erro ao rejeitar devolução' }, { status: 500 });
   }
 }

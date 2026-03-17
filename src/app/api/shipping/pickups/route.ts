@@ -1,3 +1,4 @@
+import logger from "@/lib/logger";
 import { NextResponse } from 'next/server';
 import { getPickupPoints } from '@/lib/shipping-calculator';
 
@@ -13,7 +14,7 @@ export async function GET(req: Request) {
     const points = await getPickupPoints({ destinationZip: zip });
     return NextResponse.json(points);
   } catch (err) {
-    console.error('[shipping][pickups]', err);
+    logger.error(err, '[shipping][pickups]');
     return NextResponse.json({ error: 'Erro ao buscar pontos de coleta' }, { status: 500 });
   }
 }

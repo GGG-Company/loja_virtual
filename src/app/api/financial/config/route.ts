@@ -1,3 +1,4 @@
+import logger from "@/lib/logger";
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
@@ -33,7 +34,7 @@ export async function GET() {
 
     return NextResponse.json(config);
   } catch (error) {
-    console.error('[FINANCIAL CONFIG ERROR]', error);
+    logger.error(error, '[FINANCIAL CONFIG ERROR]');
     return NextResponse.json(
       { error: 'Erro ao buscar configuração' },
       { status: 500 }

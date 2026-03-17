@@ -1,3 +1,4 @@
+import logger from "@/lib/logger";
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { OrderStatus } from '@prisma/client';
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
       orderId: order.id,
     });
   } catch (error: any) {
-    console.error('Erro ao simular pagamento:', error);
+    logger.error(error, 'Erro ao simular pagamento:');
     return NextResponse.json(
       { error: error.message || 'Erro ao simular pagamento' },
       { status: 500 }

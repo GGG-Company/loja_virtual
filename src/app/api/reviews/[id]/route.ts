@@ -1,3 +1,4 @@
+import logger from "@/lib/logger";
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
@@ -45,7 +46,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, review });
   } catch (error) {
-    console.error('[REVIEW_GET]', error);
+    logger.error(error, '[REVIEW_GET]');
     return NextResponse.json(
       { error: 'Erro ao buscar avaliação' },
       { status: 500 }
@@ -119,7 +120,7 @@ export async function PUT(
       review: updated,
     });
   } catch (error) {
-    console.error('[REVIEW_UPDATE]', error);
+    logger.error(error, '[REVIEW_UPDATE]');
     return NextResponse.json(
       { error: 'Erro ao atualizar avaliação' },
       { status: 500 }
@@ -172,7 +173,7 @@ export async function DELETE(
       message: 'Avaliação removida',
     });
   } catch (error) {
-    console.error('[REVIEW_DELETE]', error);
+    logger.error(error, '[REVIEW_DELETE]');
     return NextResponse.json(
       { error: 'Erro ao deletar avaliação' },
       { status: 500 }
@@ -247,7 +248,7 @@ export async function PATCH(
 
     return NextResponse.json({ error: 'Ação inválida' }, { status: 400 });
   } catch (error) {
-    console.error('[REVIEW_PATCH]', error);
+    logger.error(error, '[REVIEW_PATCH]');
     return NextResponse.json(
       { error: 'Erro ao processar ação' },
       { status: 500 }

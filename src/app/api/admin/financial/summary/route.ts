@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import logger from "@/lib/logger";
 
 export const dynamic = 'force-dynamic';
 
@@ -221,7 +222,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error('[FINANCIAL_SUMMARY_GET]', error);
+    logger.error(error, '[FINANCIAL_SUMMARY_GET]');
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

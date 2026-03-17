@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import logger from "@/lib/logger";
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +25,7 @@ export async function GET() {
 
     return NextResponse.json(config);
   } catch (error) {
-    console.error('[FINANCIAL_CONFIG_GET]', error);
+    logger.error(error, '[FINANCIAL_CONFIG_GET]');
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
@@ -55,7 +56,7 @@ export async function PUT(request: Request) {
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error('[FINANCIAL_CONFIG_PUT]', error);
+    logger.error(error, '[FINANCIAL_CONFIG_PUT]');
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

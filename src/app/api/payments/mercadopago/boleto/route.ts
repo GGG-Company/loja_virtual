@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import logger from "@/lib/logger";
 import { getMercadoPagoKeys } from '@/lib/mercadopago-config';
 import { prisma } from '@/lib/prisma';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
@@ -88,7 +89,7 @@ export async function POST(req: NextRequest) {
       dueDate: response.date_of_expiration,
     });
   } catch (error: any) {
-    console.error("Erro ao gerar Boleto:", error);
+    logger.error(error, "Erro ao gerar Boleto");
     return NextResponse.json({ error: error.message || "Erro ao gerar Boleto" }, { status: 500 });
   }
 }

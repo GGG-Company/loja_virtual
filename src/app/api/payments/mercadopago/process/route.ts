@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getMercadoPagoKeys } from '@/lib/mercadopago-config';
 import { prisma } from '@/lib/prisma';
 import { sendOrderStatusUpdate } from '@/lib/webhooks';
+import logger from '@/lib/logger';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
 
 export async function POST(req: NextRequest) {
@@ -9,9 +10,10 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { formData, orderId, amount } = body;
 
-    console.log('[PAYMENT PROCESS] Dados recebidos:', { orderId, amount, formData });
+    logger.info({ orderId, amount }, 'Processando novo pagamento');
 
     if (!orderId || !amount) {
+      logger.warn({ body }, 'Tentativa de pagamento com dados ausentes');
       return NextResponse.json(
         { error: 'orderId e amount são obrigatórios' },
         { status: 400 }
@@ -111,7 +113,7 @@ export async function POST(req: NextRequest) {
       statusDetail: response.status_detail,
     });
   } catch (error: any) {
-    console.error('Erro ao processar pagamento:', error);
+    logger.error({ error: error.message, stack: error.stack }, 'Erro crítico ao processar pagamento no Mercado Pago');
     return NextResponse.json(
       { error: error.message || 'Erro ao processar pagamento' },
       { status: 500 }

@@ -1,5 +1,6 @@
 'use client';
 
+import logger from "@/lib/logger";
 import { useEffect, useState } from 'react';
 import { apiClient } from '@/lib/api-client';
 
@@ -42,7 +43,7 @@ export function usePrice(basePrice: number) {
       const { data } = await apiClient.get('/api/financial/config');
       setConfig(data);
     } catch (error) {
-      console.error('Erro ao carregar configuração financeira', error);
+      logger.error(error, 'Erro ao carregar configuração financeira');
       // Fallback
       setConfig({
         creditCardInterestRate: 1.99,

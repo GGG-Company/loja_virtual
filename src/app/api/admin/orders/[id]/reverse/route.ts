@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import logger from "@/lib/logger";
 import {
   addReverseToMelhorEnvioCart,
   createReverseShippingForOrder,
@@ -46,12 +47,12 @@ export async function POST(
       serviceId = 1, // 1 = PAC, 2 = SEDEX
     } = body;
 
-    console.log('[ADMIN_REVERSE] Solicitação de logística reversa:', {
+    logger.info({
       orderId: params.id,
       mode,
       newSenderEmail,
       newSenderPhone,
-    });
+    }, '[ADMIN_REVERSE] Solicitação de logística reversa');
 
     // Buscar pedido
     const order = await prisma.order.findUnique({
@@ -191,7 +192,7 @@ export async function POST(
     return NextResponse.json({ error: 'Modo inválido. Use "auto" ou "manual"' }, { status: 400 });
 
   } catch (error) {
-    console.error('[ADMIN_REVERSE]', error);
+    logger.error(error, '[ADMIN_REVERSE]');
     return NextResponse.json({ error: 'Erro ao processar logística reversa' }, { status: 500 });
   }
 }

@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       filename,
     });
   } catch (error) {
-    console.error('[UPLOAD_ERROR]', error);
+    logger.error('[UPLOAD_ERROR]', error);
     return NextResponse.json({ error: 'Erro ao fazer upload' }, { status: 500 });
   }
 }

@@ -1,3 +1,4 @@
+import logger from "@/lib/logger";
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
@@ -12,7 +13,7 @@ function formatOrderNumber(seq: number) {
 export async function POST(req: Request) {
   try {
     const session = await auth();
-    console.log('[ORDER_CREATE_SESSION]', {
+    logger.info('[ORDER_CREATE_SESSION]', {
       userId: session?.user?.id,
       userEmail: session?.user?.email,
       userName: session?.user?.name,
@@ -35,8 +36,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Carrinho vazio' }, { status: 400 });
     }
 
-    console.log('[ORDER_CREATE_ITEMS]', items);
-    console.log('[ORDER_CREATE_SHIPPING]', shippingData);
+    logger.info('[ORDER_CREATE_ITEMS]', items);
+    logger.info('[ORDER_CREATE_SHIPPING]', shippingData);
 
     const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const shippingCost = shippingData?.price || 0;
@@ -64,7 +65,7 @@ export async function POST(req: Request) {
     });
     
     if (!userExists) {
-      console.error('[ORDER_CREATE] Usuário não encontrado:', session.user.id);
+      logger.error('[ORDER_CREATE] Usuário não encontrado:', session.user.id);
       return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 400 });
     }
 
@@ -79,7 +80,7 @@ export async function POST(req: Request) {
     const missingProducts = productIds.filter(id => !existingProductIds.has(id));
     
     if (missingProducts.length > 0) {
-      console.error('[ORDER_CREATE] Produtos não encontrados:', missingProducts);
+      logger.error('[ORDER_CREATE] Produtos não encontrados:', missingProducts);
       return NextResponse.json({ 
         error: 'Alguns produtos não foram encontrados', 
         missingProducts 
@@ -152,7 +153,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
-    console.error('[ORDER_CREATE]', error);
+    logger.error('[ORDER_CREATE]', error);
     return NextResponse.json({ error: 'Erro ao criar pedido' }, { status: 500 });
   }
 }

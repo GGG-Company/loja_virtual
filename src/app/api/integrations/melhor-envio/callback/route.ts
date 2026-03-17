@@ -1,3 +1,4 @@
+import logger from "@/lib/logger";
 import { NextRequest, NextResponse } from 'next/server';
 import { exchangeCodeForToken, saveToken } from '@/lib/melhorenvio-oauth';
 
@@ -6,7 +7,7 @@ export async function GET(req: NextRequest) {
   const code = searchParams.get('code');
   const state = searchParams.get('state');
   if (!code) {
-    console.warn('[melhorenvio][callback] code ausente', { url: req.url, state });
+    logger.warn('[melhorenvio][callback] code ausente', { url: req.url, state });
     return NextResponse.json({ error: 'code ausente' }, { status: 400 });
   }
 
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
     const redirectUrl = new URL('/admin/settings', req.url);
     return NextResponse.redirect(redirectUrl);
   } catch (e: any) {
-    console.error('[melhorenvio][callback] erro ao trocar code por token', {
+    logger.error('[melhorenvio][callback] erro ao trocar code por token', {
       message: e?.message,
       state,
     });

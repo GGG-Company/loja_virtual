@@ -1,4 +1,3 @@
-// This is your Prisma schema file
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,9 +7,503 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ============================================
-// ENUMS
-// ============================================
+model User {
+  id                  String         @id @default(cuid())
+  name                String?
+  email               String         @unique
+  emailVerified       DateTime?
+  password            String?
+  image               String?
+  phone               String?
+  cpf                 String?
+  cnpj                String?
+  stateRegistration   String?
+  addressZip          String?
+  addressStreet       String?
+  addressNumber       String?
+  addressComplement   String?
+  addressNeighborhood String?
+  addressCity         String?
+  addressState        String?
+  role                UserRole       @default(CUSTOMER)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  accounts            Account[]
+  carts               Cart?
+  notifications       Notification[]
+  orders              Order[]
+  returns             Return[]
+  reviews             Review[]
+  sessions            Session[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  description String?
+  image       String?
+  parentId    String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryHierarchy")
+  products    Product[]
+
+  @@index([slug])
+  @@map("categories")
+}
+
+model Product {
+  id               String           @id @default(cuid())
+  sku              String           @unique
+  ean              String?
+  slug             String           @unique
+  name             String
+  description      String?
+  shortDescription String?
+  imageUrl         String?
+  price            Float
+  compareAtPrice   Float?
+  promotionalPrice Float?
+  cost             Float?
+  ncm              String?
+  origin           String?
+  stock            Int              @default(0)
+  stockLocation    String?
+  minStock         Int              @default(5)
+  externalIdML     String?          @unique
+  externalIdHiper  String?          @unique
+  specs            Json?
+  weight           Float?
+  dimensions       Json?
+  isFeatured       Boolean          @default(false)
+  isPromo          Boolean          @default(false)
+  isActive         Boolean          @default(true)
+  metaTitle        String?
+  metaDescription  String?
+  categoryId       String
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  cartItems        CartItem[]
+  orderItems       OrderItem[]
+  images           ProductImage[]
+  variants         ProductVariant[]
+  category         Category         @relation(fields: [categoryId], references: [id])
+  reviews          Review[]
+  stockLogs        StockLog[]
+
+  @@index([sku])
+  @@index([slug])
+  @@index([categoryId])
+  @@index([isFeatured])
+  @@map("products")
+}
+
+model ProductVariant {
+  id         String   @id @default(cuid())
+  productId  String
+  sku        String   @unique
+  name       String
+  price      Float?
+  stock      Int      @default(0)
+  attributes Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([sku])
+  @@index([productId])
+  @@map("product_variants")
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  url       String
+  alt       String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("product_images")
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String?    @unique
+  sessionId String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  items     CartItem[]
+  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sessionId])
+  @@map("carts")
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  productId String
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@unique([cartId, productId])
+  @@map("cart_items")
+}
+
+model Order {
+  id                  String        @id @default(cuid())
+  orderNumber         String        @unique
+  userId              String
+  status              OrderStatus   @default(PENDING)
+  subtotal            Float
+  discount            Float         @default(0)
+  shipping            Float         @default(0)
+  total               Float
+  paymentMethod       PaymentMethod
+  installments        Int           @default(1)
+  paymentId           String?
+  paymentStatus       String?
+  paidAt              DateTime?
+  shippingAddress     Json
+  trackingCode        String?
+  trackingUrl         String?
+  shippedAt           DateTime?
+  deliveredAt         DateTime?
+  melhorEnvioOrderId  String?
+  melhorEnvioLabelId  String?
+  melhorEnvioStatus   String?
+  melhorEnvioService  String?
+  melhorEnvioLabelUrl String?
+  shippingServiceId   String?
+  couponId            String?
+  notes               String?
+  adminNotes          String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  items               OrderItem[]
+  coupon              Coupon?       @relation(fields: [couponId], references: [id])
+  user                User          @relation(fields: [userId], references: [id])
+  returns             Return[]
+  reviews             Review[]
+
+  @@index([userId])
+  @@index([orderNumber])
+  @@index([status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Int
+  price     Float
+  discount  Float    @default(0)
+  subtotal  Float
+  createdAt DateTime @default(now())
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+model Banner {
+  id        String    @id @default(cuid())
+  title     String
+  imageUrl  String
+  link      String?
+  order     Int       @default(0)
+  isActive  Boolean   @default(true)
+  startDate DateTime?
+  endDate   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([isActive])
+  @@map("banners")
+}
+
+model Coupon {
+  id           String       @id @default(cuid())
+  code         String       @unique
+  description  String?
+  discountType DiscountType
+  value        Float
+  scope        CouponScope  @default(GLOBAL)
+  scopeValues  Json?
+  minPurchase  Float?
+  maxDiscount  Float?
+  usageLimit   Int?
+  usagePerUser Int?
+  currentUsage Int          @default(0)
+  isActive     Boolean      @default(true)
+  startDate    DateTime?
+  endDate      DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  orders       Order[]
+
+  @@index([code])
+  @@index([isActive])
+  @@map("coupons")
+}
+
+model FinancialConfig {
+  id                      String   @id @default("singleton")
+  creditCardInterestRate  Float    @default(1.99)
+  debitCardInterestRate   Float    @default(0)
+  maxInstallments         Int      @default(12)
+  minInstallmentValue     Float    @default(50.00)
+  freeShippingMinValue    Float?   @default(200.00)
+  defaultMarkupPercentage Float    @default(30.0)
+  updatedAt               DateTime @updatedAt
+  updatedBy               String?
+
+  @@map("financial_config")
+}
+
+model ShippingRule {
+  id        String           @id @default(cuid())
+  active    Boolean          @default(true)
+  type      ShippingRuleType
+  states    Json?
+  isFree    Boolean          @default(false)
+  price     Float?
+  minValue  Float?
+  name      String?
+  priority  Int              @default(100)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([active])
+  @@index([type])
+  @@index([priority])
+  @@map("shipping_rules")
+}
+
+model StockLog {
+  id          String      @id @default(cuid())
+  productId   String
+  source      StockSource
+  previousQty Int
+  newQty      Int
+  difference  Int
+  reason      String?
+  userId      String?
+  createdAt   DateTime    @default(now())
+  product     Product     @relation(fields: [productId], references: [id])
+
+  @@index([productId])
+  @@index([source])
+  @@index([createdAt])
+  @@map("stock_logs")
+}
+
+model IntegrationLog {
+  id           String   @id @default(cuid())
+  endpoint     String
+  method       String
+  source       String?
+  requestBody  Json?
+  response     Json?
+  statusCode   Int
+  success      Boolean
+  errorMessage String?
+  createdAt    DateTime @default(now())
+
+  @@index([endpoint])
+  @@index([success])
+  @@index([createdAt])
+  @@map("integration_logs")
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  entity    String
+  entityId  String
+  changes   Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+model Return {
+  id                  String       @id @default(cuid())
+  returnNumber        String       @unique
+  orderId             String
+  userId              String
+  status              ReturnStatus @default(REQUESTED)
+  reason              ReturnReason
+  reasonDetails       String?
+  imageUrl            String?
+  videoUrl            String?
+  refundAmount        Float?
+  shippingRefund      Float?
+  melhorEnvioOrderId  String?
+  melhorEnvioLabelId  String?
+  melhorEnvioLabelUrl String?
+  trackingCode        String?
+  trackingUrl         String?
+  adminNotes          String?
+  reviewedBy          String?
+  reviewedAt          DateTime?
+  refundMethod        String?
+  refundedAt          DateTime?
+  refundReference     String?
+  shippedAt           DateTime?
+  receivedAt          DateTime?
+  inspectedAt         DateTime?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  items               ReturnItem[]
+  order               Order        @relation(fields: [orderId], references: [id])
+  user                User         @relation(fields: [userId], references: [id])
+
+  @@index([orderId])
+  @@index([userId])
+  @@index([status])
+  @@index([returnNumber])
+  @@map("returns")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  data      String?
+  isRead    Boolean          @default(false)
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model ReturnItem {
+  id          String   @id @default(cuid())
+  returnId    String
+  orderItemId String
+  productId   String
+  quantity    Int
+  reason      String?
+  condition   String?
+  createdAt   DateTime @default(now())
+  return      Return   @relation(fields: [returnId], references: [id], onDelete: Cascade)
+
+  @@index([returnId])
+  @@map("return_items")
+}
+
+model Review {
+  id                 String    @id @default(cuid())
+  productId          String
+  userId             String
+  orderId            String?
+  rating             Int
+  title              String?
+  comment            String?
+  isVerifiedPurchase Boolean   @default(false)
+  isApproved         Boolean   @default(true)
+  isHelpful          Int       @default(0)
+  sellerResponse     String?
+  sellerResponseAt   DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  order              Order?    @relation(fields: [orderId], references: [id])
+  product            Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, userId])
+  @@index([productId])
+  @@index([userId])
+  @@index([rating])
+  @@map("reviews")
+}
+
+model MelhorEnvioToken {
+  id           String    @id @default("singleton")
+  accessToken  String?
+  refreshToken String?
+  expiresAt    DateTime?
+  scope        String?
+  environment  String    @default("sandbox")
+  updatedAt    DateTime  @updatedAt
+
+  @@map("melhor_envio_token")
+}
+
+model MercadoPagoConfig {
+  id            String   @id @default("singleton")
+  publicKey     String?
+  accessToken   String?
+  environment   String   @default("sandbox")
+  webhookSecret String?
+  active        Boolean  @default(false)
+  updatedAt     DateTime @updatedAt
+
+  @@map("mercado_pago_config")
+}
 
 enum UserRole {
   CUSTOMER
@@ -19,14 +512,14 @@ enum UserRole {
 }
 
 enum OrderStatus {
-  PENDING          // Aguardando pagamento
-  CONFIRMED        // Pagamento confirmado
-  PROCESSING       // Em separação
-  SHIPPED          // Enviado
-  DELIVERED        // Entregue
-  CANCELLED        // Cancelado
-  REFUNDED         // Reembolsado
-  QUOTE            // Orçamento (não reserva estoque)
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+  QUOTE
 }
 
 enum PaymentMethod {
@@ -50,708 +543,45 @@ enum CouponScope {
 }
 
 enum StockSource {
-  ADMIN           // Ajuste manual pelo Admin/Owner
-  MERCADO_LIVRE   // Sincronização ML
-  HIPER           // Sincronização Hiper
-  PHYSICAL_STORE  // Venda na loja física
-  ECOMMERCE       // Venda na loja virtual
+  ADMIN
+  MERCADO_LIVRE
+  HIPER
+  PHYSICAL_STORE
+  ECOMMERCE
 }
-
-// ============================================
-// USER & AUTH
-// ============================================
-
-model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  password      String?   // Hash bcrypt (apenas para Credentials)
-  image         String?   // URL da foto (Google OAuth)
-  phone         String?
-  cpf           String?
-  cnpj          String?
-  stateRegistration String?
-  addressZip    String?
-  addressStreet String?
-  addressNumber String?
-  addressComplement String?
-  addressNeighborhood String?
-  addressCity   String?
-  addressState  String?
-  role          UserRole  @default(CUSTOMER)
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  // Relations
-  accounts      Account[]
-  sessions      Session[]
-  orders        Order[]
-  carts         Cart[]
-  returns       Return[]  // Devoluções solicitadas pelo usuário
-  notifications Notification[]  // Notificações do usuário
-  reviews       Review[]  // Avaliações feitas pelo usuário
-
-  @@index([email])
-  @@map("users")
-}
-
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
-  
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@unique([provider, providerAccountId])
-  @@map("accounts")
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@map("sessions")
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-  
-  @@unique([identifier, token])
-  @@map("verification_tokens")
-}
-
-// ============================================
-// PRODUCTS & CATALOG
-// ============================================
-
-model Category {
-  id          String   @id @default(cuid())
-  name        String
-  slug        String   @unique
-  description String?
-  image       String?
-  parentId    String?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Relations
-  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children    Category[] @relation("CategoryHierarchy")
-  products    Product[]
-
-  @@index([slug])
-  @@map("categories")
-}
-
-model Product {
-  id              String   @id @default(cuid())
-  sku             String   @unique // SKU interno
-  ean             String?  // Código de barras
-  slug            String   @unique
-  name            String
-  description     String?
-  shortDescription String?
-    imageUrl        String?
-  
-  // Pricing
-  price           Float
-  compareAtPrice  Float?   // Preço "de" (riscado)
-  promotionalPrice Float?  // Preço promocional (ativo quando preenchido)
-  cost            Float?   // Custo (visível apenas para OWNER)
-
-  // Fiscal
-  ncm             String?  // Código NCM
-  origin          String?  // Origem da mercadoria (0-8)
-  
-  // Estoque
-  stock           Int      @default(0)
-  stockLocation   String?  // "Corredor B - Prateleira 4"
-  minStock        Int      @default(5)
-  
-  // Integração Externa
-  externalIdML    String?  @unique // ID no Mercado Livre
-  externalIdHiper String?  @unique // ID no Hiper
-  
-  // Metadata
-  specs           Json?    // { "voltagem": "110v", "potencia": "1200W" }
-  weight          Float?   // Peso em KG
-  dimensions      Json?    // { "height": 10, "width": 20, "depth": 30 }
-  
-  // Flags
-  isFeatured      Boolean  @default(false)
-  isPromo         Boolean  @default(false)
-  isActive        Boolean  @default(true)
-  
-  // SEO
-  metaTitle       String?
-  metaDescription String?
-  
-  categoryId      String
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  // Relations
-  category        Category         @relation(fields: [categoryId], references: [id])
-  variants        ProductVariant[]
-  images          ProductImage[]
-  orderItems      OrderItem[]
-  cartItems       CartItem[]
-  stockLogs       StockLog[]
-  reviews         Review[]
-
-  @@index([sku])
-  @@index([slug])
-  @@index([categoryId])
-  @@index([isFeatured])
-  @@map("products")
-}
-
-model ProductVariant {
-  id          String   @id @default(cuid())
-  productId   String
-  sku         String   @unique
-  name        String   // "110v", "220v", "Kit com Maleta"
-  price       Float?   // Sobrescreve preço base se diferente
-  stock       Int      @default(0)
-  attributes  Json     // { "voltagem": "110v" }
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@index([sku])
-  @@index([productId])
-  @@map("product_variants")
-}
-
-model ProductImage {
-  id          String   @id @default(cuid())
-  productId   String
-  url         String
-  alt         String?
-  order       Int      @default(0)
-  
-  createdAt   DateTime @default(now())
-  
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@index([productId])
-  @@map("product_images")
-}
-
-// ============================================
-// CART & ORDERS
-// ============================================
-
-model Cart {
-  id        String     @id @default(cuid())
-  userId    String?    @unique
-  sessionId String?    // Para carrinho de anônimo
-  
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  
-  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items     CartItem[]
-
-  @@index([userId])
-  @@index([sessionId])
-  @@map("carts")
-}
-
-model CartItem {
-  id        String   @id @default(cuid())
-  cartId    String
-  productId String
-  quantity  Int      @default(1)
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  product   Product  @relation(fields: [productId], references: [id])
-
-  @@unique([cartId, productId])
-  @@map("cart_items")
-}
-
-model Order {
-  id              String        @id @default(cuid())
-  orderNumber     String        @unique // "ORD-2025-000001"
-  userId          String
-  
-  // Status
-  status          OrderStatus   @default(PENDING)
-  
-  // Pricing
-  subtotal        Float
-  discount        Float         @default(0)
-  shipping        Float         @default(0)
-  total           Float
-  
-  // Payment
-  paymentMethod   PaymentMethod
-  installments    Int           @default(1)
-  paymentId       String?       // ID externo (Mercado Pago, etc)
-  paymentStatus   String?       // Status do gateway (approved, pending, rejected, etc)
-  paidAt          DateTime?
-  
-  // Shipping
-  shippingAddress Json          // { street, number, city, state, zipCode }
-  trackingCode    String?
-  trackingUrl     String?
-  shippedAt       DateTime?
-  deliveredAt     DateTime?
-  
-  // Melhor Envio - Etiqueta
-  melhorEnvioOrderId  String?   // ID do pedido no carrinho do Melhor Envio
-  melhorEnvioLabelId  String?   // ID da etiqueta gerada
-  melhorEnvioStatus   String?   // Status da etiqueta (pending, released, posted, delivered, etc)
-  melhorEnvioService  String?   // Serviço escolhido (PAC, SEDEX, etc)
-  melhorEnvioLabelUrl String?   // URL para impressão da etiqueta
-  shippingServiceId   String?   // ID do serviço de frete selecionado
-  
-  // Cupom
-  couponId        String?
-  
-  // Notas
-  notes           String?
-  adminNotes      String? // Visível apenas Admin/Owner
-  
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
-  // Relations
-  user            User          @relation(fields: [userId], references: [id])
-  coupon          Coupon?       @relation(fields: [couponId], references: [id])
-  items           OrderItem[]
-  returns         Return[]      // Devoluções associadas ao pedido
-  reviews         Review[]      // Avaliações associadas ao pedido
-
-  @@index([userId])
-  @@index([orderNumber])
-  @@index([status])
-  @@map("orders")
-}
-
-model OrderItem {
-  id          String   @id @default(cuid())
-  orderId     String
-  productId   String
-  
-  quantity    Int
-  price       Float    // Preço no momento da compra
-  discount    Float    @default(0)
-  subtotal    Float
-  
-  createdAt   DateTime @default(now())
-  
-  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product     Product  @relation(fields: [productId], references: [id])
-
-  @@index([orderId])
-  @@map("order_items")
-}
-
-// ============================================
-// MARKETING & PROMOTIONS
-// ============================================
-
-model Banner {
-  id          String    @id @default(cuid())
-  title       String
-  imageUrl    String
-  link        String?
-  order       Int       @default(0)
-  isActive    Boolean   @default(true)
-  startDate   DateTime?
-  endDate     DateTime?
-  
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@index([isActive])
-  @@map("banners")
-}
-
-model Coupon {
-  id            String        @id @default(cuid())
-  code          String        @unique
-  description   String?
-  
-  discountType  DiscountType
-  value         Float         // Porcentagem (15) ou Valor Fixo (50.00)
-  
-  // Escopo
-  scope         CouponScope   @default(GLOBAL)
-  scopeValues   Json?         // ["BA", "SP"] ou [categoryId, productId]
-  
-  // Limites
-  minPurchase   Float?
-  maxDiscount   Float?        // Desconto máximo em R$
-  usageLimit    Int?          // Quantas vezes pode ser usado (total)
-  usagePerUser  Int?          // Quantas vezes por usuário
-  currentUsage  Int           @default(0)
-  
-  // Validade
-  isActive      Boolean       @default(true)
-  startDate     DateTime?
-  endDate       DateTime?
-  
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  
-  orders        Order[]
-
-  @@index([code])
-  @@index([isActive])
-  @@map("coupons")
-}
-
-// ============================================
-// FINANCIAL (OWNER ONLY)
-// ============================================
-
-model FinancialConfig {
-  id                        String   @id @default("singleton")
-  
-  // Juros e Parcelamento
-  creditCardInterestRate    Float    @default(1.99) // % ao mês
-  debitCardInterestRate     Float    @default(0)
-  maxInstallments           Int      @default(12)
-  minInstallmentValue       Float    @default(50.00)
-  
-  // Frete
-  freeShippingMinValue      Float?   @default(200.00)
-  
-  // Markup Padrão
-  defaultMarkupPercentage   Float    @default(30.0)
-  
-  updatedAt                 DateTime @updatedAt
-  updatedBy                 String?  // User ID do Owner
-
-  @@map("financial_config")
-}
-
-// ============================================
-// SHIPPING RULES
-// ============================================
 
 enum ShippingRuleType {
-  ALL      // Aplica ao Brasil todo
-  STATE    // Lista de UFs
+  ALL
+  STATE
 }
-
-model ShippingRule {
-  id          String            @id @default(cuid())
-  active      Boolean           @default(true)
-  type        ShippingRuleType
-  states      Json?             // ["SP","RJ"], usado quando type = STATE
-
-  // Resultado da regra
-  isFree      Boolean           @default(false)
-  price       Float?            // caso não seja grátis, valor fixo
-  minValue    Float?            // pedido mínimo para aplicar
-
-  name        String?           // rótulo interno
-  priority    Int               @default(100) // menor = maior prioridade
-
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-
-  @@index([active])
-  @@index([type])
-  @@index([priority])
-  @@map("shipping_rules")
-}
-
-// ============================================
-// LOGS & AUDITING
-// ============================================
-
-model StockLog {
-  id          String      @id @default(cuid())
-  productId   String
-  
-  source      StockSource
-  previousQty Int
-  newQty      Int
-  difference  Int         // + ou -
-  
-  reason      String?     // "Venda ML #12345", "Ajuste manual", etc
-  userId      String?     // Quem fez o ajuste (se manual)
-  
-  createdAt   DateTime    @default(now())
-  
-  product     Product     @relation(fields: [productId], references: [id])
-
-  @@index([productId])
-  @@index([source])
-  @@index([createdAt])
-  @@map("stock_logs")
-}
-
-model IntegrationLog {
-  id          String   @id @default(cuid())
-  
-  endpoint    String   // "/api/integrations/stock/sync"
-  method      String   // "POST"
-  source      String?  // "Mercado Livre", "Hiper", "Bot WhatsApp"
-  
-  requestBody Json?
-  response    Json?
-  statusCode  Int
-  
-  success     Boolean
-  errorMessage String?
-  
-  createdAt   DateTime @default(now())
-
-  @@index([endpoint])
-  @@index([success])
-  @@index([createdAt])
-  @@map("integration_logs")
-}
-
-model ActivityLog {
-  id          String   @id @default(cuid())
-  userId      String
-  action      String   // "UPDATE_PRODUCT", "DELETE_ORDER", etc
-  entity      String   // "Product", "Order"
-  entityId    String
-  changes     Json?    // Diff do before/after
-  
-  createdAt   DateTime @default(now())
-
-  @@index([userId])
-  @@index([action])
-  @@index([createdAt])
-  @@map("activity_logs")
-}
-
-// ============================================
-// RETURNS & REFUNDS (Devoluções)
-// ============================================
 
 enum ReturnStatus {
-  REQUESTED        // Solicitado pelo cliente
-  PENDING_REVIEW   // Aguardando análise do admin
-  APPROVED         // Aprovado - aguardando envio
-  LABEL_GENERATED  // Etiqueta de devolução gerada
-  IN_TRANSIT       // Produto em trânsito de volta
-  RECEIVED         // Produto recebido pela loja
-  INSPECTING       // Em inspeção/análise
-  REFUND_PENDING   // Aguardando reembolso
-  REFUNDED         // Reembolsado
-  REJECTED         // Devolução rejeitada
-  CANCELLED        // Cancelado pelo cliente
+  REQUESTED
+  PENDING_REVIEW
+  APPROVED
+  LABEL_GENERATED
+  IN_TRANSIT
+  RECEIVED
+  INSPECTING
+  REFUND_PENDING
+  REFUNDED
+  REJECTED
+  CANCELLED
 }
 
 enum ReturnReason {
-  DEFECTIVE        // Produto com defeito
-  WRONG_PRODUCT    // Produto errado enviado
-  NOT_AS_DESCRIBED // Produto diferente do anunciado
-  DAMAGED_SHIPPING // Danificado no transporte
-  CHANGED_MIND     // Arrependimento (7 dias CDC)
-  SIZE_ISSUE       // Tamanho/medidas incorretas
-  OTHER            // Outro motivo
-}
-
-model Return {
-  id              String        @id @default(cuid())
-  returnNumber    String        @unique // "DEV-2026-000001"
-  
-  // Relacionamentos
-  orderId         String
-  userId          String
-  
-  // Status
-  status          ReturnStatus  @default(REQUESTED)
-  
-  // Motivo
-  reason          ReturnReason
-  reasonDetails   String?       // Descrição detalhada do cliente
-  
-  // Itens sendo devolvidos
-  items           ReturnItem[]
-  
-  // Mídia (Imagem e Vídeo do Produto)
-  imageUrl        String?       // URL da imagem do produto em devolução
-  videoUrl        String?       // URL do vídeo do produto em devolução
-  
-  // Valores
-  refundAmount    Float?        // Valor a ser reembolsado
-  shippingRefund  Float?        // Reembolso do frete original
-  
-  // Logística Reversa (Melhor Envio)
-  melhorEnvioOrderId   String?  // ID no carrinho do ME
-  melhorEnvioLabelId   String?  // ID da etiqueta reversa
-  melhorEnvioLabelUrl  String?  // URL para impressão
-  trackingCode         String?  // Código de rastreio da devolução
-  trackingUrl          String?  // URL de rastreamento
-  
-  // Análise Admin
-  adminNotes      String?       // Notas internas do admin
-  reviewedBy      String?       // ID do admin que analisou
-  reviewedAt      DateTime?     // Data da análise
-  
-  // Reembolso
-  refundMethod    String?       // "original_payment", "store_credit", "bank_transfer"
-  refundedAt      DateTime?
-  refundReference String?       // Referência do reembolso (ID transação)
-  
-  // Datas
-  shippedAt       DateTime?     // Cliente enviou o produto
-  receivedAt      DateTime?     // Loja recebeu o produto
-  inspectedAt     DateTime?     // Data da inspeção
-  
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
-  // Relations
-  order           Order         @relation(fields: [orderId], references: [id])
-  user            User          @relation(fields: [userId], references: [id])
-
-  @@index([orderId])
-  @@index([userId])
-  @@index([status])
-  @@index([returnNumber])
-  @@map("returns")
-}
-
-model Notification {
-  id              String   @id @default(cuid())
-  userId          String
-  
-  // Tipo de notificação
-  type            NotificationType // ORDER_STATUS, RETURN_STATUS, PAYMENT, PROMO
-  
-  // Dados da notificação
-  title           String
-  message         String
-  data            String?  // JSON com dados adicionais (orderId, returnId, etc)
-  
-  // Status
-  isRead          Boolean  @default(false)
-  readAt          DateTime?
-  
-  // Datas
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  // Relations
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([userId])
-  @@index([isRead])
-  @@index([createdAt])
-  @@map("notifications")
+  DEFECTIVE
+  WRONG_PRODUCT
+  NOT_AS_DESCRIBED
+  DAMAGED_SHIPPING
+  CHANGED_MIND
+  SIZE_ISSUE
+  OTHER
 }
 
 enum NotificationType {
-  ORDER_STATUS    // Notificações de status de pedido
-  RETURN_STATUS   // Notificações de status de devolução
-  PAYMENT         // Notificações de pagamento
-  PROMO           // Promoções e ofertas
-}
-
-model ReturnItem {
-  id          String   @id @default(cuid())
-  returnId    String
-  orderItemId String   // Referência ao item original do pedido
-  productId   String
-  quantity    Int      // Quantidade sendo devolvida
-  reason      String?  // Motivo específico deste item
-  condition   String?  // Estado do produto quando recebido
-  
-  createdAt   DateTime @default(now())
-  
-  return      Return   @relation(fields: [returnId], references: [id], onDelete: Cascade)
-
-  @@index([returnId])
-  @@map("return_items")
-}
-
-// ============================================
-// REVIEWS & RATINGS
-// ============================================
-
-model Review {
-  id          String   @id @default(cuid())
-  productId   String
-  userId      String
-  orderId     String?  // Opcional: vincular à compra verificada
-  
-  rating      Int      // 1 a 5 estrelas
-  title       String?  // Título opcional da avaliação
-  comment     String?  // Comentário detalhado
-  
-  // Flags
-  isVerifiedPurchase Boolean @default(false) // Comprou o produto
-  isApproved  Boolean  @default(true)  // Moderação
-  isHelpful   Int      @default(0)     // Contador de "útil"
-  
-  // Resposta do vendedor
-  sellerResponse String?
-  sellerResponseAt DateTime?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Relations
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  order       Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
-  
-  @@unique([productId, userId]) // Um usuário só pode avaliar um produto uma vez
-  @@index([productId])
-  @@index([userId])
-  @@index([rating])
-  @@map("reviews")
-}
-
-// ============================================
-// INTEGRATIONS TOKENS (Melhor Envio OAuth)
-// ============================================
-
-model MelhorEnvioToken {
-  id            String   @id @default("singleton")
-  accessToken   String?
-  refreshToken  String?
-  expiresAt     DateTime?
-  scope         String?
-  environment   String   @default("sandbox") // "sandbox" ou "production"
-  updatedAt     DateTime @updatedAt
-
-  @@map("melhor_envio_token")
-}
-model MercadoPagoConfig {
-  id            String   @id @default("singleton")
-  publicKey     String?
-  accessToken   String?
-  environment   String   @default("sandbox") // "sandbox" ou "production"
-  webhookSecret String?
-  active        Boolean  @default(false)
-  updatedAt     DateTime @updatedAt
-
-  @@map("mercado_pago_config")
+  ORDER_STATUS
+  RETURN_STATUS
+  PAYMENT
+  PROMO
 }

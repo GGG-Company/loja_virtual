@@ -1,3 +1,4 @@
+import logger from "@/lib/logger";
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
@@ -106,7 +107,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('[REVIEWS_LIST]', error);
+    logger.error(error, '[REVIEWS_LIST]');
     return NextResponse.json(
       { error: 'Erro ao buscar avaliações' },
       { status: 500 }
@@ -227,7 +228,7 @@ export async function POST(
       review,
     }, { status: 201 });
   } catch (error) {
-    console.error('[REVIEW_CREATE]', error);
+    logger.error(error, '[REVIEW_CREATE]');
     return NextResponse.json(
       { error: 'Erro ao criar avaliação' },
       { status: 500 }

@@ -1,3 +1,4 @@
+import logger from "@/lib/logger";
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
@@ -84,7 +85,7 @@ export async function POST(
       order: updatedOrder,
     });
   } catch (error) {
-    console.error('[CONFIRM_DELIVERY]', error);
+    logger.error(error, '[CONFIRM_DELIVERY]');
     return NextResponse.json({ error: 'Erro ao confirmar recebimento' }, { status: 500 });
   }
 }

@@ -4,6 +4,7 @@ import { config as loadEnv } from 'dotenv';
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { sendOrderStatusUpdate } from '@/lib/webhooks';
+import logger from "@/lib/logger";
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -26,14 +27,14 @@ export async function POST(req: NextRequest) {
 
     const webhookUrl = process.env.N8N_ORDERS_WEBHOOK_URL || process.env.N8N_WEBHOOK_URL;
     if (!webhookUrl) {
-      console.warn('[WEBHOOK_TEST_ENV]', {
+      logger.warn({
         hasN8NOrders: Boolean(process.env.N8N_ORDERS_WEBHOOK_URL),
         hasN8N: Boolean(process.env.N8N_WEBHOOK_URL),
         cwd: process.cwd(),
         envPath,
         envExists: fs.existsSync(envPath),
         envLoaded,
-      });
+      }, '[WEBHOOK_TEST_ENV]');
       return NextResponse.json(
         {
           error: 'Webhook não configurado. Defina N8N_ORDERS_WEBHOOK_URL ou N8N_WEBHOOK_URL.',
@@ -82,7 +83,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ message: 'Webhook de teste enviado.' });
   } catch (error) {
-    console.error('[ADMIN_WEBHOOK_TEST]', error);
+    logger.error(error, '[ADMIN_WEBHOOK_TEST]');
     return NextResponse.json({ error: 'Erro ao enviar webhook de teste.' }, { status: 500 });
   }
 }

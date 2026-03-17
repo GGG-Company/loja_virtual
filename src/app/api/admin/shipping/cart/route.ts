@@ -1,3 +1,4 @@
+import logger from "@/lib/logger";
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(result);
 
   } catch (error) {
-    console.error('[ADMIN_CART]', error);
+    logger.error(error, '[ADMIN_CART]');
     return NextResponse.json({ error: 'Erro ao consultar carrinho' }, { status: 500 });
   }
 }
@@ -105,7 +106,7 @@ export async function DELETE(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('[ADMIN_CART]', error);
+    logger.error(error, '[ADMIN_CART]');
     return NextResponse.json({ error: 'Erro ao remover do carrinho' }, { status: 500 });
   }
 }

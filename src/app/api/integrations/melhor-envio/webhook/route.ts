@@ -1,3 +1,4 @@
+import logger from "@/lib/logger";
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendOrderStatusUpdate } from '@/lib/webhooks';
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    console.log('[MELHOR_ENVIO_WEBHOOK] Notificação recebida:', {
+    logger.info('[MELHOR_ENVIO_WEBHOOK] Notificação recebida:', {
       event: body.type,
       serviceOrder: body.data?.service_order,
       status: body.data?.status,
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
     if (webhookToken) {
       const headerToken = req.headers.get('x-webhook-token');
       if (headerToken !== webhookToken) {
-        console.warn('[MELHOR_ENVIO_WEBHOOK] Token inválido');
+        logger.warn('[MELHOR_ENVIO_WEBHOOK] Token inválido');
         return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
       }
     }
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
 
     // Se não temos código de rastreamento, não conseguimos atualizar
     if (!data?.service_order) {
-      console.warn('[MELHOR_ENVIO_WEBHOOK] service_order não encontrado');
+      logger.warn('[MELHOR_ENVIO_WEBHOOK] service_order não encontrado');
       return NextResponse.json({ received: true });
     }
 
@@ -72,7 +73,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!order) {
-      console.warn('[MELHOR_ENVIO_WEBHOOK] Pedido não encontrado para tracking:', trackingCode);
+      logger.warn('[MELHOR_ENVIO_WEBHOOK] Pedido não encontrado para tracking:', trackingCode);
       return NextResponse.json({ received: true });
     }
 
@@ -116,7 +117,7 @@ export async function POST(req: NextRequest) {
       case 'shipment:exception':
         // Exceção/Problema na entrega
         // Não muda o status automaticamente, apenas registra
-        console.warn('[MELHOR_ENVIO_WEBHOOK] Exceção na entrega:', {
+        logger.warn('[MELHOR_ENVIO_WEBHOOK] Exceção na entrega:', {
           trackingCode,
           reason: data.reason,
           message: data.message,
@@ -185,7 +186,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ received: true });
   } catch (error: any) {
-    console.error('[MELHOR_ENVIO_WEBHOOK] Erro ao processar:', error);
+    logger.error(error, '[MELHOR_ENVIO_WEBHOOK] Erro ao processar:');
     return NextResponse.json(
       { error: error.message || 'Erro ao processar webhook' },
       { status: 500 }

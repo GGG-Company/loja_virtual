@@ -1,3 +1,4 @@
+import logger from "@/lib/logger";
 import { NextResponse } from 'next/server';
 import { getProduct, isExternalEnabled } from '@/lib/products-repository';
 
@@ -19,7 +20,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, source: isExternalEnabled() ? 'external' : 'local', product });
   } catch (error) {
-    console.error('[PRODUCT_GET]', error);
+    logger.error(error, '[PRODUCT_GET]');
     return NextResponse.json(
       { error: 'Erro ao buscar produto' },
       { status: 500 }

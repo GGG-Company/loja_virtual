@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import logger from "@/lib/logger";
 
 export const dynamic = 'force-dynamic';
 
@@ -59,7 +60,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error('[ADMIN PRODUCTS ERROR]', error);
+    logger.error(error, '[ADMIN PRODUCTS ERROR]');
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
@@ -119,7 +120,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(product);
   } catch (error) {
-    console.error('[ADMIN_PRODUCT_POST]', error);
+    logger.error(error, '[ADMIN_PRODUCT_POST]');
     return NextResponse.json({ error: 'Erro ao criar produto' }, { status: 500 });
   }
 }

@@ -1,3 +1,4 @@
+import logger from "@/lib/logger";
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
@@ -71,7 +72,7 @@ export async function POST(request: Request) {
       { status: 201 }
     );
   } catch (error) {
-    console.error('[REGISTER ERROR]', error);
+    logger.error(error, '[REGISTER ERROR]');
     return NextResponse.json(
       { error: 'Erro ao criar conta' },
       { status: 500 }

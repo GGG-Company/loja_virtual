@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[NOTIFICATIONS_LIST]', error);
+    logger.error('[NOTIFICATIONS_LIST]', error);
     return NextResponse.json(
       { error: 'Erro ao buscar notificações' },
       { status: 500 }
@@ -141,7 +141,7 @@ export async function PUT(request: NextRequest) {
       { status: 400 }
     );
   } catch (error) {
-    console.error('[NOTIFICATIONS_UPDATE]', error);
+    logger.error('[NOTIFICATIONS_UPDATE]', error);
     return NextResponse.json(
       { error: 'Erro ao atualizar notificação' },
       { status: 500 }
@@ -219,7 +219,7 @@ export async function DELETE(request: NextRequest) {
       { status: 400 }
     );
   } catch (error) {
-    console.error('[NOTIFICATIONS_DELETE]', error);
+    logger.error('[NOTIFICATIONS_DELETE]', error);
     return NextResponse.json(
       { error: 'Erro ao deletar notificação' },
       { status: 500 }

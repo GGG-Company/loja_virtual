@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import logger from "@/lib/logger";
 import { getMercadoPagoKeys } from '@/lib/mercadopago-config';
 import { prisma } from '@/lib/prisma';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
@@ -56,7 +57,7 @@ export async function POST(req: NextRequest) {
       ticketUrl: response.point_of_interaction?.transaction_data?.ticket_url,
     });
   } catch (error: any) {
-    console.error('Erro ao gerar PIX:', error);
+    logger.error(error, 'Erro ao gerar PIX');
     return NextResponse.json(
       { error: error.message || 'Erro ao gerar PIX' },
       { status: 500 }

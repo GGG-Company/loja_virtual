@@ -1,5 +1,6 @@
 'use client';
 
+import logger from "@/lib/logger";
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -64,7 +65,7 @@ export default function RegisterPage() {
       if (isAxiosError(error)) {
         toast.error(error.response?.data?.error || 'Erro ao criar conta');
       } else {
-        console.error('[REGISTER]', error);
+        logger.error(error, '[REGISTER]');
         toast.error('Erro ao criar conta');
       }
     } finally {

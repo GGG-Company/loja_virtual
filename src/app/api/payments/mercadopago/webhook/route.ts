@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import logger from "@/lib/logger";
 import { getMercadoPagoKeys } from '@/lib/mercadopago-config';
 import { prisma } from '@/lib/prisma';
 import { OrderStatus } from '@prisma/client';
@@ -11,7 +12,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    console.log("Webhook Mercado Pago recebido:", body);
+    logger.info({ body }, "Webhook Mercado Pago recebido");
 
     // Verificar se é uma notificação de pagamento
     if (body.type !== "payment") {
@@ -78,7 +79,7 @@ export async function POST(req: NextRequest) {
       const paymentStatusChanged = currentOrder.paymentStatus !== paymentInfo.status;
 
       if (!statusChanged && !paymentStatusChanged) {
-        console.log(`Pedido ${orderId} já está com status ${orderStatus}. Ignorando duplicata.`);
+        logger.info({ orderId, orderStatus }, `Pedido ${orderId} já está com status ${orderStatus}. Ignorando duplicata.`);
         return NextResponse.json({ received: true, ignored: true });
       }
 
@@ -134,12 +135,12 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      console.log(`Pedido ${orderId} atualizado para ${orderStatus} (Antes: ${currentOrder.status})`);
+      logger.info({ orderId, orderStatus, previousStatus: currentOrder.status }, `Pedido ${orderId} atualizado para ${orderStatus} (Antes: ${currentOrder.status})`);
     }
 
     return NextResponse.json({ received: true });
   } catch (error: any) {
-    console.error('Erro ao processar webhook:', error);
+    logger.error(error, 'Erro ao processar webhook');
     return NextResponse.json(
       { error: error.message || 'Erro ao processar webhook' },
       { status: 500 }

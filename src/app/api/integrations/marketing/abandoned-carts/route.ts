@@ -1,3 +1,4 @@
+import logger from "@/lib/logger";
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
@@ -99,7 +100,7 @@ export async function GET(request: NextRequest) {
       carts: enrichedCarts,
     });
   } catch (error) {
-    console.error('[ABANDONED CARTS ERROR]', error);
+    logger.error(error, '[ABANDONED CARTS ERROR]');
     return NextResponse.json(
       { error: 'Erro ao buscar carrinhos abandonados' },
       { status: 500 }

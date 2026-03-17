@@ -1,5 +1,6 @@
 'use client';
 
+import logger from "@/lib/logger";
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -118,7 +119,7 @@ export default function CheckoutPage() {
         estado: prev.estado || data.addressState || '',
       }));
     } catch (error) {
-      console.error('Erro ao carregar perfil', error);
+      logger.error(error, 'Erro ao carregar perfil');
     }
   };
 
@@ -143,7 +144,7 @@ export default function CheckoutPage() {
         body: JSON.stringify(payload),
       });
     } catch (error) {
-      console.error('Erro ao salvar perfil', error);
+      logger.error(error, 'Erro ao salvar perfil');
     }
   };
 
@@ -227,7 +228,7 @@ export default function CheckoutPage() {
         toast.error(data.error || 'Nenhuma opção de frete disponível');
       }
     } catch (error) {
-      console.error('[CHECKOUT] Erro ao calcular frete:', error);
+      logger.error(error, '[CHECKOUT] Erro ao calcular frete');
       toast.error('Erro ao calcular frete');
     } finally {
       setLoadingShipping(false);
@@ -334,7 +335,7 @@ export default function CheckoutPage() {
         toast.error(data.error || 'Erro ao gerar PIX');
       }
     } catch (error) {
-      console.error('Erro ao gerar PIX:', error);
+      logger.error(error, 'Erro ao gerar PIX');
       toast.error('Erro ao gerar PIX');
     } finally {
       setLoadingPayment(false);
@@ -367,7 +368,7 @@ export default function CheckoutPage() {
         toast.error(data.error || 'Erro ao gerar Boleto');
       }
     } catch (error) {
-      console.error('Erro ao gerar Boleto:', error);
+      logger.error(error, 'Erro ao gerar Boleto');
       toast.error('Erro ao gerar Boleto');
     } finally {
       setLoadingPayment(false);

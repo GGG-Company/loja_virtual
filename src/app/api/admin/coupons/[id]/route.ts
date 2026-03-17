@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import logger from "@/lib/logger";
 
 // GET - Buscar cupom por ID
 export async function GET(
@@ -29,7 +30,7 @@ export async function GET(
 
     return NextResponse.json(coupon);
   } catch (error) {
-    console.error('[ADMIN_COUPON_GET]', error);
+    logger.error(error, '[ADMIN_COUPON_GET]');
     return NextResponse.json({ error: 'Erro ao buscar cupom' }, { status: 500 });
   }
 }
@@ -57,7 +58,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('[ADMIN_COUPON_DELETE]', error);
+    logger.error(error, '[ADMIN_COUPON_DELETE]');
     return NextResponse.json({ error: 'Erro ao excluir cupom' }, { status: 500 });
   }
 }
@@ -101,7 +102,7 @@ export async function PUT(
 
     return NextResponse.json({ coupon });
   } catch (error) {
-    console.error('[ADMIN_COUPON_PUT]', error);
+    logger.error(error, '[ADMIN_COUPON_PUT]');
     return NextResponse.json({ error: 'Erro ao atualizar cupom' }, { status: 500 });
   }
 }

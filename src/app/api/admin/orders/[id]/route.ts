@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import logger from "@/lib/logger";
 
 export async function GET(
   req: NextRequest,
@@ -40,7 +41,7 @@ export async function GET(
 
     return NextResponse.json(order);
   } catch (error) {
-    console.error('[ADMIN_ORDER_DETAIL]', error);
+    logger.error(error, '[ADMIN_ORDER_DETAIL]');
     return NextResponse.json({ error: 'Erro ao buscar pedido' }, { status: 500 });
   }
 }

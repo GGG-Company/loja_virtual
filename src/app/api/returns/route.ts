@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, returns });
   } catch (error) {
-    console.error('[RETURNS_LIST]', error);
+    logger.error('[RETURNS_LIST]', error);
     return NextResponse.json({ error: 'Erro ao listar devoluções' }, { status: 500 });
   }
 }
@@ -247,7 +247,7 @@ export async function POST(request: NextRequest) {
         createdAt: result.createdAt,
       });
     } catch (webhookError) {
-      console.error('[RETURNS_WEBHOOK_ERROR]', webhookError);
+      logger.error('[RETURNS_WEBHOOK_ERROR]', webhookError);
       // Não falha a requisição se o webhook falhar
     }
 
@@ -258,7 +258,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
 
   } catch (error) {
-    console.error('[RETURNS_CREATE]', error);
+    logger.error('[RETURNS_CREATE]', error);
     return NextResponse.json({ error: 'Erro ao criar devolução' }, { status: 500 });
   }
 }

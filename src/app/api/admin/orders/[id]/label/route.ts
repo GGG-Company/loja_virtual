@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import logger from "@/lib/logger";
 import { 
   createShippingLabelForOrder, 
   printMelhorEnvioLabel,
@@ -74,7 +75,7 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('[ADMIN_ORDER_LABEL_POST]', error);
+    logger.error(error, '[ADMIN_ORDER_LABEL_POST]');
     return NextResponse.json({ error: 'Erro ao gerar etiqueta' }, { status: 500 });
   }
 }
@@ -148,7 +149,7 @@ export async function GET(
           });
         }
       } catch (e) {
-        console.error('[LABEL_PRINT_ERROR]', e);
+        logger.error(e, '[LABEL_PRINT_ERROR]');
       }
     }
 
@@ -160,7 +161,7 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('[ADMIN_ORDER_LABEL_GET]', error);
+    logger.error(error, '[ADMIN_ORDER_LABEL_GET]');
     return NextResponse.json({ error: 'Erro ao buscar etiqueta' }, { status: 500 });
   }
 }

@@ -1,3 +1,4 @@
+import logger from "@/lib/logger";
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
@@ -63,7 +64,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, return: returnRequest });
   } catch (error) {
-    console.error('[RETURN_GET]', error);
+    logger.error(error, '[RETURN_GET]');
     return NextResponse.json({ error: 'Erro ao buscar devolução' }, { status: 500 });
   }
 }
@@ -152,7 +153,7 @@ export async function PUT(
 
     return NextResponse.json({ error: 'Ação inválida' }, { status: 400 });
   } catch (error) {
-    console.error('[RETURN_UPDATE]', error);
+    logger.error(error, '[RETURN_UPDATE]');
     return NextResponse.json({ error: 'Erro ao atualizar devolução' }, { status: 500 });
   }
 }

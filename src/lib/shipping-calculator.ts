@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import logger from "@/lib/logger";
 import { getAccessToken, commonHeaders } from '@/lib/melhorenvio-oauth';
 
 export type ShippingDimension = {
@@ -117,7 +118,7 @@ function roundPrice(v: number) {
 async function quoteWithMelhorEnvio(params: { items: ShippingItem[]; destinationZip: string; originZip: string; }): Promise<ShippingOption[] | null> {
   const token = await getAccessToken();
   if (!token) {
-    console.warn('[shipping] Token do Melhor Envio não encontrado. Vá em Configurações e conecte sua conta.');
+    logger.warn('[shipping] Token do Melhor Envio não encontrado. Vá em Configurações e conecte sua conta.');
     return null;
   }
 
@@ -156,7 +157,7 @@ async function quoteWithMelhorEnvio(params: { items: ShippingItem[]; destination
     body.services = servicesStr;
   }
 
-  console.log('[shipping] Cotação Melhor Envio - Request Body:', JSON.stringify(body, null, 2));
+  logger.info({ body }, '[shipping] Cotação Melhor Envio - Request Body');
 
   try {
     const res = await fetch(`${baseUrl}/api/v2/me/shipment/calculate`, {
@@ -169,10 +170,7 @@ async function quoteWithMelhorEnvio(params: { items: ShippingItem[]; destination
     const responseText = await res.text();
     
     if (!res.ok) {
-      console.error('[shipping] Melhor Envio Error Response:', {
-        status: responseStatus,
-        body: responseText
-      });
+      logger.error({ status: responseStatus, body: responseText }, '[shipping] Melhor Envio Error Response');
       return null;
     }
 
@@ -180,12 +178,12 @@ async function quoteWithMelhorEnvio(params: { items: ShippingItem[]; destination
     try {
       data = JSON.parse(responseText);
     } catch (e) {
-      console.error('[shipping] Erro ao parsear JSON do Melhor Envio:', responseText);
+      logger.error(e, `[shipping] Erro ao parsear JSON do Melhor Envio: ${responseText}`);
       return null;
     }
 
     if (!Array.isArray(data)) {
-      console.warn('[shipping] Resposta do Melhor Envio não é um array:', data);
+      logger.warn({ data }, '[shipping] Resposta do Melhor Envio não é um array');
       return null;
     }
 
@@ -204,10 +202,10 @@ async function quoteWithMelhorEnvio(params: { items: ShippingItem[]; destination
       };
     }).filter((o: ShippingOption) => o.price > 0 && !(o.notes && typeof o.notes === 'string' && o.notes.toLowerCase().includes('erro')));
 
-    console.info('[shipping] Melhor Envio OK. Opções encontradas:', mapped.length);
+    logger.info({ optionsCount: mapped.length }, '[shipping] Melhor Envio OK. Opções encontradas');
     return mapped;
   } catch (err) {
-    console.error('[shipping] Erro catastrófico na cotação Melhor Envio:', err);
+    logger.error(err, '[shipping] Erro catastrófico na cotação Melhor Envio');
     return null;
   }
 }
@@ -228,14 +226,15 @@ async function listPickupPointsFromMelhorEnvio(zip: string): Promise<PickupPoint
 
     if (!res.ok) {
       const body = await res.text().catch(() => '');
-      console.warn('[shipping] pickup list error', res.status, body?.slice(0, 300));
+      logger.warn({ status: res.status, body: body?.slice(0, 300) }, '[shipping] pickup list error');
       return null;
     }
+
 
     const contentType = res.headers.get('content-type') || '';
     if (!contentType.includes('application/json')) {
       const body = await res.text().catch(() => '');
-      console.warn('[shipping] pickup list non-json', res.status, body?.slice(0, 300));
+      logger.warn({ status: res.status, body: body?.slice(0, 300) }, '[shipping] pickup list non-json response');
       return null;
     }
 
@@ -252,10 +251,10 @@ async function listPickupPointsFromMelhorEnvio(zip: string): Promise<PickupPoint
       company: p.company?.name || p.partner || undefined,
     })).filter((p: PickupPoint) => !!p.id);
 
-    console.info('[shipping] pickup list ok', mapped.length, 'pontos');
+    logger.info({ count: mapped.length }, '[shipping] pickup list ok');
     return mapped;
   } catch (err) {
-    console.warn('[shipping] melhor envio pickup list failed', err);
+    logger.error(err, '[shipping] melhor envio pickup list failed');
     return null;
   }
 }
@@ -298,7 +297,7 @@ async function trackWithMelhorEnvio(codes: string[]): Promise<TrackingInfo[] | n
         : undefined,
     })).filter((t: TrackingInfo) => !!t.code);
   } catch (err) {
-    console.warn('[shipping] melhor envio tracking failed', err);
+    logger.error(err, '[shipping] melhor envio tracking failed');
     return null;
   }
 }
@@ -326,17 +325,17 @@ export async function loadShippingItems(rawItems: ShippingItem[]) {
 }
 
 export async function getShippingOptions(params: { items: ShippingItem[]; destinationZip: string; originZip?: string; }) {
-  console.log('[shipping] getShippingOptions chamado com:', {
+  logger.info({
     itemsCount: params.items.length,
     destinationZip: params.destinationZip,
     originZip: params.originZip,
-  });
-  
+  }, '[shipping] getShippingOptions chamado');
+
   const normalized = await loadShippingItems(params.items);
-  console.log('[shipping] Itens normalizados:', JSON.stringify(normalized, null, 2));
+  logger.info({ normalized }, '[shipping] Itens normalizados');
   
   const originZip = normalizeZip(params.originZip || process.env.SHIPPING_ORIGIN_ZIP || process.env.ORIGIN_ZIP || '44002264');
-  console.log('[shipping] CEP de Origem final:', originZip);
+  logger.info({ originZip }, '[shipping] CEP de Origem final');
 
   const pickup: ShippingOption = {
     id: 'pickup-feira',
@@ -351,14 +350,13 @@ export async function getShippingOptions(params: { items: ShippingItem[]; destin
   const melhorEnvio = await quoteWithMelhorEnvio({ items: normalized, destinationZip: normalizeZip(params.destinationZip), originZip });
   
   if (melhorEnvio && melhorEnvio.length) {
-    console.log('[shipping] Opções do Melhor Envio recebidas:', melhorEnvio.length);
+    logger.info({ count: melhorEnvio.length }, '[shipping] Opções do Melhor Envio recebidas');
     const merged = [...melhorEnvio, pickup];
     const unique = Array.from(new Map(merged.map((o) => [o.id, o])).values());
     return unique;
   }
 
-  console.warn('[shipping] Nenhuma opção do Melhor Envio, retornando apenas retirada em loja');
-  // Sem fallback mock: se a cotação falhar, exibe apenas retirada em loja.
+  logger.warn('[shipping] Nenhuma opção do Melhor Envio, retornando apenas retirada em loja');
   return [pickup];
 }
 

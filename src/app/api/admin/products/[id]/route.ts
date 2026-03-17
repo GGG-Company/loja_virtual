@@ -1,3 +1,4 @@
+import logger from "@/lib/logger";
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
@@ -32,7 +33,7 @@ export async function GET(
 
     return NextResponse.json(product);
   } catch (error) {
-    console.error('[ADMIN_PRODUCT_GET]', error);
+    logger.error(error, '[ADMIN_PRODUCT_GET]');
     return NextResponse.json({ error: 'Erro ao buscar produto' }, { status: 500 });
   }
 }
@@ -88,7 +89,7 @@ export async function PUT(
       if (categoryExists) {
         validCategoryId = categoryId;
       } else {
-        console.warn(`[ADMIN_PRODUCT_PUT] Categoria ${categoryId} não encontrada, mantendo categoria atual`);
+        logger.warn(`[ADMIN_PRODUCT_PUT] Categoria ${categoryId} não encontrada, mantendo categoria atual`);
       }
     }
 
@@ -115,7 +116,7 @@ export async function PUT(
 
     return NextResponse.json(product);
   } catch (error) {
-    console.error('[ADMIN_PRODUCT_PUT]', error);
+    logger.error(error, '[ADMIN_PRODUCT_PUT]');
     return NextResponse.json({ error: 'Erro ao atualizar produto' }, { status: 500 });
   }
 }
@@ -146,7 +147,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, id: product.id, softDeleted: true });
   } catch (error) {
-    console.error('[ADMIN_PRODUCT_DELETE]', error);
+    logger.error(error, '[ADMIN_PRODUCT_DELETE]');
     return NextResponse.json({ error: 'Erro ao excluir produto' }, { status: 500 });
   }
 }

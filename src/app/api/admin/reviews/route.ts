@@ -1,3 +1,4 @@
+import logger from "@/lib/logger";
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
@@ -82,7 +83,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[ADMIN_REVIEWS_GET]', error);
+    logger.error(error, '[ADMIN_REVIEWS_GET]');
     return NextResponse.json(
       { success: false, error: 'Erro ao buscar avaliações' },
       { status: 500 }

@@ -1,5 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { updateMercadoPagoConfig } from '@/lib/mercadopago-config';
+import logger from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
       updatedAt: config.updatedAt?.toISOString(),
     });
   } catch (error) {
-    console.error('Erro ao configurar Mercado Pago:', error);
+    logger.error(error, 'Erro ao configurar Mercado Pago');
     return NextResponse.json(
       { error: 'Erro ao configurar Mercado Pago' },
       { status: 500 }

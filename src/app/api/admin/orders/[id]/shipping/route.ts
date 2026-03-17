@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import logger from "@/lib/logger";
 import {
   createShippingLabelForOrder,
   printMelhorEnvioLabel,
@@ -91,7 +92,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('[ADMIN_SHIPPING_GET]', error);
+    logger.error(error, '[ADMIN_SHIPPING_GET]');
     return NextResponse.json({ error: 'Erro ao buscar dados de envio' }, { status: 500 });
   }
 }
@@ -123,7 +124,7 @@ export async function POST(
     const body = await request.json();
     const { action } = body;
 
-    console.log('[ADMIN_SHIPPING] Ação solicitada:', action, 'para pedido:', params.id);
+    logger.info({ action, orderId: params.id }, '[ADMIN_SHIPPING] Ação solicitada');
 
     const order = await prisma.order.findUnique({
       where: { id: params.id },
@@ -142,7 +143,7 @@ export async function POST(
     switch (action) {
       case 'create_label': {
         // Criar etiqueta completa (adicionar ao carrinho + checkout + gerar)
-        console.log('[ADMIN_SHIPPING] Criando etiqueta para pedido:', order.orderNumber);
+        logger.info({ orderNumber: order.orderNumber }, '[ADMIN_SHIPPING] Criando etiqueta para pedido');
         const result = await createShippingLabelForOrder(params.id);
         
         if (result.success) {
@@ -240,7 +241,7 @@ export async function POST(
         return NextResponse.json({ error: 'Ação inválida' }, { status: 400 });
     }
   } catch (error) {
-    console.error('[ADMIN_SHIPPING_POST]', error);
+    logger.error(error, '[ADMIN_SHIPPING_POST]');
     return NextResponse.json({ error: 'Erro ao processar ação de envio' }, { status: 500 });
   }
 }

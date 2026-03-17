@@ -1,3 +1,4 @@
+import logger from "@/lib/logger";
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
@@ -55,7 +56,7 @@ export async function GET() {
       lowStockProducts,
     });
   } catch (error) {
-    console.error('[ADMIN_STATS]', error);
+    logger.error(error, '[ADMIN_STATS]');
     return NextResponse.json({ error: 'Erro ao buscar estatísticas' }, { status: 500 });
   }
 }

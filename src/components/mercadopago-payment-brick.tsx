@@ -1,5 +1,6 @@
 'use client';
 
+import logger from "@/lib/logger";
 import { Payment } from '@mercadopago/sdk-react';
 import { toast } from 'sonner';
 import { memo, useCallback, useMemo } from 'react';
@@ -82,14 +83,14 @@ export const MercadoPagoPaymentBrick = memo(function MercadoPagoPaymentBrick({
         onPaymentError(data);
       }
     } catch (error: any) {
-      console.error('Erro ao processar pagamento:', error);
+      logger.error(error, 'Erro ao processar pagamento');
       toast.error(error.message || 'Erro ao processar pagamento');
       onPaymentError(error);
     }
   }, [orderId, amount, onPaymentSuccess, onPaymentError]);
 
   const onError = useCallback(async (error: any) => {
-    console.error('Payment Brick Error:', error);
+    logger.error(error, 'Payment Brick Error');
     // Tenta extrair mensagem amigável
     const msg = error?.message || (typeof error === 'string' ? error : 'Erro desconhecido no Checkout');
     toast.error(`Erro ao carregar checkout: ${msg}`);
@@ -98,7 +99,7 @@ export const MercadoPagoPaymentBrick = memo(function MercadoPagoPaymentBrick({
 
   const onReady = useCallback(async () => {
     // Quando o brick estiver pronto
-    console.log('Payment Brick carregado');
+    logger.info('Payment Brick carregado');
   }, []);
 
   if (!initialized) {

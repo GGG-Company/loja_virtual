@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { sendWebhook } from '@/lib/webhooks';
+import logger from "@/lib/logger";
 
 /**
  * POST /api/admin/orders/[id]/send-label
@@ -83,7 +84,7 @@ export async function POST(
         sentBy: user.id,
       });
     } catch (webhookError) {
-      console.error('[SEND_LABEL_WEBHOOK_ERROR]', webhookError);
+      logger.error(webhookError, '[SEND_LABEL_WEBHOOK_ERROR]');
       // Não falha a requisição se o webhook falhar
     }
 
@@ -92,7 +93,7 @@ export async function POST(
       message: 'Etiqueta enviada para o cliente com sucesso',
     });
   } catch (error) {
-    console.error('[SEND_LABEL]', error);
+    logger.error(error, '[SEND_LABEL]');
     return NextResponse.json(
       { error: 'Erro ao enviar etiqueta' },
       { status: 500 }

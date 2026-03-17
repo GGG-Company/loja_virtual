@@ -1,5 +1,6 @@
 'use client';
 
+import logger from "@/lib/logger";
 import { useEffect, useState, useRef } from 'react';
 import { Bell, X, Check, Trash2 } from 'lucide-react';
 import { Button } from './ui/button';
@@ -37,7 +38,7 @@ export function NotificationBell() {
       const unread = (data.notifications || []).filter((n: Notification) => !n.isRead).length;
       setUnreadCount(unread);
     } catch (error) {
-      console.error('[NOTIFICATIONS_FETCH]', error);
+      logger.error(error, '[NOTIFICATIONS_FETCH]');
     } finally {
       setLoading(false);
     }
@@ -84,7 +85,7 @@ export function NotificationBell() {
       );
       setUnreadCount(Math.max(0, unreadCount - 1));
     } catch (error) {
-      console.error('[MARK_AS_READ]', error);
+      logger.error(error, '[MARK_AS_READ]');
       toast.error('Erro ao marcar notificação como lida');
     }
   };

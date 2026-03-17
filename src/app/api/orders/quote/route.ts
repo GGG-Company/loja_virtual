@@ -1,3 +1,4 @@
+import logger from "@/lib/logger";
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
@@ -117,7 +118,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, order });
   } catch (error) {
-    console.error('[ORDER_QUOTE]', error);
+    logger.error(error, '[ORDER_QUOTE]');
     return NextResponse.json({ error: 'Erro ao gerar orçamento' }, { status: 500 });
   }
 }

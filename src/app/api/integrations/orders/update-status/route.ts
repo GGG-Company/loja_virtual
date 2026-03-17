@@ -1,3 +1,4 @@
+import logger from "@/lib/logger";
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
@@ -125,7 +126,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[ORDER STATUS UPDATE ERROR]', error);
+    logger.error(error, '[ORDER STATUS UPDATE ERROR]');
     return NextResponse.json(
       { error: 'Erro ao atualizar status do pedido' },
       { status: 500 }

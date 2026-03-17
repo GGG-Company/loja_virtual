@@ -1,3 +1,4 @@
+import logger from "@/lib/logger";
 import { NextResponse } from 'next/server';
 import { trackShipments } from '@/lib/shipping-calculator';
 
@@ -13,7 +14,7 @@ export async function POST(req: Request) {
     const result = await trackShipments({ trackingCodes });
     return NextResponse.json(result);
   } catch (err) {
-    console.error('[shipping][track]', err);
+    logger.error(err, '[shipping][track]');
     return NextResponse.json({ error: 'Erro ao consultar rastreio' }, { status: 500 });
   }
 }

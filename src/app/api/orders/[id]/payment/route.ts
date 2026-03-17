@@ -1,3 +1,4 @@
+import logger from "@/lib/logger";
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
@@ -9,12 +10,12 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    console.log('[PAYMENT] Iniciando processamento de pagamento');
+    logger.info('[PAYMENT] Iniciando processamento de pagamento');
     const session = await auth();
 
 
     if (!session?.user?.email) {
-      console.warn('[PAYMENT] Usuário não autenticado');
+      logger.warn('[PAYMENT] Usuário não autenticado');
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }
 
@@ -25,14 +26,14 @@ export async function POST(
 
 
     if (!user) {
-      console.warn('[PAYMENT] Usuário não encontrado:', session.user.email);
+      logger.warn('[PAYMENT] Usuário não encontrado:', session.user.email);
       return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
     }
 
 
     const body = await request.json();
     const { paymentMethod } = body;
-    console.log('[PAYMENT] Método de pagamento recebido:', paymentMethod);
+    logger.info('[PAYMENT] Método de pagamento recebido:', paymentMethod);
 
     // Verificar se o pedido existe e pertence ao usuário
     const order = await prisma.order.findFirst({
@@ -50,7 +51,7 @@ export async function POST(
 
 
     if (!order) {
-      console.warn('[PAYMENT] Pedido não encontrado:', params.id);
+      logger.warn('[PAYMENT] Pedido não encontrado:', params.id);
       return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
     }
 
@@ -58,7 +59,7 @@ export async function POST(
     const twoMinutesAgo = new Date(Date.now() - 120 * 1000);
 
     if (order.status === 'PENDING' && order.createdAt < twoMinutesAgo) {
-      console.warn('[PAYMENT] Pedido expirado, cancelando:', order.id);
+      logger.warn('[PAYMENT] Pedido expirado, cancelando:', order.id);
       await prisma.order.update({
         where: { id: order.id },
         data: { status: 'CANCELLED' },
@@ -71,7 +72,7 @@ export async function POST(
 
 
     if (order.status !== 'PENDING') {
-      console.warn('[PAYMENT] Pedido não está pendente:', order.id, 'Status:', order.status);
+      logger.warn('[PAYMENT] Pedido não está pendente:', order.id, 'Status:', order.status);
       return NextResponse.json(
         { error: 'Este pedido não está pendente de pagamento' },
         { status: 400 }
@@ -93,7 +94,7 @@ export async function POST(
     }
 
     // Atualizar o pedido com o método de pagamento e marcar como pago/confirmado
-    console.log('[PAYMENT] Atualizando pedido para CONFIRMED:', params.id);
+    logger.info('[PAYMENT] Atualizando pedido para CONFIRMED:', params.id);
     const updatedOrder = await prisma.order.update({
       where: { id: params.id },
       data: {
@@ -114,7 +115,7 @@ export async function POST(
     });
 
 
-    console.log('[PAYMENT] Pedido atualizado e confirmado:', updatedOrder.id);
+    logger.info('[PAYMENT] Pedido atualizado e confirmado:', updatedOrder.id);
     await sendOrderStatusUpdate({
       orderId: (updatedOrder as any).id,
       status: 'CONFIRMED',
@@ -124,14 +125,14 @@ export async function POST(
       user: (updatedOrder as any).user,
       items: (updatedOrder as any).items,
     });
-    console.log('[PAYMENT] Webhook de status enviado para pedido:', updatedOrder.id);
+    logger.info('[PAYMENT] Webhook de status enviado para pedido:', updatedOrder.id);
 
     // Gerar etiqueta do Melhor Envio automaticamente após pagamento confirmado
-    console.log('[PAYMENT] Iniciando geração de etiqueta do Melhor Envio...');
+    logger.info('[PAYMENT] Iniciando geração de etiqueta do Melhor Envio...');
     let shippingLabel = null;
     try {
       const labelResult = await createShippingLabelForOrder(updatedOrder.id);
-      console.log('[PAYMENT] Resultado da geração de etiqueta:', JSON.stringify(labelResult, null, 2));
+      logger.info('[PAYMENT] Resultado da geração de etiqueta:', JSON.stringify(labelResult, null, 2));
       
       if (labelResult.success) {
         shippingLabel = {
@@ -140,16 +141,16 @@ export async function POST(
           labelUrl: labelResult.labelUrl,
           status: labelResult.status,
         };
-        console.log('[PAYMENT] Etiqueta gerada com sucesso!', shippingLabel);
+        logger.info('[PAYMENT] Etiqueta gerada com sucesso!', shippingLabel);
       } else {
-        console.warn('[PAYMENT] Falha ao gerar etiqueta:', labelResult.error);
+        logger.warn('[PAYMENT] Falha ao gerar etiqueta:', labelResult.error);
       }
     } catch (labelError) {
-      console.error('[PAYMENT] Erro ao gerar etiqueta do Melhor Envio:', labelError);
+      logger.error(labelError, '[PAYMENT] Erro ao gerar etiqueta do Melhor Envio:');
       // Não bloquear o pagamento se a etiqueta falhar
     }
 
-    console.log('[PAYMENT] Finalizando processamento de pagamento:', updatedOrder.id);
+    logger.info('[PAYMENT] Finalizando processamento de pagamento:', updatedOrder.id);
     return NextResponse.json({ 
       success: true,
       order: updatedOrder,
@@ -157,7 +158,7 @@ export async function POST(
       shippingLabel,
     });
   } catch (error) {
-    console.error('[PROCESS_PAYMENT]', error);
+    logger.error(error, '[PROCESS_PAYMENT]');
     return NextResponse.json({ error: 'Erro ao processar pagamento' }, { status: 500 });
   }
 }

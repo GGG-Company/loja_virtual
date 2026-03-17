@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import logger from "@/lib/logger";
 
 export const dynamic = 'force-dynamic';
 
@@ -95,7 +96,7 @@ export async function GET(request: NextRequest) {
       stats: statusCounts,
     });
   } catch (error) {
-    console.error('[ADMIN_RETURNS_LIST]', error);
+    logger.error(error, '[ADMIN_RETURNS_LIST]');
     return NextResponse.json({ error: 'Erro ao listar devoluções' }, { status: 500 });
   }
 }

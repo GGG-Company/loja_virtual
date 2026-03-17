@@ -85,7 +85,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error('[ASSISTANT]', error);
+    logger.error('[ASSISTANT]', error);
     return NextResponse.json({ error: 'Erro ao responder' }, { status: 500 });
   }
 }

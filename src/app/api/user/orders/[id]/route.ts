@@ -1,3 +1,4 @@
+import logger from "@/lib/logger";
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
@@ -91,7 +92,7 @@ export async function GET(
 
     return NextResponse.json(order);
   } catch (error) {
-    console.error('[USER_ORDER_GET]', error);
+    logger.error(error, '[USER_ORDER_GET]');
     return NextResponse.json({ error: 'Erro ao buscar pedido' }, { status: 500 });
   }
 }
