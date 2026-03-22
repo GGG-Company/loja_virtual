@@ -50,10 +50,9 @@ class ApiClient {
         if (response) {
           switch (response.status) {
             case 401:
-              // Unauthorized: redirecionar para login
-              if (typeof window !== 'undefined') {
-                window.location.href = '/auth/login';
-              }
+              // Não redireciona automaticamente — cada página protegida
+              // deve tratar o 401 individualmente para evitar redirect
+              // indesejado em páginas públicas (Home, Produtos, etc).
               break;
             case 403:
               console.error('Acesso negado');

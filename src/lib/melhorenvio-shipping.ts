@@ -5,6 +5,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { getAccessToken, commonHeaders } from '@/lib/melhorenvio-oauth';
+import logger from '@/lib/logger';
 
 function melhorEnvioBaseUrl() {
   const isSandbox = (process.env.MELHOR_ENVIO_SANDBOX || 'true').toLowerCase() !== 'false';
@@ -100,17 +101,17 @@ export type MelhorEnvioLabelResult = {
 export async function addToMelhorEnvioCart(input: ShippingLabelInput): Promise<MelhorEnvioLabelResult> {
   const token = await getAccessToken();
   if (!token) {
-    console.error('[MELHOR_ENVIO] Token não disponível');
+    logger.error('[MELHOR_ENVIO] Token não disponível');
     return { success: false, error: 'Token não disponível' };
   }
 
   const baseUrl = melhorEnvioBaseUrl();
-  console.log('[MELHOR_ENVIO] ========================================');
-  console.log('[MELHOR_ENVIO] Adicionando ao carrinho');
-  console.log('[MELHOR_ENVIO] Pedido:', input.orderId);
-  console.log('[MELHOR_ENVIO] Serviço:', input.serviceId);
-  console.log('[MELHOR_ENVIO] Base URL:', baseUrl);
-  console.log('[MELHOR_ENVIO] ========================================');
+  logger.info('[MELHOR_ENVIO] ========================================');
+  logger.info('[MELHOR_ENVIO] Adicionando ao carrinho');
+  logger.info('[MELHOR_ENVIO] Pedido: %s', input.orderId);
+  logger.info('[MELHOR_ENVIO] Serviço: %s', input.serviceId);
+  logger.info('[MELHOR_ENVIO] Base URL: %s', baseUrl);
+  logger.info('[MELHOR_ENVIO] ========================================');
 
   // Montar body conforme documentação oficial
   const body: Record<string, any> = {
@@ -193,7 +194,7 @@ export async function addToMelhorEnvioCart(input: ShippingLabelInput): Promise<M
   }
 
   try {
-    console.log('[MELHOR_ENVIO] Request body:', JSON.stringify(body, null, 2));
+    logger.info('[MELHOR_ENVIO] Request body: %j', body);
 
     const res = await fetch(`${baseUrl}/api/v2/me/cart`, {
       method: 'POST',
@@ -202,11 +203,11 @@ export async function addToMelhorEnvioCart(input: ShippingLabelInput): Promise<M
     });
 
     const responseText = await res.text();
-    console.log('[MELHOR_ENVIO] Response status:', res.status);
-    console.log('[MELHOR_ENVIO] Response body:', responseText);
+    logger.info('[MELHOR_ENVIO] Response status: %d', res.status);
+    logger.info('[MELHOR_ENVIO] Response body: %s', responseText);
 
     if (!res.ok) {
-      console.error('[MELHOR_ENVIO] Erro ao adicionar ao carrinho:', res.status, responseText);
+      logger.error('[MELHOR_ENVIO] Erro ao adicionar ao carrinho: %d %s', res.status, responseText);
       
       // Tentar extrair mensagem de erro mais específica
       let errorMessage = `Erro ${res.status}`;
@@ -228,10 +229,10 @@ export async function addToMelhorEnvioCart(input: ShippingLabelInput): Promise<M
     const data = JSON.parse(responseText);
     const meOrderId = data.id || data.order_id;
 
-    console.log('[MELHOR_ENVIO] ========================================');
-    console.log('[MELHOR_ENVIO] Adicionado ao carrinho com sucesso!');
-    console.log('[MELHOR_ENVIO] ID do pedido no Melhor Envio:', meOrderId);
-    console.log('[MELHOR_ENVIO] ========================================');
+    logger.info('[MELHOR_ENVIO] ========================================');
+    logger.info('[MELHOR_ENVIO] Adicionado ao carrinho com sucesso!');
+    logger.info('[MELHOR_ENVIO] ID do pedido no Melhor Envio: %s', meOrderId);
+    logger.info('[MELHOR_ENVIO] ========================================');
 
     return {
       success: true,
@@ -240,7 +241,7 @@ export async function addToMelhorEnvioCart(input: ShippingLabelInput): Promise<M
       rawResponse: data,
     };
   } catch (err: any) {
-    console.error('[MELHOR_ENVIO] Exceção ao adicionar ao carrinho:', err);
+    logger.error('[MELHOR_ENVIO] Exceção ao adicionar ao carrinho: %o', err);
     return { success: false, error: err.message };
   }
 }
@@ -315,15 +316,15 @@ export type ReverseShippingInput = {
 export async function addReverseToMelhorEnvioCart(input: ReverseShippingInput): Promise<MelhorEnvioLabelResult> {
   const token = await getAccessToken();
   if (!token) {
-    console.error('[MELHOR_ENVIO_REVERSE] Token não disponível');
+    logger.error('[MELHOR_ENVIO_REVERSE] Token não disponível');
     return { success: false, error: 'Token não disponível' };
   }
 
   const baseUrl = melhorEnvioBaseUrl();
-  console.log('[MELHOR_ENVIO_REVERSE] ========================================');
-  console.log('[MELHOR_ENVIO_REVERSE] Adicionando logística reversa ao carrinho');
-  console.log('[MELHOR_ENVIO_REVERSE] Serviço:', input.serviceId === 1 ? 'PAC' : 'SEDEX');
-  console.log('[MELHOR_ENVIO_REVERSE] ========================================');
+  logger.info('[MELHOR_ENVIO_REVERSE] ========================================');
+  logger.info('[MELHOR_ENVIO_REVERSE] Adicionando logística reversa ao carrinho');
+  logger.info('[MELHOR_ENVIO_REVERSE] Serviço: %s', input.serviceId === 1 ? 'PAC' : 'SEDEX');
+  logger.info('[MELHOR_ENVIO_REVERSE] ========================================');
 
   // Montar body conforme o cenário
   const body: Record<string, any> = {
@@ -346,8 +347,8 @@ export async function addReverseToMelhorEnvioCart(input: ReverseShippingInput): 
   // Cenário 1: Envio original feito pelo Melhor Envio
   if (input.originalOrderId) {
     body.order_id = input.originalOrderId;
-    console.log('[MELHOR_ENVIO_REVERSE] Modo: Devolução de envio do Melhor Envio');
-    console.log('[MELHOR_ENVIO_REVERSE] Order ID original:', input.originalOrderId);
+    logger.info('[MELHOR_ENVIO_REVERSE] Modo: Devolução de envio do Melhor Envio');
+    logger.info('[MELHOR_ENVIO_REVERSE] Order ID original: %s', input.originalOrderId);
   }
   // Cenário 2: Envio original NÃO feito pelo Melhor Envio
   else if (input.from && input.to && input.products) {
@@ -405,7 +406,7 @@ export async function addReverseToMelhorEnvioCart(input: ReverseShippingInput): 
       weight: Number(p.weight.toFixed(2)),
     }));
 
-    console.log('[MELHOR_ENVIO_REVERSE] Modo: Devolução de envio externo');
+    logger.info('[MELHOR_ENVIO_REVERSE] Modo: Devolução de envio externo');
   } else {
     return { 
       success: false, 
@@ -414,7 +415,7 @@ export async function addReverseToMelhorEnvioCart(input: ReverseShippingInput): 
   }
 
   try {
-    console.log('[MELHOR_ENVIO_REVERSE] Request body:', JSON.stringify(body, null, 2));
+    logger.info('[MELHOR_ENVIO_REVERSE] Request body: %j', body);
 
     const res = await fetch(`${baseUrl}/api/v2/me/cart/reverse`, {
       method: 'POST',
@@ -423,11 +424,11 @@ export async function addReverseToMelhorEnvioCart(input: ReverseShippingInput): 
     });
 
     const responseText = await res.text();
-    console.log('[MELHOR_ENVIO_REVERSE] Response status:', res.status);
-    console.log('[MELHOR_ENVIO_REVERSE] Response body:', responseText);
+    logger.info('[MELHOR_ENVIO_REVERSE] Response status: %d', res.status);
+    logger.info('[MELHOR_ENVIO_REVERSE] Response body: %s', responseText);
 
     if (!res.ok) {
-      console.error('[MELHOR_ENVIO_REVERSE] Erro ao adicionar ao carrinho:', res.status, responseText);
+      logger.error('[MELHOR_ENVIO_REVERSE] Erro ao adicionar ao carrinho: %d %s', res.status, responseText);
       
       let errorMessage = `Erro ${res.status}`;
       try {
@@ -448,10 +449,10 @@ export async function addReverseToMelhorEnvioCart(input: ReverseShippingInput): 
     const data = JSON.parse(responseText);
     const meOrderId = data.id || data.order_id;
 
-    console.log('[MELHOR_ENVIO_REVERSE] ========================================');
-    console.log('[MELHOR_ENVIO_REVERSE] Adicionado ao carrinho com sucesso!');
-    console.log('[MELHOR_ENVIO_REVERSE] ID do pedido reverso:', meOrderId);
-    console.log('[MELHOR_ENVIO_REVERSE] ========================================');
+    logger.info('[MELHOR_ENVIO_REVERSE] ========================================');
+    logger.info('[MELHOR_ENVIO_REVERSE] Adicionado ao carrinho com sucesso!');
+    logger.info('[MELHOR_ENVIO_REVERSE] ID do pedido reverso: %s', meOrderId);
+    logger.info('[MELHOR_ENVIO_REVERSE] ========================================');
 
     return {
       success: true,
@@ -460,7 +461,7 @@ export async function addReverseToMelhorEnvioCart(input: ReverseShippingInput): 
       rawResponse: data,
     };
   } catch (err: any) {
-    console.error('[MELHOR_ENVIO_REVERSE] Exceção:', err);
+    logger.error('[MELHOR_ENVIO_REVERSE] Exceção: %o', err);
     return { success: false, error: err.message };
   }
 }
@@ -474,9 +475,9 @@ export async function createReverseShippingForOrder(
   newSenderEmail: string,
   newSenderPhone: string
 ): Promise<MelhorEnvioLabelResult> {
-  console.log('[MELHOR_ENVIO_REVERSE] ========================================');
-  console.log('[MELHOR_ENVIO_REVERSE] Criando logística reversa para pedido:', orderId);
-  console.log('[MELHOR_ENVIO_REVERSE] ========================================');
+  logger.info('[MELHOR_ENVIO_REVERSE] ========================================');
+  logger.info('[MELHOR_ENVIO_REVERSE] Criando logística reversa para pedido: %s', orderId);
+  logger.info('[MELHOR_ENVIO_REVERSE] ========================================');
 
   // Buscar dados do pedido original
   const order = await prisma.order.findUnique({
@@ -494,13 +495,13 @@ export async function createReverseShippingForOrder(
   });
 
   if (!order) {
-    console.error('[MELHOR_ENVIO_REVERSE] Pedido não encontrado:', orderId);
+    logger.error('[MELHOR_ENVIO_REVERSE] Pedido não encontrado: %s', orderId);
     return { success: false, error: 'Pedido não encontrado' };
   }
 
   // Verificar se o pedido original tem ID do Melhor Envio
   if (!order.melhorEnvioOrderId) {
-    console.error('[MELHOR_ENVIO_REVERSE] Pedido não possui ID do Melhor Envio');
+    logger.error('[MELHOR_ENVIO_REVERSE] Pedido não possui ID do Melhor Envio');
     return { success: false, error: 'Pedido não possui etiqueta do Melhor Envio' };
   }
 
@@ -540,17 +541,17 @@ export async function createReverseShippingForOrder(
   });
 
   if (!cartResult.success || !cartResult.orderId) {
-    console.error('[MELHOR_ENVIO_REVERSE] Falha ao adicionar ao carrinho');
+    logger.error('[MELHOR_ENVIO_REVERSE] Falha ao adicionar ao carrinho');
     return cartResult;
   }
 
   const meReverseOrderId = cartResult.orderId;
-  console.log('[MELHOR_ENVIO_REVERSE] ID do pedido reverso:', meReverseOrderId);
+  logger.info('[MELHOR_ENVIO_REVERSE] ID do pedido reverso: %s', meReverseOrderId);
 
   // Fazer checkout
   const checkoutResult = await checkoutMelhorEnvio([meReverseOrderId]);
   if (!checkoutResult.success) {
-    console.error('[MELHOR_ENVIO_REVERSE] Falha no checkout');
+    logger.error('[MELHOR_ENVIO_REVERSE] Falha no checkout');
     return checkoutResult;
   }
 
@@ -558,7 +559,7 @@ export async function createReverseShippingForOrder(
   const isSandbox = (process.env.MELHOR_ENVIO_SANDBOX || 'true').toLowerCase() !== 'false';
   
   if (isSandbox) {
-    console.warn('[MELHOR_ENVIO_REVERSE] ⚠️ Ambiente Sandbox: geração de etiqueta reversa não disponível');
+    logger.warn('[MELHOR_ENVIO_REVERSE] ⚠️ Ambiente Sandbox: geração de etiqueta reversa não disponível');
     return {
       success: true,
       orderId: meReverseOrderId,
@@ -570,18 +571,18 @@ export async function createReverseShippingForOrder(
   // Em produção, gerar etiqueta
   const generateResult = await generateMelhorEnvioLabel([meReverseOrderId]);
   if (!generateResult.success) {
-    console.error('[MELHOR_ENVIO_REVERSE] Falha ao gerar etiqueta');
+    logger.error('[MELHOR_ENVIO_REVERSE] Falha ao gerar etiqueta');
     return generateResult;
   }
 
   // Obter URL de impressão
   const printResult = await printMelhorEnvioLabel([meReverseOrderId]);
 
-  console.log('[MELHOR_ENVIO_REVERSE] ========================================');
-  console.log('[MELHOR_ENVIO_REVERSE] Etiqueta reversa criada com sucesso!');
-  console.log('[MELHOR_ENVIO_REVERSE] Tracking:', generateResult.trackingCode);
-  console.log('[MELHOR_ENVIO_REVERSE] URL:', printResult.url);
-  console.log('[MELHOR_ENVIO_REVERSE] ========================================');
+  logger.info('[MELHOR_ENVIO_REVERSE] ========================================');
+  logger.info('[MELHOR_ENVIO_REVERSE] Etiqueta reversa criada com sucesso!');
+  logger.info('[MELHOR_ENVIO_REVERSE] Tracking: %s', generateResult.trackingCode);
+  logger.info('[MELHOR_ENVIO_REVERSE] URL: %s', printResult.url);
+  logger.info('[MELHOR_ENVIO_REVERSE] ========================================');
 
   return {
     success: true,
@@ -599,12 +600,12 @@ export async function createReverseShippingForOrder(
 export async function checkoutMelhorEnvio(orderIds: string[]): Promise<MelhorEnvioLabelResult> {
   const token = await getAccessToken();
   if (!token) {
-    console.error('[MELHOR_ENVIO] Token não disponível para checkout');
+    logger.error('[MELHOR_ENVIO] Token não disponível para checkout');
     return { success: false, error: 'Token não disponível' };
   }
 
   const baseUrl = melhorEnvioBaseUrl();
-  console.log('[MELHOR_ENVIO] Realizando checkout para:', orderIds);
+  logger.info('[MELHOR_ENVIO] Realizando checkout para: %o', orderIds);
 
   try {
     const res = await fetch(`${baseUrl}/api/v2/me/shipment/checkout`, {
@@ -614,16 +615,16 @@ export async function checkoutMelhorEnvio(orderIds: string[]): Promise<MelhorEnv
     });
 
     const responseText = await res.text();
-    console.log('[MELHOR_ENVIO] Checkout response status:', res.status);
-    console.log('[MELHOR_ENVIO] Checkout response body:', responseText);
+    logger.info('[MELHOR_ENVIO] Checkout response status: %d', res.status);
+    logger.info('[MELHOR_ENVIO] Checkout response body: %s', responseText);
 
     if (!res.ok) {
-      console.error('[MELHOR_ENVIO] Erro no checkout:', res.status, responseText);
+      logger.error('[MELHOR_ENVIO] Erro no checkout: %d %s', res.status, responseText);
       return { success: false, error: `Erro ${res.status}: ${responseText}`, rawResponse: responseText };
     }
 
     const data = JSON.parse(responseText);
-    console.log('[MELHOR_ENVIO] Checkout realizado com sucesso');
+    logger.info('[MELHOR_ENVIO] Checkout realizado com sucesso');
 
     // Extrair tracking code da resposta do checkout
     let trackingCode: string | undefined;
@@ -639,7 +640,7 @@ export async function checkoutMelhorEnvio(orderIds: string[]): Promise<MelhorEnv
     }
 
     if (trackingCode) {
-      console.log('[MELHOR_ENVIO] Tracking code obtido do checkout:', trackingCode);
+      logger.info('[MELHOR_ENVIO] Tracking code obtido do checkout: %s', trackingCode);
     }
 
     return {
@@ -649,7 +650,7 @@ export async function checkoutMelhorEnvio(orderIds: string[]): Promise<MelhorEnv
       rawResponse: data,
     };
   } catch (err: any) {
-    console.error('[MELHOR_ENVIO] Exceção no checkout:', err);
+    logger.error('[MELHOR_ENVIO] Exceção no checkout: %o', err);
     return { success: false, error: err.message };
   }
 }
@@ -660,12 +661,12 @@ export async function checkoutMelhorEnvio(orderIds: string[]): Promise<MelhorEnv
 export async function generateMelhorEnvioLabel(orderIds: string[]): Promise<MelhorEnvioLabelResult> {
   const token = await getAccessToken();
   if (!token) {
-    console.error('[MELHOR_ENVIO] Token não disponível para gerar etiqueta');
+    logger.error('[MELHOR_ENVIO] Token não disponível para gerar etiqueta');
     return { success: false, error: 'Token não disponível' };
   }
 
   const baseUrl = melhorEnvioBaseUrl();
-  console.log('[MELHOR_ENVIO] Gerando etiqueta para:', orderIds);
+  logger.info('[MELHOR_ENVIO] Gerando etiqueta para: %o', orderIds);
 
   try {
     const res = await fetch(`${baseUrl}/api/v2/me/shipment/generate`, {
@@ -675,16 +676,16 @@ export async function generateMelhorEnvioLabel(orderIds: string[]): Promise<Melh
     });
 
     const responseText = await res.text();
-    console.log('[MELHOR_ENVIO] Gerar etiqueta response status:', res.status);
-    console.log('[MELHOR_ENVIO] Gerar etiqueta response body:', responseText);
+    logger.info('[MELHOR_ENVIO] Gerar etiqueta response status: %d', res.status);
+    logger.info('[MELHOR_ENVIO] Gerar etiqueta response body: %s', responseText);
 
     if (!res.ok) {
-      console.error('[MELHOR_ENVIO] Erro ao gerar etiqueta:', res.status, responseText);
+      logger.error('[MELHOR_ENVIO] Erro ao gerar etiqueta: %d %s', res.status, responseText);
       return { success: false, error: `Erro ${res.status}: ${responseText}`, rawResponse: responseText };
     }
 
     const data = JSON.parse(responseText);
-    console.log('[MELHOR_ENVIO] Etiqueta gerada com sucesso');
+    logger.info('[MELHOR_ENVIO] Etiqueta gerada com sucesso');
 
     // Extrair tracking code se disponível
     let trackingCode: string | undefined;
@@ -702,7 +703,7 @@ export async function generateMelhorEnvioLabel(orderIds: string[]): Promise<Melh
       rawResponse: data,
     };
   } catch (err: any) {
-    console.error('[MELHOR_ENVIO] Exceção ao gerar etiqueta:', err);
+    logger.error('[MELHOR_ENVIO] Exceção ao gerar etiqueta: %o', err);
     return { success: false, error: err.message };
   }
 }
@@ -714,12 +715,12 @@ export async function generateMelhorEnvioLabel(orderIds: string[]): Promise<Melh
 export async function printMelhorEnvioLabel(orderIds: string[], mode: 'private' | 'public' = 'private'): Promise<{ success: boolean; url?: string; error?: string }> {
   const token = await getAccessToken();
   if (!token) {
-    console.error('[MELHOR_ENVIO] Token não disponível para imprimir etiqueta');
+    logger.error('[MELHOR_ENVIO] Token não disponível para imprimir etiqueta');
     return { success: false, error: 'Token não disponível' };
   }
 
   const baseUrl = melhorEnvioBaseUrl();
-  console.log('[MELHOR_ENVIO] Obtendo URL de impressão para:', orderIds, 'modo:', mode);
+  logger.info('[MELHOR_ENVIO] Obtendo URL de impressão para: %o modo: %s', orderIds, mode);
 
   try {
     const res = await fetch(`${baseUrl}/api/v2/me/shipment/print`, {
@@ -729,22 +730,22 @@ export async function printMelhorEnvioLabel(orderIds: string[], mode: 'private' 
     });
 
     const responseText = await res.text();
-    console.log('[MELHOR_ENVIO] Print response status:', res.status);
-    console.log('[MELHOR_ENVIO] Print response body:', responseText);
+    logger.info('[MELHOR_ENVIO] Print response status: %d', res.status);
+    logger.info('[MELHOR_ENVIO] Print response body: %s', responseText);
 
     if (!res.ok) {
-      console.error('[MELHOR_ENVIO] Erro ao obter URL de impressão:', res.status, responseText);
+      logger.error('[MELHOR_ENVIO] Erro ao obter URL de impressão: %d %s', res.status, responseText);
       return { success: false, error: `Erro ${res.status}: ${responseText}` };
     }
 
     const data = JSON.parse(responseText);
     const url = data.url || data.print_url;
 
-    console.log('[MELHOR_ENVIO] URL de impressão obtida:', url);
+    logger.info('[MELHOR_ENVIO] URL de impressão obtida: %s', url);
 
     return { success: true, url };
   } catch (err: any) {
-    console.error('[MELHOR_ENVIO] Exceção ao obter URL de impressão:', err);
+    logger.error('[MELHOR_ENVIO] Exceção ao obter URL de impressão: %o', err);
     return { success: false, error: err.message };
   }
 }
@@ -759,7 +760,7 @@ export async function previewMelhorEnvioLabel(orderIds: string[]): Promise<{ suc
   }
 
   const baseUrl = melhorEnvioBaseUrl();
-  console.log('[MELHOR_ENVIO] Pré-visualizando etiqueta para:', orderIds);
+  logger.info('[MELHOR_ENVIO] Pré-visualizando etiqueta para: %o', orderIds);
 
   try {
     const res = await fetch(`${baseUrl}/api/v2/me/shipment/preview`, {
@@ -769,10 +770,10 @@ export async function previewMelhorEnvioLabel(orderIds: string[]): Promise<{ suc
     });
 
     const responseText = await res.text();
-    console.log('[MELHOR_ENVIO] Preview response status:', res.status);
+    logger.info('[MELHOR_ENVIO] Preview response status: %d', res.status);
 
     if (!res.ok) {
-      console.error('[MELHOR_ENVIO] Erro ao pré-visualizar:', res.status, responseText);
+      logger.error('[MELHOR_ENVIO] Erro ao pré-visualizar: %d %s', res.status, responseText);
       return { success: false, error: `Erro ${res.status}: ${responseText}` };
     }
 
@@ -781,7 +782,7 @@ export async function previewMelhorEnvioLabel(orderIds: string[]): Promise<{ suc
 
     return { success: true, url };
   } catch (err: any) {
-    console.error('[MELHOR_ENVIO] Exceção ao pré-visualizar:', err);
+    logger.error('[MELHOR_ENVIO] Exceção ao pré-visualizar: %o', err);
     return { success: false, error: err.message };
   }
 }
@@ -796,7 +797,7 @@ export async function getMelhorEnvioOrderStatus(orderId: string): Promise<{ succ
   }
 
   const baseUrl = melhorEnvioBaseUrl();
-  console.log('[MELHOR_ENVIO] Consultando status do pedido:', orderId);
+  logger.info('[MELHOR_ENVIO] Consultando status do pedido: %s', orderId);
 
   try {
     const res = await fetch(`${baseUrl}/api/v2/me/orders/${orderId}`, {
@@ -805,7 +806,7 @@ export async function getMelhorEnvioOrderStatus(orderId: string): Promise<{ succ
     });
 
     const responseText = await res.text();
-    console.log('[MELHOR_ENVIO] Status response:', res.status);
+    logger.info('[MELHOR_ENVIO] Status response: %d', res.status);
 
     if (!res.ok) {
       return { success: false, error: `Erro ${res.status}: ${responseText}` };
@@ -833,7 +834,7 @@ export async function listMelhorEnvioCart(): Promise<{ success: boolean; items?:
   }
 
   const baseUrl = melhorEnvioBaseUrl();
-  console.log('[MELHOR_ENVIO] Listando itens do carrinho');
+  logger.info('[MELHOR_ENVIO] Listando itens do carrinho');
 
   try {
     const res = await fetch(`${baseUrl}/api/v2/me/cart`, {
@@ -842,7 +843,7 @@ export async function listMelhorEnvioCart(): Promise<{ success: boolean; items?:
     });
 
     const responseText = await res.text();
-    console.log('[MELHOR_ENVIO] Cart list response:', res.status);
+    logger.info('[MELHOR_ENVIO] Cart list response: %d', res.status);
 
     if (!res.ok) {
       return { success: false, error: `Erro ${res.status}: ${responseText}` };
@@ -852,7 +853,7 @@ export async function listMelhorEnvioCart(): Promise<{ success: boolean; items?:
     // A resposta pode ser um array direto ou um objeto com data
     const items = Array.isArray(data) ? data : (data.data || []);
     
-    console.log('[MELHOR_ENVIO] Total de itens no carrinho:', items.length);
+    logger.info('[MELHOR_ENVIO] Total de itens no carrinho: %d', items.length);
     return { success: true, items };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -869,7 +870,7 @@ export async function getMelhorEnvioCartItem(itemId: string): Promise<{ success:
   }
 
   const baseUrl = melhorEnvioBaseUrl();
-  console.log('[MELHOR_ENVIO] Buscando item do carrinho:', itemId);
+  logger.info('[MELHOR_ENVIO] Buscando item do carrinho: %s', itemId);
 
   try {
     const res = await fetch(`${baseUrl}/api/v2/me/cart/${itemId}`, {
@@ -878,7 +879,7 @@ export async function getMelhorEnvioCartItem(itemId: string): Promise<{ success:
     });
 
     const responseText = await res.text();
-    console.log('[MELHOR_ENVIO] Cart item response:', res.status);
+    logger.info('[MELHOR_ENVIO] Cart item response: %d', res.status);
 
     if (!res.ok) {
       return { success: false, error: `Erro ${res.status}: ${responseText}` };
@@ -901,7 +902,7 @@ export async function removeMelhorEnvioCartItem(itemId: string): Promise<{ succe
   }
 
   const baseUrl = melhorEnvioBaseUrl();
-  console.log('[MELHOR_ENVIO] Removendo item do carrinho:', itemId);
+  logger.info('[MELHOR_ENVIO] Removendo item do carrinho: %s', itemId);
 
   try {
     const res = await fetch(`${baseUrl}/api/v2/me/cart/${itemId}`, {
@@ -909,11 +910,11 @@ export async function removeMelhorEnvioCartItem(itemId: string): Promise<{ succe
       headers: { ...commonHeaders(), Authorization: `Bearer ${token}` },
     });
 
-    console.log('[MELHOR_ENVIO] Cart remove response:', res.status);
+    logger.info('[MELHOR_ENVIO] Cart remove response: %d', res.status);
 
     // 204 No Content ou 200 OK são respostas de sucesso
     if (res.status === 204 || res.ok) {
-      console.log('[MELHOR_ENVIO] Item removido com sucesso');
+      logger.info('[MELHOR_ENVIO] Item removido com sucesso');
       return { success: true };
     }
 
@@ -928,7 +929,7 @@ export async function removeMelhorEnvioCartItem(itemId: string): Promise<{ succe
  * 10. Limpar todo o carrinho (remove todos os itens)
  */
 export async function clearMelhorEnvioCart(): Promise<{ success: boolean; removed: number; errors: string[] }> {
-  console.log('[MELHOR_ENVIO] Limpando carrinho...');
+  logger.info('[MELHOR_ENVIO] Limpando carrinho...');
   
   const cartResult = await listMelhorEnvioCart();
   if (!cartResult.success || !cartResult.items) {
@@ -936,7 +937,7 @@ export async function clearMelhorEnvioCart(): Promise<{ success: boolean; remove
   }
 
   if (cartResult.items.length === 0) {
-    console.log('[MELHOR_ENVIO] Carrinho já está vazio');
+    logger.info('[MELHOR_ENVIO] Carrinho já está vazio');
     return { success: true, removed: 0, errors: [] };
   }
 
@@ -953,7 +954,7 @@ export async function clearMelhorEnvioCart(): Promise<{ success: boolean; remove
     }
   }
 
-  console.log(`[MELHOR_ENVIO] Carrinho limpo. Removidos: ${removed}, Erros: ${errors.length}`);
+  logger.info('[MELHOR_ENVIO] Carrinho limpo. Removidos: %d, Erros: %d', removed, errors.length);
   return { success: errors.length === 0, removed, errors };
 }
 
@@ -962,9 +963,9 @@ export async function clearMelhorEnvioCart(): Promise<{ success: boolean; remove
  * Executa todo o fluxo: Adicionar ao carrinho -> Checkout -> Gerar etiqueta
  */
 export async function createShippingLabelForOrder(orderId: string): Promise<MelhorEnvioLabelResult> {
-  console.log('[MELHOR_ENVIO] ========================================');
-  console.log('[MELHOR_ENVIO] Iniciando criação de etiqueta para pedido:', orderId);
-  console.log('[MELHOR_ENVIO] ========================================');
+  logger.info('[MELHOR_ENVIO] ========================================');
+  logger.info('[MELHOR_ENVIO] Iniciando criação de etiqueta para pedido: %s', orderId);
+  logger.info('[MELHOR_ENVIO] ========================================');
 
   // Buscar dados do pedido
   const order = await prisma.order.findUnique({
@@ -982,18 +983,18 @@ export async function createShippingLabelForOrder(orderId: string): Promise<Melh
   });
 
   if (!order) {
-    console.error('[MELHOR_ENVIO] Pedido não encontrado:', orderId);
+    logger.error('[MELHOR_ENVIO] Pedido não encontrado: %s', orderId);
     return { success: false, error: 'Pedido não encontrado' };
   }
 
-  console.log('[MELHOR_ENVIO] Pedido encontrado:', order.orderNumber);
-  console.log('[MELHOR_ENVIO] Endereço de entrega:', JSON.stringify(order.shippingAddress, null, 2));
+  logger.info('[MELHOR_ENVIO] Pedido encontrado: %s', order.orderNumber);
+  logger.info('[MELHOR_ENVIO] Endereço de entrega: %j', order.shippingAddress);
 
   const shippingAddr = order.shippingAddress as any;
   
   // Verificar se é retirada em loja
   if (shippingAddr?.deliveryMethod === 'Retirada na Loja (Feira de Santana)' || order.shippingServiceId === 'pickup-feira') {
-    console.log('[MELHOR_ENVIO] Pedido é retirada em loja, pulando geração de etiqueta');
+    logger.info('[MELHOR_ENVIO] Pedido é retirada em loja, pulando geração de etiqueta');
     return { success: true, status: 'pickup', error: 'Retirada em loja - sem etiqueta' };
   }
 
@@ -1032,8 +1033,8 @@ export async function createShippingLabelForOrder(orderId: string): Promise<Melh
     postal_code: (shippingAddr?.zip || '').replace(/\D/g, ''),
   };
 
-  console.log('[MELHOR_ENVIO] Remetente:', JSON.stringify(from, null, 2));
-  console.log('[MELHOR_ENVIO] Destinatário:', JSON.stringify(to, null, 2));
+  logger.info('[MELHOR_ENVIO] Remetente: %j', from);
+  logger.info('[MELHOR_ENVIO] Destinatário: %j', to);
 
   // Calcular dimensões e peso totais
   let totalWeight = 0;
@@ -1068,17 +1069,17 @@ export async function createShippingLabelForOrder(orderId: string): Promise<Melh
     weight: Math.max(0.3, Number(totalWeight.toFixed(2))),
   }];
 
-  console.log('[MELHOR_ENVIO] Produtos:', JSON.stringify(products, null, 2));
-  console.log('[MELHOR_ENVIO] Volumes:', JSON.stringify(volumes, null, 2));
+  logger.info('[MELHOR_ENVIO] Produtos: %j', products);
+  logger.info('[MELHOR_ENVIO] Volumes: %j', volumes);
 
   // Determinar o serviço de frete
   const serviceId = order.shippingServiceId || shippingAddr?.serviceId || '1'; // Default: PAC (1)
-  console.log('[MELHOR_ENVIO] Serviço selecionado:', serviceId);
+  logger.info('[MELHOR_ENVIO] Serviço selecionado: %s', serviceId);
 
   // Limitar insurance_value a R$ 1000 (limite para envios não comerciais no sandbox)
   const maxInsurance = 1000;
   const insuranceValue = Math.min(totalInsurance, maxInsurance);
-  console.log('[MELHOR_ENVIO] Valor seguro:', insuranceValue, '(original:', totalInsurance, ')');
+  logger.info('[MELHOR_ENVIO] Valor seguro: %d (original: %d)', insuranceValue, totalInsurance);
 
   // 1. Adicionar ao carrinho
   const cartResult = await addToMelhorEnvioCart({
@@ -1101,12 +1102,12 @@ export async function createShippingLabelForOrder(orderId: string): Promise<Melh
   });
 
   if (!cartResult.success || !cartResult.orderId) {
-    console.error('[MELHOR_ENVIO] Falha ao adicionar ao carrinho');
+    logger.error('[MELHOR_ENVIO] Falha ao adicionar ao carrinho');
     return cartResult;
   }
 
   const meOrderId = cartResult.orderId;
-  console.log('[MELHOR_ENVIO] ID do pedido no Melhor Envio:', meOrderId);
+  logger.info('[MELHOR_ENVIO] ID do pedido no Melhor Envio: %s', meOrderId);
 
   // Salvar ID do Melhor Envio no pedido
   await prisma.order.update({
@@ -1121,7 +1122,7 @@ export async function createShippingLabelForOrder(orderId: string): Promise<Melh
   // 2. Fazer checkout (comprar frete)
   const checkoutResult = await checkoutMelhorEnvio([meOrderId]);
   if (!checkoutResult.success) {
-    console.error('[MELHOR_ENVIO] Falha no checkout');
+    logger.error('[MELHOR_ENVIO] Falha no checkout');
     await prisma.order.update({
       where: { id: orderId },
       data: { melhorEnvioStatus: 'checkout_failed' },
@@ -1149,7 +1150,7 @@ export async function createShippingLabelForOrder(orderId: string): Promise<Melh
   // 3. Gerar etiqueta
   const generateResult = await generateMelhorEnvioLabel([meOrderId]);
   if (!generateResult.success) {
-    console.error('[MELHOR_ENVIO] Falha ao gerar etiqueta');
+    logger.error('[MELHOR_ENVIO] Falha ao gerar etiqueta');
     await prisma.order.update({
       where: { id: orderId },
       data: { melhorEnvioStatus: 'generate_failed' },
@@ -1178,12 +1179,12 @@ export async function createShippingLabelForOrder(orderId: string): Promise<Melh
     },
   });
 
-  console.log('[MELHOR_ENVIO] ========================================');
-  console.log('[MELHOR_ENVIO] Etiqueta criada com sucesso!');
-  console.log('[MELHOR_ENVIO] Tracking:', finalTrackingCode);
-  console.log('[MELHOR_ENVIO] Tracking URL:', finalTrackingUrl);
-  console.log('[MELHOR_ENVIO] Label URL:', printResult.url);
-  console.log('[MELHOR_ENVIO] ========================================');
+  logger.info('[MELHOR_ENVIO] ========================================');
+  logger.info('[MELHOR_ENVIO] Etiqueta criada com sucesso!');
+  logger.info('[MELHOR_ENVIO] Tracking: %s', finalTrackingCode);
+  logger.info('[MELHOR_ENVIO] Tracking URL: %s', finalTrackingUrl);
+  logger.info('[MELHOR_ENVIO] Label URL: %s', printResult.url);
+  logger.info('[MELHOR_ENVIO] ========================================');
 
   return {
     success: true,

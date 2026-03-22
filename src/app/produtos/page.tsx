@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { SlidersHorizontal } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
+import logger from "@/lib/logger";
 
 // Helper to forward client logs to server for debugging in VSCode terminal
 async function sendServerLog(tag: string, payload: any) {
@@ -71,7 +72,7 @@ function ProductsContent() {
       }
       const response = await apiClient.get<{ products: ProductListItem[] }>(url);
       const arr = response.data.products ?? [];
-      console.log("[PLP] fetchProducts -> fetched", arr.length, "products", { categoria, url });
+      logger.debug({ count: arr.length, categoria, url }, "[PLP] fetchProducts -> fetched");
       sendServerLog("fetchProducts", { count: arr.length, categoria, url });
       setAllProducts(arr);
       // By default show all fetched products (user can apply filters)
@@ -92,11 +93,11 @@ function ProductsContent() {
       const voltsParam = searchParams?.get("voltages");
       if (brandsParam) {
         setSelectedBrands(brandsParam.split(","));
-        console.log("[PLP] init brands from URL", brandsParam.split(","));
+        logger.debug({ brands: brandsParam.split(",") }, "[PLP] init brands from URL");
       }
       if (voltsParam) {
         setSelectedVoltages(voltsParam.split(","));
-        console.log("[PLP] init voltages from URL", voltsParam.split(","));
+        logger.debug({ voltages: voltsParam.split(",") }, "[PLP] init voltages from URL");
       }
 
       // If URL already has filter params, apply them immediately (avoid showing full list after router.push)
@@ -145,11 +146,11 @@ function ProductsContent() {
           }
         });
 
-        console.log("[PLP] fetchProducts -> applied URL filters, resulting", sortedFromUrl.length);
+        logger.debug({ count: sortedFromUrl.length }, "[PLP] fetchProducts -> applied URL filters");
         setProducts(sortedFromUrl);
       }
     } catch (error) {
-      console.error("Erro ao carregar produtos:", error);
+      logger.error(error, "Erro ao carregar produtos");
     } finally {
       setIsLoading(false);
     }
@@ -164,7 +165,7 @@ function ProductsContent() {
   const toggleBrand = useCallback((brand: string) => {
     setSelectedBrands((prev) => {
       const next = prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand];
-      console.log("[PLP] toggleBrand ->", brand, { next });
+      logger.debug({ brand, next }, "[PLP] toggleBrand");
       sendServerLog("toggleBrand", { brand, next });
       return next;
     });
@@ -174,7 +175,7 @@ function ProductsContent() {
   const toggleVoltage = useCallback((vol: string) => {
     setSelectedVoltages((prev) => {
       const next = prev.includes(vol) ? prev.filter((v) => v !== vol) : [...prev, vol];
-      console.log("[PLP] toggleVoltage ->", vol, { next });
+      logger.debug({ vol, next }, "[PLP] toggleVoltage");
       sendServerLog("toggleVoltage", { vol, next });
       return next;
     });
@@ -198,7 +199,7 @@ function ProductsContent() {
     if (selectedBrands.length) params.set("brands", selectedBrands.join(","));
     if (selectedVoltages.length) params.set("voltages", selectedVoltages.join(","));
 
-    console.log("[PLP] applyFilters -> params", { min, max, selectedBrands, selectedVoltages, sortBy });
+    logger.debug({ min, max, selectedBrands, selectedVoltages, sortBy }, "[PLP] applyFilters -> params");
     sendServerLog("applyFiltersParams", { min, max, selectedBrands, selectedVoltages, sortBy });
 
     const paramString = params.toString();
@@ -227,7 +228,7 @@ function ProductsContent() {
       return true;
     });
 
-    console.log("[PLP] applyFilters -> filteredCount", filtered.length, "from", allProducts.length);
+    logger.debug({ filteredCount: filtered.length, total: allProducts.length }, "[PLP] applyFilters -> results");
     sendServerLog("applyFiltersFiltered", { count: filtered.length, from: allProducts.length });
 
     // Apply sorting to filtered results
@@ -248,11 +249,12 @@ function ProductsContent() {
       }
     });
 
-    console.log(
-      "[PLP] applyFilters -> sortedCount",
-      sorted.length,
-      "exampleIds",
-      sorted.slice(0, 5).map((p) => p.id)
+    logger.debug(
+      {
+        sortedCount: sorted.length,
+        exampleIds: sorted.slice(0, 5).map((p) => p.id),
+      },
+      "[PLP] applyFilters -> sortedCount"
     );
     sendServerLog("applyFiltersSorted", { count: sorted.length, exampleIds: sorted.slice(0, 5).map((p) => p.id) });
 
@@ -293,7 +295,7 @@ function ProductsContent() {
     setPriceRange([min, max]);
     // Also update tempRange normalized
     setTempRange([min, max]);
-    console.log("[PLP] commitTempRange ->", { min, max });
+    logger.debug({ min, max }, "[PLP] commitTempRange");
     sendServerLog("commitTempRange", { min, max });
   }, [tempRange]);
 
