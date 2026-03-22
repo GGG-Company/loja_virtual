@@ -67,6 +67,9 @@ export async function proxy(request: NextRequest) {
       '/api/payments/mercadopago/webhook',
       '/api/integrations/melhor-envio/authorize',
       '/api/integrations/melhor-envio/callback',
+      '/api/products',
+      '/api/categories',
+      '/api/site-config',
     ];
 
     if (publicApiRoutes.some(route => pathname.includes(route))) {
