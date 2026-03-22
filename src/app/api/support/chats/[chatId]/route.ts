@@ -180,16 +180,11 @@ export async function POST(
 // PATCH - Atualizar status do chat
 export async function PATCH(
   request: Request,
-  { params }: { params: { chatId: string } }
+  { params }: { params: Promise<{ chatId: string }> }
 ) {
   try {
+    const { chatId } = await params;
     const session = await auth();
-    
-    if (!session?.user || (session.user.role !== 'ADMIN' && session.user.role !== 'OWNER')) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
-
-    const { chatId } = params;
     const body = await request.json();
     const { status } = body;
 

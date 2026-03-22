@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import logger from '@/lib/logger';
 
 const UPLOAD_DIR = join(process.cwd(), 'public', 'uploads');
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB para vídeos
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
       filename,
     });
   } catch (error) {
-    logger.error('[UPLOAD_ERROR]', error);
+    logger.error(error as Error, '[UPLOAD_ERROR]');
     return NextResponse.json({ error: 'Erro ao fazer upload' }, { status: 500 });
   }
 }

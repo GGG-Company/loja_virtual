@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { Prisma } from '@prisma/client';
 import { listProducts, isExternalEnabled } from '@/lib/products-repository';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +27,7 @@ export async function GET(request: Request) {
       products,
     });
   } catch (error) {
-    logger.error('[PRODUCTS_GET]', error);
+    logger.error(error as Error, '[PRODUCTS_GET]');
     return NextResponse.json(
       { error: 'Erro ao buscar produtos' },
       { status: 500 }

@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { sendWebhook } from '@/lib/webhooks';
+import logger from '@/lib/logger';
 
 // Gerar número da devolução
 function formatReturnNumber(seq: number) {
@@ -70,7 +71,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, returns });
   } catch (error) {
-    logger.error('[RETURNS_LIST]', error);
+    logger.error(error as Error, '[RETURNS_LIST]');
     return NextResponse.json({ error: 'Erro ao listar devoluções' }, { status: 500 });
   }
 }
@@ -247,7 +248,7 @@ export async function POST(request: NextRequest) {
         createdAt: result.createdAt,
       });
     } catch (webhookError) {
-      logger.error('[RETURNS_WEBHOOK_ERROR]', webhookError);
+      logger.error(webhookError as Error, '[RETURNS_WEBHOOK_ERROR]');
       // Não falha a requisição se o webhook falhar
     }
 
@@ -258,7 +259,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
 
   } catch (error) {
-    logger.error('[RETURNS_CREATE]', error);
+    logger.error(error as Error, '[RETURNS_CREATE]');
     return NextResponse.json({ error: 'Erro ao criar devolução' }, { status: 500 });
   }
 }

@@ -23,24 +23,23 @@ export async function GET(request: Request, context: { params: Promise<{ chatId:
   const subscriber = new Redis(REDIS_URL);
   const channel = `support:chat:${chatId}`;
 
-  // Create a readable stream that will be used as the response body
-  const stream = new Readable({
-    read() {},
-  });
+  // Create a TransformStream to handle SSE
+  const { readable, writable } = new TransformStream();
+  const writer = writable.getWriter();
+  const encoder = new TextEncoder();
 
   // Send initial comment to keep connection open
-  stream.push(`: connected\n\n`);
+  writer.write(encoder.encode(`: connected\n\n`));
 
   const onMessage = (chan: string, message: string) => {
     try {
-      // write SSE event
-      stream.push(`event: message\n`);
-      // data must be sent line by line
+      let sseData = `event: message\n`;
       const lines = message.split('\n');
       for (const line of lines) {
-        stream.push(`data: ${line}\n`);
+        sseData += `data: ${line}\n`;
       }
-      stream.push('\n');
+      sseData += '\n';
+      writer.write(encoder.encode(sseData));
     } catch (e) {
       // ignore
     }
@@ -50,11 +49,11 @@ export async function GET(request: Request, context: { params: Promise<{ chatId:
     subscriber.on('message', onMessage as any);
   }).catch((err: any) => {
     console.error('[SSE SUBSCRIBE] error', err);
-    stream.push(`event: error\ndata: ${JSON.stringify({ error: 'subscribe_failed' })}\n\n`);
+    writer.write(encoder.encode(`event: error\ndata: ${JSON.stringify({ error: 'subscribe_failed' })}\n\n`));
   });
 
   // When client disconnects, cleanup subscriber
-  const res = new NextResponse(stream, {
+  const res = new NextResponse(readable, {
     status: 200,
     headers: {
       'Content-Type': 'text/event-stream',
@@ -63,15 +62,15 @@ export async function GET(request: Request, context: { params: Promise<{ chatId:
     },
   });
 
-  // hook into Node.js response close via symbolic header that Next will keep open
-  // Note: Next serverless environments may not support long-lived SSE.
-  (res as any).onClose = async () => {
+  // hook for cleanup
+  request.signal.addEventListener('abort', async () => {
     try {
       subscriber.off('message', onMessage as any);
       await subscriber.unsubscribe(channel);
       subscriber.disconnect();
+      writer.close();
     } catch (e) {}
-  };
+  });
 
   return res;
 }

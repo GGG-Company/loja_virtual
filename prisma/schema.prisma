@@ -35,7 +35,8 @@ model User {
   returns             Return[]
   reviews             Review[]
   sessions            Session[]
-  supportChats        SupportChat[]
+  supportChats        SupportChat[]  @relation("UserChats")
+  attendantChats      SupportChat[]  @relation("AttendantChats")
   conversations       Conversation[]
 
   @@index([email])
@@ -595,10 +596,13 @@ model SupportChat {
     userEmail   String?
     subject     String?
     status      SupportStatus    @default(OPEN)
+    assignedTo  String?          // Atendente atribuído
+    closedAt    DateTime?        // Data de encerramento
     createdAt   DateTime         @default(now())
     updatedAt   DateTime         @updatedAt
     messages    SupportMessage[]
-    user        User?            @relation(fields: [userId], references: [id])
+    user        User?            @relation("UserChats", fields: [userId], references: [id])
+    attendant   User?            @relation("AttendantChats", fields: [assignedTo], references: [id])
 
     @@map("support_chats")
 }
