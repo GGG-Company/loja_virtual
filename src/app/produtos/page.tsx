@@ -10,20 +10,22 @@ import { SkeletonCard } from "@/components/skeleton-card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal, Search, PackageSearch } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
+import { Breadcrumb } from "@/components/breadcrumb";
 import logger from "@/lib/logger";
 
 // Helper to forward client logs to server for debugging in VSCode terminal
-async function sendServerLog(tag: string, payload: any) {
+// Only active in development — no-op in production to avoid unnecessary requests
+async function sendServerLog(tag: string, payload: unknown) {
+  if (process.env.NODE_ENV !== 'development') return;
   try {
-    // fire-and-forget, don't await to avoid blocking UI
     fetch("/api/dev/log", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ tag, payload, ts: new Date().toISOString() }),
     }).catch(() => {});
-  } catch (e) {
+  } catch {
     // ignore
   }
 }
@@ -40,7 +42,7 @@ type ProductListItem = {
     name?: string;
     slug?: string;
   };
-  specs?: any;
+  specs?: Record<string, unknown>;
   createdAt?: string;
 };
 
@@ -53,7 +55,12 @@ function ProductsContent() {
   const [showFilters, setShowFilters] = useState(false);
   const [priceRange, setPriceRange] = useState([0, 5000]);
   const [tempRange, setTempRange] = useState<number[]>([0, 5000]);
-  const [sortBy, setSortBy] = useState("recent");
+  const [sortBy, setSortBy] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('plp-sort') || 'recent';
+    }
+    return 'recent';
+  });
 
   // Controlled filter states
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
@@ -265,6 +272,7 @@ function ProductsContent() {
   const handleSortChange = useCallback(
     (value: string) => {
       setSortBy(value);
+      sessionStorage.setItem('plp-sort', value);
       const sorted = [...products].sort((a, b) => {
         const priceA = a.promotionalPrice ?? a.price ?? 0;
         const priceB = b.promotionalPrice ?? b.price ?? 0;
@@ -302,23 +310,38 @@ function ProductsContent() {
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-metallic-50">
-        {/* Hero */}
-        <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white py-16">
-          <div className="container mx-auto px-4">
-            <h1 className="text-4xl font-bold mb-4">Nossos Produtos</h1>
-            <p className="text-lg text-primary-100">Encontre as melhores ferramentas profissionais</p>
+      <main className="min-h-screen bg-gray-50">
+        {/* Hero — Dark Industrial */}
+        <div className="relative bg-[#1A1A1A] text-white py-8 lg:py-14 overflow-hidden">
+          <div
+            className="absolute inset-0 opacity-[0.04] pointer-events-none"
+            style={{
+              backgroundImage: `repeating-linear-gradient(-55deg, #CC1020 0px, #CC1020 2px, transparent 2px, transparent 28px)`,
+            }}
+          />
+          <div className="absolute top-0 left-0 right-0 h-1 bg-[#CC1020]" />
+          <div className="container mx-auto px-4 relative z-10">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-1 h-8 bg-[#CC1020] rounded-full" />
+              <p className="text-xs font-display font-bold text-[#CC1020] tracking-widest uppercase">Catálogo</p>
+            </div>
+            <h1 className="font-display text-4xl font-bold uppercase mb-1">Nossos Produtos</h1>
+            <p className="text-gray-300 font-body">Encontre as melhores ferramentas profissionais</p>
           </div>
         </div>
 
         <div className="container mx-auto px-4 py-8">
+          <Breadcrumb
+            items={[{ label: 'Produtos', href: '/produtos' }]}
+            className="mb-6"
+          />
           <div className="grid lg:grid-cols-4 gap-6">
             {/* Filters Sidebar */}
             <div className={`lg:col-span-1 ${showFilters ? "block" : "hidden lg:block"}`}>
-              <div className="bg-white rounded-lg shadow-md p-6 space-y-6 sticky top-24">
+              <div className="bg-white rounded-sm shadow-md border-t-4 border-[#CC1020] p-6 space-y-6 sticky top-24">
                 <div className="flex justify-between items-center">
-                  <h2 className="text-xl font-bold text-metallic-900">Filtros</h2>
-                  <button onClick={() => setShowFilters(false)} className="lg:hidden text-metallic-600">
+                  <h2 className="font-display text-lg font-bold text-[#1A1A1A] uppercase tracking-wide">Filtros</h2>
+                  <button onClick={() => setShowFilters(false)} aria-label="Fechar filtros" className="lg:hidden text-metallic-600">
                     ✕
                   </button>
                 </div>
@@ -339,7 +362,7 @@ function ProductsContent() {
                   <div className="space-y-2">
                     {["Makita", "Bosch", "DeWalt", "Black+Decker", "Tramontina"].map((brand) => (
                       <label key={brand} className="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" className="rounded border-metallic-300" checked={selectedBrands.includes(brand)} onChange={() => toggleBrand(brand)} />
+                        <input type="checkbox" className="rounded border-gray-300 accent-[#CC1020]" checked={selectedBrands.includes(brand)} onChange={() => toggleBrand(brand)} />
                         <span className="text-sm text-metallic-700">{brand}</span>
                       </label>
                     ))}
@@ -352,7 +375,7 @@ function ProductsContent() {
                   <div className="space-y-2">
                     {["110V", "220V", "Bivolt", "Bateria"].map((voltage) => (
                       <label key={voltage} className="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" className="rounded border-metallic-300" checked={selectedVoltages.includes(voltage)} onChange={() => toggleVoltage(voltage)} />
+                        <input type="checkbox" className="rounded border-gray-300 accent-[#CC1020]" checked={selectedVoltages.includes(voltage)} onChange={() => toggleVoltage(voltage)} />
                         <span className="text-sm text-metallic-700">{voltage}</span>
                       </label>
                     ))}
@@ -406,8 +429,32 @@ function ProductsContent() {
                     </motion.div>
                   ))
                 ) : (
-                  <div className="col-span-full text-center py-12">
-                    <p className="text-metallic-600 text-lg">Nenhum produto encontrado</p>
+                  <div className="col-span-full text-center py-16">
+                    <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <PackageSearch className="h-10 w-10 text-gray-400" />
+                    </div>
+                    <p className="font-display text-lg font-bold text-[#1A1A1A] uppercase mb-1">
+                      Nenhum produto encontrado
+                    </p>
+                    {searchParams?.get('busca') ? (
+                      <>
+                        <p className="text-sm text-gray-500 mb-6">
+                          Nenhum resultado para &quot;{searchParams.get('busca')}&quot;. Tente outro termo ou remova os filtros.
+                        </p>
+                        <Button variant="outline" onClick={() => router.push('/produtos')}>
+                          Ver todos os produtos
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm text-gray-500 mb-6">
+                          Tente ajustar os filtros ou explore outras categorias.
+                        </p>
+                        <Button variant="outline" onClick={() => router.push('/produtos')}>
+                          Limpar filtros
+                        </Button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -422,7 +469,7 @@ function ProductsContent() {
 
 export default function ProductsPage() {
   return (
-    <Suspense fallback={<div>Carregando produtos...</div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#CC1020]" /></div>}>
       <ProductsContent />
     </Suspense>
   );

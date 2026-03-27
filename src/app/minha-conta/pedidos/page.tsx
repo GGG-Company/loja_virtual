@@ -74,7 +74,7 @@ export default function MeusPedidosPage() {
     return (
       <>
         <Header />
-        <div className="min-h-screen flex items-center justify-center bg-metallic-50">
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
         </div>
         <Footer />
@@ -85,7 +85,7 @@ export default function MeusPedidosPage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-metallic-50 py-12">
+      <main className="min-h-screen bg-gray-50 py-12">
         <div className="container mx-auto px-4 max-w-6xl">
           <motion.div
             initial={{ opacity: 0, y: -20 }}

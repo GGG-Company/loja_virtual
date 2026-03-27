@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -r \"primary-500\\\\|primary-600\\\\|primary-400\\\\|primary-300\" C:UsersKauanDesktoploja_virtualsrc --include=*.tsx --include=*.ts)",
+      "Bash(grep -r \"bg-primary\\\\|text-primary\\\\|border-primary\\\\|ring-primary\\\\|hover:bg-primary\\\\|focus:ring-primary\" C:UsersKauanDesktoploja_virtualsrc --include=*.tsx --include=*.ts)",
+      "Bash(xargs grep:*)",
+      "Bash(grep -rn \"primary-600\\\\|primary-500\\\\|primary-400\\\\|primary-300\" C:/Users/Kauan/Desktop/loja_virtual/src --include=*.tsx --include=*.ts)",
+      "Bash(grep -rn \"bg-primary\\\\|text-primary\\\\|border-primary\\\\|ring-primary\" C:/Users/Kauan/Desktop/loja_virtual/src --include=*.tsx --include=*.ts)",
+      "Bash(grep -rn \"hover:bg-primary\\\\|focus:ring-primary\\\\|primary-foreground\\\\|primary-100\\\\|primary-700\" C:/Users/Kauan/Desktop/loja_virtual/src --include=*.tsx --include=*.ts)",
+      "Bash(npx tsc:*)",
+      "Bash(echo \"EXIT:$?\")"
+    ]
+  }
+}

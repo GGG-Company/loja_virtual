@@ -11,18 +11,24 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Industrial Modern Theme (Laranja/Cinza/Metálico)
+        // Feira das Ferramentas — Brand Identity (Vermelho/Preto/Branco)
         primary: {
-          50: '#fff7ed',
-          100: '#ffedd5',
-          200: '#fed7aa',
-          300: '#fdba74',
-          400: '#fb923c',
-          500: '#f97316', // Orange principal
-          600: '#ea580c',
-          700: '#c2410c',
-          800: '#9a3412',
-          900: '#7c2d12',
+          50: '#fff5f5',
+          100: '#ffe0e0',
+          200: '#ffc2c2',
+          300: '#ff9494',
+          400: '#f85555',
+          500: '#e01020', // Vermelho principal da marca
+          600: '#cc0a1a',
+          700: '#a80816',
+          800: '#890610',
+          900: '#6b040c',
+        },
+        brand: {
+          red: '#CC1020',
+          black: '#1A1A1A',
+          white: '#FFFFFF',
+          dark: '#111111',
         },
         metallic: {
           50: '#f8fafc',
@@ -62,6 +68,10 @@ const config: Config = {
           foreground: 'hsl(var(--card-foreground))',
         },
       },
+      fontFamily: {
+        display: ['var(--font-barlow-condensed)', 'Barlow Condensed', 'sans-serif'],
+        body: ['var(--font-barlow)', 'Barlow', 'sans-serif'],
+      },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
@@ -80,11 +90,21 @@ const config: Config = {
           '0%': { backgroundPosition: '-1000px 0' },
           '100%': { backgroundPosition: '1000px 0' },
         },
+        'slide-in-left': {
+          '0%': { transform: 'translateX(-100%)', opacity: '0' },
+          '100%': { transform: 'translateX(0)', opacity: '1' },
+        },
+        'brand-pulse': {
+          '0%, 100%': { boxShadow: '0 0 0 0 rgba(204, 16, 32, 0.4)' },
+          '50%': { boxShadow: '0 0 0 8px rgba(204, 16, 32, 0)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         shimmer: 'shimmer 2s infinite linear',
+        'slide-in-left': 'slide-in-left 0.4s ease-out',
+        'brand-pulse': 'brand-pulse 2s infinite',
       },
     },
   },

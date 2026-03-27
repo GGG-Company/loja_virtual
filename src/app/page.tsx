@@ -1,6 +1,7 @@
 import { HeroSection } from '@/components/hero-section';
 import { FeaturedProducts } from '@/components/featured-products';
 import { CategoriesGrid } from '@/components/categories-grid';
+import { CasaSection } from '@/components/casa-section';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 
@@ -12,6 +13,7 @@ export default function HomePage() {
         <HeroSection />
         <CategoriesGrid />
         <FeaturedProducts />
+        <CasaSection />
       </main>
       <Footer />
     </>

@@ -11,6 +11,7 @@ import { CheckCircle, Package, Eye, Home } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import Confetti from 'react-confetti';
+import { CheckoutProgress } from '@/components/checkout-progress';
 
 function ConfirmacaoContent() {
   const router = useRouter();
@@ -62,7 +63,7 @@ function ConfirmacaoContent() {
     return (
       <>
         <Header />
-        <div className="min-h-screen flex items-center justify-center bg-metallic-50">
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
         </div>
         <Footer />
@@ -81,8 +82,9 @@ function ConfirmacaoContent() {
           numberOfPieces={500}
         />
       )}
-      <main className="min-h-screen bg-gradient-to-br from-green-50 via-white to-primary-50 py-12 flex items-center justify-center">
+      <main className="min-h-screen bg-gray-50 py-12">
         <div className="container mx-auto px-4 max-w-2xl">
+          <CheckoutProgress currentStep={4} />
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -213,7 +215,7 @@ export default function CheckoutConfirmacaoPage() {
     <Suspense fallback={
       <>
         <Header />
-        <div className="min-h-screen flex items-center justify-center bg-metallic-50">
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
         </div>
         <Footer />

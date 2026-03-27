@@ -197,7 +197,7 @@ export default function PagamentoPage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-metallic-50 py-8">
+      <main className="min-h-screen bg-gray-50 py-8">
         <div className="container mx-auto px-4 max-w-2xl">
           <button onClick={() => router.back()} className="flex items-center text-metallic-600 hover:text-metallic-900 mb-6">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -224,7 +224,7 @@ export default function PagamentoPage() {
             </div>
 
             {/* Resumo do Pedido */}
-            <div className="bg-metallic-50 p-4 rounded-lg">
+            <div className="bg-gray-50 p-4 rounded-lg">
               <div className="flex justify-between items-center">
                 <span className="text-lg font-semibold text-metallic-900">Total a Pagar:</span>
                 <span className="text-2xl font-bold text-primary-600">R$ {order.total.toFixed(2)}</span>
@@ -268,7 +268,7 @@ export default function PagamentoPage() {
                   ) : (
                     <div className="w-full h-48 flex items-center justify-center border-2 border-dashed rounded-lg text-metallic-500">QR Code do gateway PIX</div>
                   )}
-                  <div className="mt-3 bg-metallic-50 border border-metallic-200 rounded-lg p-3">
+                  <div className="mt-3 bg-gray-50 border border-metallic-200 rounded-lg p-3">
                     <p className="font-mono text-xs break-all text-metallic-900">{pixCode || "Código PIX não disponível"}</p>
                   </div>
                   <div className="mt-2">

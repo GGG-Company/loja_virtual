@@ -59,25 +59,25 @@ export default function AdminDashboard() {
       label: 'Produtos Cadastrados',
       value: stats?.totalProducts || 0,
       icon: Package,
-      color: 'from-blue-500 to-blue-600',
-      bgColor: 'bg-blue-50',
-      textColor: 'text-blue-700',
+      color: 'from-[#CC1020] to-[#a80816]',
+      bgColor: 'bg-red-50',
+      textColor: 'text-[#CC1020]',
     },
     {
       label: 'Pedidos Total',
       value: stats?.totalOrders || 0,
       icon: ShoppingCart,
-      color: 'from-green-500 to-green-600',
-      bgColor: 'bg-green-50',
-      textColor: 'text-green-700',
+      color: 'from-[#1A1A1A] to-[#333333]',
+      bgColor: 'bg-gray-100',
+      textColor: 'text-[#1A1A1A]',
     },
     {
       label: 'Pedidos Pendentes',
       value: stats?.pendingOrders || 0,
       icon: Clock,
-      color: 'from-yellow-500 to-yellow-600',
-      bgColor: 'bg-yellow-50',
-      textColor: 'text-yellow-700',
+      color: 'from-amber-500 to-amber-600',
+      bgColor: 'bg-amber-50',
+      textColor: 'text-amber-700',
     },
     {
       label: 'Faturamento',
@@ -86,9 +86,9 @@ export default function AdminDashboard() {
         currency: 'BRL',
       }).format(stats?.totalRevenue || 0),
       icon: DollarSign,
-      color: 'from-primary-500 to-primary-600',
-      bgColor: 'bg-primary-50',
-      textColor: 'text-primary-700',
+      color: 'from-[#CC1020] to-[#a80816]',
+      bgColor: 'bg-red-50',
+      textColor: 'text-[#CC1020]',
     },
   ];
 
@@ -96,12 +96,15 @@ export default function AdminDashboard() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-4xl font-bold text-metallic-900">
-          Dashboard Administrativo
-        </h1>
-        <p className="text-metallic-600 mt-2 text-lg">
-          Bem-vindo, <span className="font-semibold">{session?.user?.name}</span> 
-          <span className="ml-2 px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-medium">
+        <div className="flex items-center gap-3 mb-1">
+          <div className="w-1 h-10 bg-[#CC1020] rounded-full" />
+          <h1 className="font-display text-4xl font-bold text-[#1A1A1A] uppercase">
+            Dashboard
+          </h1>
+        </div>
+        <p className="text-gray-500 mt-1 font-body ml-4">
+          Bem-vindo, <span className="font-semibold text-[#1A1A1A]">{session?.user?.name}</span>
+          <span className="ml-2 px-3 py-1 bg-red-50 text-[#CC1020] rounded-sm text-sm font-bold font-display">
             {(session?.user as { role?: string } | null)?.role}
           </span>
         </p>
@@ -154,7 +157,7 @@ export default function AdminDashboard() {
               stats.recentOrders.map((order) => (
                 <div
                   key={order.id}
-                  className="flex justify-between items-center p-4 bg-metallic-50 rounded-lg hover:bg-metallic-100 transition-colors"
+                  className="flex justify-between items-center p-4 bg-gray-50 rounded-sm hover:bg-gray-100 transition-colors"
                 >
                   <div>
                     <p className="font-semibold text-metallic-900">

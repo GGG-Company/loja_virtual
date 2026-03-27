@@ -16,6 +16,7 @@ import Image from "next/image";
 // Não exigimos sessão para adicionar ao carrinho — usamos cache local
 import Script from "next/script";
 import { ProductReviews } from "@/components/product-reviews";
+import { Breadcrumb } from "@/components/breadcrumb";
 
 type ProductVariant = {
   id: string;
@@ -153,7 +154,7 @@ function ProductDetailContent() {
         <Script
           id="product-structured-data"
           type="application/ld+json"
-          strategy="afterInteractive"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org/",
@@ -165,7 +166,7 @@ function ProductDetailContent() {
               gtin13: product.ean,
               productID: product.id,
               category: product.category?.name,
-              brand: "Shopping das Ferramentas",
+              brand: "Feira das Ferramentas",
               offers: {
                 "@type": "Offer",
                 priceCurrency: "BRL",
@@ -180,10 +181,22 @@ function ProductDetailContent() {
       {!searchParams.get("embed") && <Header />}
       <main className="min-h-screen bg-white py-12">
         <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-12">
+          {!searchParams.get("embed") && (
+            <Breadcrumb
+              className="mb-6"
+              items={[
+                { label: 'Produtos', href: '/produtos' },
+                ...(product.category?.name
+                  ? [{ label: product.category.name, href: `/produtos?categoria=${encodeURIComponent(product.category.name)}` }]
+                  : []),
+                { label: product.name },
+              ]}
+            />
+          )}
+          <div className="grid lg:grid-cols-2 gap-6 lg:gap-12">
             {/* Image Gallery */}
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
-              <div className="aspect-square bg-metallic-100 rounded-2xl flex items-center justify-center overflow-hidden relative">{product.imageUrl || product.images?.[0]?.url ? <Image src={product.imageUrl || product.images?.[0]?.url || ""} alt={product.name} fill className="object-contain" sizes="(min-width: 1024px) 50vw, 100vw" priority /> : <p className="text-6xl">🔨</p>}</div>
+              <div className="aspect-square bg-gray-100 rounded-sm border border-gray-200 flex items-center justify-center overflow-hidden relative">{product.imageUrl || product.images?.[0]?.url ? <Image src={product.imageUrl || product.images?.[0]?.url || ""} alt={product.name} fill className="object-contain" sizes="(min-width: 1024px) 50vw, 100vw" priority /> : <p className="text-6xl">🔨</p>}</div>
             </motion.div>
 
             {/* Product Info - Buy Box */}
@@ -192,7 +205,7 @@ function ProductDetailContent() {
               <div className="text-sm text-primary-600 font-semibold">{product.category?.name}</div>
 
               {/* Title */}
-              <h1 className="text-4xl font-bold text-metallic-900">{product.name}</h1>
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-metallic-900">{product.name}</h1>
 
               {/* Rating */}
               <div className="flex items-center gap-2">
@@ -207,7 +220,7 @@ function ProductDetailContent() {
               {/* Price */}
               <div className="border-t border-b border-metallic-200 py-6 space-y-2">
                 {product.compareAtPrice && <p className="text-sm text-metallic-600 line-through">De R$ {product.compareAtPrice.toFixed(2)}</p>}
-                <p className="text-4xl font-bold text-primary-600">R$ {displayPrice.toFixed(2)}</p>
+                <p className="text-3xl lg:text-4xl font-bold text-primary-600">R$ {displayPrice.toFixed(2)}</p>
                 {bestInstallment && (
                   <p className="text-sm text-metallic-600">
                     ou {bestInstallment.installments}x de R$ {bestInstallment.installmentValue.toFixed(2)}
@@ -219,9 +232,9 @@ function ProductDetailContent() {
               {product.variants && product.variants.length > 0 && (
                 <div className="space-y-3">
                   <Label>Voltagem*</Label>
-                  <div className="flex gap-3">
+                  <div className="flex flex-wrap gap-3">
                     {product.variants.map((variant) => (
-                      <button key={variant.id} onClick={() => setSelectedVoltage(variant.name)} className={`px-6 py-3 rounded-lg border-2 font-semibold transition-all ${selectedVoltage === variant.name ? "border-primary-600 bg-primary-50 text-primary-700" : "border-metallic-300 hover:border-metallic-400"}`}>
+                      <button key={variant.id} onClick={() => setSelectedVoltage(variant.name)} className={`min-h-[44px] px-6 py-2 rounded-sm border-2 font-semibold transition-all ${selectedVoltage === variant.name ? "border-[#CC1020] bg-red-50 text-[#CC1020]" : "border-gray-300 hover:border-gray-400"}`}>
                         {variant.name}
                       </button>
                     ))}
@@ -233,11 +246,11 @@ function ProductDetailContent() {
               <div className="space-y-3">
                 <Label>Quantidade</Label>
                 <div className="flex items-center gap-3">
-                  <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="px-4 py-2 border border-metallic-300 rounded-lg hover:bg-metallic-50">
-                    -
+                  <button onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="Diminuir quantidade" className="min-w-[44px] min-h-[44px] px-4 py-2 border border-gray-200 rounded-sm hover:bg-gray-50 text-lg font-bold">
+                    −
                   </button>
-                  <span className="px-6 py-2 border border-metallic-300 rounded-lg font-semibold">{quantity}</span>
-                  <button onClick={() => setQuantity(quantity + 1)} className="px-4 py-2 border border-metallic-300 rounded-lg hover:bg-metallic-50">
+                  <span className="px-6 py-2 border border-gray-200 rounded-sm font-semibold text-lg min-w-[56px] text-center" aria-live="polite" aria-label={`Quantidade: ${quantity}`}>{quantity}</span>
+                  <button onClick={() => setQuantity(quantity + 1)} aria-label="Aumentar quantidade" className="min-w-[44px] min-h-[44px] px-4 py-2 border border-gray-200 rounded-sm hover:bg-gray-50 text-lg font-bold">
                     +
                   </button>
                 </div>
@@ -249,7 +262,7 @@ function ProductDetailContent() {
                   <ShoppingCart className="mr-2 h-5 w-5" />
                   Adicionar ao Carrinho
                 </Button>
-                <Button size="lg" variant="outline" className="h-14 px-6">
+                <Button size="lg" variant="outline" className="h-14 px-6" aria-label="Adicionar aos favoritos">
                   <Heart className="h-5 w-5" />
                 </Button>
               </div>
@@ -276,7 +289,7 @@ function ProductDetailContent() {
           </div>
 
           {/* Description & Specs */}
-          <div className="mt-16 grid lg:grid-cols-2 gap-12">
+          <div className="mt-8 lg:mt-16 grid lg:grid-cols-2 gap-6 lg:gap-12">
             <div>
               <h2 className="text-2xl font-bold text-metallic-900 mb-4">Descrição</h2>
               <p className="text-metallic-700 leading-relaxed">{product.description}</p>
@@ -285,11 +298,11 @@ function ProductDetailContent() {
             {product.specs && (
               <div>
                 <h2 className="text-2xl font-bold text-metallic-900 mb-4">Especificações Técnicas</h2>
-                <div className="bg-metallic-50 rounded-lg p-6 space-y-3">
+                <div className="bg-gray-50 rounded-sm p-6 space-y-3 border border-gray-100">
                   {Object.entries(product.specs).map(([key, value]) => (
-                    <div key={key} className="flex justify-between border-b border-metallic-200 pb-2">
-                      <span className="font-semibold text-metallic-700">{key}:</span>
-                      <span className="text-metallic-600">{String(value)}</span>
+                    <div key={key} className="flex justify-between gap-4 border-b border-metallic-200 pb-2">
+                      <span className="font-semibold text-metallic-700 shrink-0">{key}:</span>
+                      <span className="text-metallic-600 text-right min-w-0 break-words">{String(value)}</span>
                     </div>
                   ))}
                 </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import logger from "@/lib/logger";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { apiClient } from '@/lib/api-client';
 
 interface FinancialConfig {
@@ -17,105 +17,102 @@ interface InstallmentOption {
   interestFree: boolean;
 }
 
+// ── Module-level singleton cache ───────────────────────────────────────────
+// Shared across all usePrice() calls — only one API request per page load.
+let configCache: FinancialConfig | null = null;
+let configPromise: Promise<FinancialConfig> | null = null;
+
+const DEFAULT_CONFIG: FinancialConfig = {
+  creditCardInterestRate: 1.99,
+  maxInstallments: 12,
+  minInstallmentValue: 50,
+};
+
+async function fetchConfig(): Promise<FinancialConfig> {
+  if (configCache) return configCache;
+  if (!configPromise) {
+    configPromise = apiClient
+      .get<FinancialConfig>('/api/financial/config')
+      .then((r) => {
+        configCache = r.data;
+        return r.data;
+      })
+      .catch((err) => {
+        logger.error(err, 'Erro ao carregar configuração financeira — usando fallback');
+        configCache = DEFAULT_CONFIG;
+        return DEFAULT_CONFIG;
+      });
+  }
+  return configPromise;
+}
+
 /**
- * Hook personalizado para cálculo de preços com parcelamento
- * 
- * Features:
- * - Lê configuração financeira do backend
- * - Calcula parcelas com juros
- * - Exibe opções de parcelamento formatadas
- * 
- * Uso:
- * ```tsx
- * const { installmentOptions, formatPrice } = usePrice(product.price);
- * ```
+ * Hook para cálculo de preços e parcelamento.
+ *
+ * A configuração financeira é buscada UMA única vez por sessão de página
+ * (cache em memória de módulo) e compartilhada entre todos os cards de produto.
  */
 export function usePrice(basePrice: number) {
-  const [config, setConfig] = useState<FinancialConfig | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [config, setConfig] = useState<FinancialConfig | null>(configCache);
+  const [loading, setLoading] = useState(!configCache);
 
   useEffect(() => {
-    fetchFinancialConfig();
+    if (configCache) {
+      setConfig(configCache);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    fetchConfig().then((cfg) => {
+      if (!cancelled) {
+        setConfig(cfg);
+        setLoading(false);
+      }
+    });
+    return () => { cancelled = true; };
   }, []);
 
-  const fetchFinancialConfig = async () => {
-    try {
-      const { data } = await apiClient.get('/api/financial/config');
-      setConfig(data);
-    } catch (error) {
-      logger.error(error, 'Erro ao carregar configuração financeira');
-      // Fallback
-      setConfig({
-        creditCardInterestRate: 1.99,
-        maxInstallments: 12,
-        minInstallmentValue: 50,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const calculateInstallments = (): InstallmentOption[] => {
+  const installmentOptions = useMemo((): InstallmentOption[] => {
     if (!config) return [];
-
-    const options: InstallmentOption[] = [];
-    const monthlyRate = config.creditCardInterestRate / 100;
+    const opts: InstallmentOption[] = [];
+    const rate = config.creditCardInterestRate / 100;
 
     for (let i = 1; i <= config.maxInstallments; i++) {
       let total = basePrice;
       let installmentValue = basePrice / i;
 
-      // Aplicar juros a partir de 3x (exemplo de regra)
       if (i >= 3) {
-        // Fórmula de juros compostos: M = C * (1 + i)^n
-        total = basePrice * Math.pow(1 + monthlyRate, i);
+        total = basePrice * Math.pow(1 + rate, i);
         installmentValue = total / i;
       }
 
-      // Verificar se parcela é >= valor mínimo
-      if (installmentValue < config.minInstallmentValue) {
-        break;
-      }
+      if (installmentValue < config.minInstallmentValue) break;
 
-      options.push({
-        installments: i,
-        installmentValue,
-        total,
-        interestFree: i < 3,
-      });
+      opts.push({ installments: i, installmentValue, total, interestFree: i < 3 });
     }
+    return opts;
+  }, [config, basePrice]);
 
-    return options;
-  };
+  const formatPrice = (value: number): string =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
-  const formatPrice = (value: number): string => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
+  const bestInstallment = useMemo(
+    () => (installmentOptions.length > 0 ? installmentOptions[installmentOptions.length - 1] : null),
+    [installmentOptions]
+  );
 
   const bestInstallmentText = (): string => {
-    const options = calculateInstallments();
-    if (options.length === 0) return '';
-
-    const best = options[options.length - 1];
-    return `${best.installments}x de ${formatPrice(best.installmentValue)} ${
-      best.interestFree ? 'sem juros' : 'com juros'
+    if (!bestInstallment) return '';
+    return `${bestInstallment.installments}x de ${formatPrice(bestInstallment.installmentValue)} ${
+      bestInstallment.interestFree ? 'sem juros' : 'com juros'
     }`;
   };
 
-  const bestInstallment = (): InstallmentOption | null => {
-    const options = calculateInstallments();
-    if (options.length === 0) return null;
-    return options[options.length - 1];
-  };
-
   return {
-    installmentOptions: calculateInstallments(),
+    installmentOptions,
     formatPrice,
     bestInstallmentText,
-    bestInstallment: bestInstallment(),
+    bestInstallment,
     loading,
     config,
   };

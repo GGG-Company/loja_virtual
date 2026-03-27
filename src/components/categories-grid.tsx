@@ -2,36 +2,43 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { Drill, Wrench, Hammer, Shield } from 'lucide-react';
+import { Drill, Wrench, Hammer, Shield, Home } from 'lucide-react';
 
 const categories = [
   {
     name: 'Ferramentas Elétricas',
     icon: Drill,
     slug: 'ferramentas-eletricas',
-    color: 'from-primary-500 to-primary-600',
-    count: 45,
+    bg: '#CC1020',
+    accent: '#a80816',
   },
   {
     name: 'Ferramentas Manuais',
     icon: Wrench,
     slug: 'ferramentas-manuais',
-    color: 'from-metallic-600 to-metallic-700',
-    count: 38,
+    bg: '#1A1A1A',
+    accent: '#333333',
   },
   {
     name: 'Jardinagem',
     icon: Hammer,
     slug: 'jardinagem',
-    color: 'from-green-500 to-green-600',
-    count: 22,
+    bg: '#2d5a27',
+    accent: '#1e3d1a',
+  },
+  {
+    name: 'Casa',
+    icon: Home,
+    slug: 'casa',
+    bg: '#7c4d1e',
+    accent: '#5a3614',
   },
   {
     name: 'EPIs',
     icon: Shield,
     slug: 'epis',
-    color: 'from-orange-500 to-orange-600',
-    count: 31,
+    bg: '#1a3a5c',
+    accent: '#102540',
   },
 ];
 
@@ -39,32 +46,36 @@ const container = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-    },
+    transition: { staggerChildren: 0.08 },
   },
 };
 
 const item = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0 },
+  hidden: { opacity: 0, y: 24 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.4 } },
 };
 
 export function CategoriesGrid() {
   return (
-    <section className="py-16 bg-metallic-50">
+    <section className="py-10 lg:py-16 bg-gray-50">
       <div className="container mx-auto px-4">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="text-center mb-12"
+          className="mb-12"
         >
-          <h2 className="text-4xl font-bold text-metallic-900 mb-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-1 h-8 bg-[#CC1020] rounded-full" />
+            <p className="text-xs font-display font-bold text-[#CC1020] tracking-widest uppercase">
+              Categorias
+            </p>
+          </div>
+          <h2 className="font-display text-4xl lg:text-5xl font-bold text-[#1A1A1A] uppercase">
             Navegue por Categoria
           </h2>
-          <p className="text-metallic-600 text-lg">
+          <p className="text-gray-500 mt-2 font-body">
             Encontre exatamente o que você precisa
           </p>
         </motion.div>
@@ -74,7 +85,7 @@ export function CategoriesGrid() {
           initial="hidden"
           whileInView="show"
           viewport={{ once: true }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-6"
+          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4"
         >
           {categories.map((category) => {
             const Icon = category.icon;
@@ -85,40 +96,61 @@ export function CategoriesGrid() {
                   className="block group"
                 >
                   <motion.div
-                    whileHover={{ scale: 1.05, rotate: 1 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="relative overflow-hidden rounded-2xl bg-white shadow-lg hover:shadow-2xl transition-all duration-300 h-48"
+                    whileHover={{ y: -6 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="relative overflow-hidden rounded-sm h-36 sm:h-44 lg:h-48 shadow-md hover:shadow-xl transition-shadow duration-300"
+                    style={{ background: category.bg }}
                   >
+                    {/* Diagonal stripe overlay */}
                     <div
-                      className={`absolute inset-0 bg-gradient-to-br ${category.color} opacity-90 group-hover:opacity-100 transition-opacity`}
+                      className="absolute inset-0 opacity-10"
+                      style={{
+                        backgroundImage: `repeating-linear-gradient(
+                          -45deg,
+                          rgba(255,255,255,0.15) 0px,
+                          rgba(255,255,255,0.15) 1px,
+                          transparent 1px,
+                          transparent 12px
+                        )`,
+                      }}
                     />
 
-                    <div className="relative h-full flex flex-col items-center justify-center text-white p-6">
-                      <motion.div
-                        whileHover={{ scale: 1.2, rotate: 360 }}
-                        transition={{ duration: 0.6 }}
-                      >
-                        <Icon className="h-16 w-16 mb-4" />
-                      </motion.div>
-                      <h3 className="text-xl font-bold text-center mb-2">
-                        {category.name}
-                      </h3>
-                      <motion.p
-                        initial={{ opacity: 0 }}
-                        whileHover={{ opacity: 1 }}
-                        className="text-sm text-white/90"
-                      >
-                        {category.count} produtos
-                      </motion.p>
-                    </div>
-
-                    {/* Efeito de brilho no hover */}
+                    {/* Hover accent */}
                     <motion.div
-                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                      className="absolute inset-0"
+                      style={{ background: category.accent }}
+                      initial={{ opacity: 0 }}
+                      whileHover={{ opacity: 0.6 }}
+                      transition={{ duration: 0.2 }}
+                    />
+
+                    {/* Sheen sweep on hover */}
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent"
                       initial={{ x: '-100%' }}
                       whileHover={{ x: '100%' }}
-                      transition={{ duration: 0.6 }}
+                      transition={{ duration: 0.5 }}
                     />
+
+                    {/* Content */}
+                    <div className="relative h-full flex flex-col items-center justify-center text-white p-5">
+                      <div className="w-14 h-14 rounded-sm bg-white/15 flex items-center justify-center mb-4 group-hover:bg-white/25 transition-colors">
+                        <Icon className="h-8 w-8" />
+                      </div>
+                      <h3 className="font-display font-bold text-sm sm:text-base lg:text-lg text-center uppercase leading-tight">
+                        {category.name}
+                      </h3>
+                      <div className="mt-2 sm:mt-3 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        <span className="text-[10px] sm:text-xs font-bold tracking-widest uppercase border border-white/50 px-2 sm:px-3 py-1 rounded-sm">
+                          Ver tudo →
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Bottom red accent for first category */}
+                    {category.slug === 'ferramentas-eletricas' && (
+                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/30" />
+                    )}
                   </motion.div>
                 </Link>
               </motion.div>

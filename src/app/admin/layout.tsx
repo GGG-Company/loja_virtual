@@ -41,7 +41,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#CC1020]"></div>
       </div>
     );
   }
@@ -65,10 +65,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   ];
 
   return (
-    <div className="min-h-screen bg-metallic-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b border-metallic-200 px-4 py-3 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-metallic-900">Admin Panel</h1>
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b-2 border-[#CC1020] px-4 py-3 flex items-center justify-between">
+        <h1 className="font-display text-lg font-bold text-[#1A1A1A]"><span className="text-[#CC1020]">Feira</span> das Ferramentas — Admin</h1>
         <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-metallic-100 rounded-lg">
           {sidebarOpen ? <X /> : <Menu />}
         </button>
@@ -78,16 +78,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <aside className={`fixed left-0 top-0 h-screen w-64 bg-gradient-to-b from-metallic-900 to-metallic-800 text-white z-50 transition-transform lg:translate-x-0 overflow-y-auto ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="p-6 flex flex-col h-full">
           {/* Logo */}
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold">🔨 Admin</h2>
-            <p className="text-xs text-metallic-400 mt-1">Shopping das Ferramentas</p>
+          <div className="mb-8 pb-6 border-b border-white/10">
+            <div className="font-display text-xl font-bold leading-tight">
+              <span className="text-[#CC1020]">Feira</span>{' '}
+              <span className="text-white">das</span>
+              <br />
+              <span className="text-white">Ferramentas</span>
+            </div>
+            <p className="text-xs text-gray-400 mt-1 font-body tracking-wider uppercase">Painel Admin</p>
           </div>
 
           {/* User Info */}
           <div className="mb-8 p-4 bg-white/10 rounded-lg backdrop-blur-sm">
             <p className="font-semibold text-sm">{session.user?.name}</p>
             <p className="text-xs text-metallic-400">{session.user?.email}</p>
-            <span className="mt-2 inline-block px-2 py-1 bg-primary-500/20 text-primary-300 rounded text-xs font-medium">{userRole}</span>
+            <span className="mt-2 inline-block px-2 py-1 bg-[#CC1020]/20 text-[#f87171] rounded-sm text-xs font-bold font-display tracking-wide">{userRole}</span>
           </div>
 
           {/* Navigation */}
@@ -96,7 +101,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               const Icon = item.icon;
               const isActive = pathname === item.href;
               return (
-                <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive ? "bg-primary-600 text-white shadow-lg" : "hover:bg-white/10 text-metallic-300"}`}>
+                <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-sm transition-all font-body ${isActive ? "bg-[#CC1020] text-white shadow-lg" : "hover:bg-white/10 text-gray-400"}`}>
                   <Icon className="h-5 w-5" />
                   <span className="font-medium">{item.label}</span>
                 </Link>

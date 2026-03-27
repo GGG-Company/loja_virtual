@@ -59,8 +59,7 @@ export default function RegisterPage() {
         stateRegistration: formData.stateRegistration || undefined,
       });
 
-      toast.success('Conta criada com sucesso!');
-      router.push('/auth/login');
+      router.push('/auth/login?welcome=1');
     } catch (error: unknown) {
       if (isAxiosError(error)) {
         toast.error(error.response?.data?.error || 'Erro ao criar conta');
@@ -74,19 +73,23 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-metallic-100 px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center bg-[#f5f5f5] px-4 py-12">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="w-full max-w-md"
       >
-        <div className="bg-white rounded-2xl shadow-2xl p-8 space-y-6">
+        <div className="bg-white shadow-2xl p-8 space-y-6 border-t-4 border-[#CC1020]">
           <div className="text-center space-y-2">
-            <h1 className="text-3xl font-bold text-metallic-900">
+            <div className="font-display text-2xl font-bold leading-tight">
+              <span className="text-[#CC1020]">Feira</span>{' '}
+              <span className="text-[#1A1A1A]">das Ferramentas</span>
+            </div>
+            <h1 className="text-lg font-semibold text-[#1A1A1A] font-display">
               Criar Conta
             </h1>
-            <p className="text-metallic-600">
+            <p className="text-gray-500 font-body text-sm">
               Cadastre-se para começar a comprar
             </p>
           </div>
@@ -144,10 +147,10 @@ export default function RegisterPage() {
                     key={type}
                     type="button"
                     onClick={() => setFormData({ ...formData, personType: type })}
-                    className={`h-11 rounded-xl border transition ${
+                    className={`h-11 rounded-sm border-2 transition font-body text-sm font-semibold ${
                       formData.personType === type
-                        ? 'border-primary-500 bg-primary-50 text-primary-700'
-                        : 'border-metallic-200 hover:border-primary-200 text-metallic-700'
+                        ? 'border-[#CC1020] bg-red-50 text-[#CC1020]'
+                        : 'border-gray-200 hover:border-[#CC1020]/40 text-gray-700'
                     }`}
                   >
                     {type === 'CPF' ? 'Pessoa Física (CPF)' : 'Pessoa Jurídica (CNPJ)'}

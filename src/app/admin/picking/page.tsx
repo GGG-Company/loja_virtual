@@ -401,7 +401,7 @@ export default function AdminPickingPage() {
                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${statusBadgeClass(order.status)}`}>{statusLabel[order.status] || statusToPt(order.status)}</span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 bg-metallic-50 border border-metallic-100 rounded-lg p-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 bg-gray-50 border border-metallic-100 rounded-lg p-3">
                   <div className="flex items-start gap-2 text-sm text-metallic-700">
                     <Phone className="h-4 w-4 text-primary-600 mt-0.5" />
                     <div>
@@ -528,7 +528,7 @@ export default function AdminPickingPage() {
                 <p className="text-lg font-semibold text-metallic-900">Todos os itens do relatório</p>
                 <p className="text-sm text-metallic-600">{pickingReport.length} itens agrupados</p>
               </div>
-              <button className="p-2 rounded-md hover:bg-metallic-50 text-metallic-600" aria-label="Fechar" onClick={() => setShowAllModal(false)}>
+              <button className="p-2 rounded-md hover:bg-gray-50 text-metallic-600" aria-label="Fechar" onClick={() => setShowAllModal(false)}>
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -579,7 +579,7 @@ export default function AdminPickingPage() {
                 <p className="text-lg font-semibold text-metallic-900">Marcar como Enviado</p>
                 <p className="text-sm text-metallic-600">Pedido {trackingModal.orderNumber}</p>
               </div>
-              <button className="p-2 rounded-md hover:bg-metallic-50 text-metallic-600" aria-label="Fechar" onClick={() => setTrackingModal(null)}>
+              <button className="p-2 rounded-md hover:bg-gray-50 text-metallic-600" aria-label="Fechar" onClick={() => setTrackingModal(null)}>
                 <X className="h-4 w-4" />
               </button>
             </div>

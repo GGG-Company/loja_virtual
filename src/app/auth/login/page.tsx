@@ -1,8 +1,8 @@
 'use client';
 
 import { signIn } from 'next-auth/react';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,13 +10,20 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
+
+  useEffect(() => {
+    if (searchParams?.get('welcome') === '1') {
+      toast.success('Conta criada com sucesso! Faça login para continuar.', { duration: 5000 });
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,20 +66,21 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-metallic-100 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#f5f5f5] px-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="w-full max-w-md"
       >
-        <div className="bg-white rounded-2xl shadow-2xl p-8 space-y-6">
+        <div className="bg-white shadow-2xl p-8 space-y-6 border-t-4 border-[#CC1020]">
           {/* Logo e Título */}
           <div className="text-center space-y-2">
-            <h1 className="text-3xl font-bold text-metallic-900">
-              Shopping das Ferramentas
-            </h1>
-            <p className="text-metallic-600">
+            <div className="font-display text-2xl font-bold leading-tight">
+              <span className="text-[#CC1020]">Feira</span>{' '}
+              <span className="text-[#1A1A1A]">das Ferramentas</span>
+            </div>
+            <p className="text-gray-500 font-body text-sm">
               Faça login para continuar
             </p>
           </div>
@@ -191,5 +199,17 @@ export default function LoginPage() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-[#f5f5f5]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#CC1020]" />
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }

@@ -242,7 +242,7 @@ export default function AdminSettingsPage() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nome da Loja</label>
-              <input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="Shopping das Ferramentas" disabled />
+              <input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="Feira das Ferramentas" disabled />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Email de Contato</label>

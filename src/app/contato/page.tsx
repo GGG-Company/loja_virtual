@@ -28,17 +28,28 @@ export default function ContactPage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-metallic-50">
-        {/* Hero */}
-        <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white py-20">
-          <div className="container mx-auto px-4">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-center"
-            >
-              <h1 className="text-5xl font-bold mb-4">Entre em Contato</h1>
-              <p className="text-xl text-primary-100">
+      <main className="min-h-screen bg-gray-50">
+        {/* Hero — Dark Industrial */}
+        <div className="relative bg-[#1A1A1A] text-white py-20 overflow-hidden">
+          <div
+            className="absolute inset-0 opacity-[0.04] pointer-events-none"
+            style={{
+              backgroundImage: `repeating-linear-gradient(-55deg, #CC1020 0px, #CC1020 2px, transparent 2px, transparent 28px)`,
+            }}
+          />
+          <div className="absolute top-0 left-0 right-0 h-1 bg-[#CC1020]" />
+
+          <div className="container mx-auto px-4 relative z-10 text-center">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <div className="flex items-center justify-center gap-3 mb-3">
+                <div className="w-1 h-8 bg-[#CC1020] rounded-full" />
+                <p className="text-xs font-display font-bold text-[#CC1020] tracking-widest uppercase">
+                  Atendimento
+                </p>
+                <div className="w-1 h-8 bg-[#CC1020] rounded-full" />
+              </div>
+              <h1 className="font-display text-5xl font-bold uppercase mb-3">Entre em Contato</h1>
+              <p className="text-gray-300 text-lg font-body">
                 Estamos aqui para ajudar! Fale conosco
               </p>
             </motion.div>
@@ -55,15 +66,21 @@ export default function ContactPage() {
               className="space-y-8"
             >
               <div>
-                <h2 className="text-3xl font-bold text-metallic-900 mb-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-1 h-7 bg-[#CC1020] rounded-full" />
+                  <p className="text-xs font-display font-bold text-[#CC1020] tracking-widest uppercase">
+                    Fale Conosco
+                  </p>
+                </div>
+                <h2 className="font-display text-3xl font-bold text-[#1A1A1A] uppercase mb-2">
                   Informações de Contato
                 </h2>
-                <p className="text-metallic-600 text-lg">
+                <p className="text-gray-500 font-body">
                   Nossa equipe está pronta para atender você com excelência.
                 </p>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {[
                   {
                     icon: Phone,
@@ -74,20 +91,20 @@ export default function ContactPage() {
                   {
                     icon: Mail,
                     title: 'Email',
-                    content: 'contato@shopferramentas.com.br',
+                    content: 'contato@feiradeferramentas.com.br',
                     subcontent: 'Respondemos em até 24h',
                   },
                   {
                     icon: MapPin,
                     title: 'Endereço',
                     content: 'Av. Principal, 1234',
-                    subcontent: 'Feira de Santana, BA - CEP 44002-264',
+                    subcontent: 'Feira de Santana, BA — CEP 44002-264',
                   },
                   {
                     icon: Clock,
                     title: 'Horário de Atendimento',
-                    content: 'Segunda a Sexta: 8h - 18h',
-                    subcontent: 'Sábado: 8h - 12h',
+                    content: 'Segunda a Sexta: 8h – 18h',
+                    subcontent: 'Sábado: 8h – 12h',
                   },
                 ].map((item, index) => {
                   const Icon = item.icon;
@@ -97,21 +114,19 @@ export default function ContactPage() {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.3 + index * 0.1 }}
-                      className="flex gap-4 p-6 bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow"
+                      className="flex gap-4 p-5 bg-white rounded-sm shadow-sm border border-gray-100 hover:border-[#CC1020]/30 hover:shadow-md transition-all"
                     >
                       <div className="flex-shrink-0">
-                        <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
-                          <Icon className="h-6 w-6 text-primary-600" />
+                        <div className="w-11 h-11 bg-red-50 rounded-sm flex items-center justify-center">
+                          <Icon className="h-5 w-5 text-[#CC1020]" />
                         </div>
                       </div>
                       <div>
-                        <h3 className="font-semibold text-metallic-900 mb-1">
+                        <h3 className="font-display font-bold text-[#1A1A1A] uppercase text-sm tracking-wide mb-0.5">
                           {item.title}
                         </h3>
-                        <p className="text-metallic-700">{item.content}</p>
-                        <p className="text-sm text-metallic-500">
-                          {item.subcontent}
-                        </p>
+                        <p className="text-gray-700 font-body">{item.content}</p>
+                        <p className="text-sm text-gray-400 font-body">{item.subcontent}</p>
                       </div>
                     </motion.div>
                   );
@@ -125,21 +140,22 @@ export default function ContactPage() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <div className="bg-white rounded-2xl shadow-xl p-8">
-                <h2 className="text-2xl font-bold text-metallic-900 mb-6">
-                  Envie sua Mensagem
-                </h2>
+              <div className="bg-white rounded-sm shadow-lg border-t-4 border-[#CC1020] p-8">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-1 h-7 bg-[#CC1020] rounded-full" />
+                  <h2 className="font-display text-2xl font-bold text-[#1A1A1A] uppercase">
+                    Envie sua Mensagem
+                  </h2>
+                </div>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-5">
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">Nome Completo *</Label>
                       <Input
                         id="name"
                         value={formData.name}
-                        onChange={(e) =>
-                          setFormData({ ...formData, name: e.target.value })
-                        }
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         required
                         className="h-12"
                       />
@@ -151,9 +167,7 @@ export default function ContactPage() {
                         id="phone"
                         type="tel"
                         value={formData.phone}
-                        onChange={(e) =>
-                          setFormData({ ...formData, phone: e.target.value })
-                        }
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                         className="h-12"
                       />
                     </div>
@@ -165,9 +179,7 @@ export default function ContactPage() {
                       id="email"
                       type="email"
                       value={formData.email}
-                      onChange={(e) =>
-                        setFormData({ ...formData, email: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       required
                       className="h-12"
                     />
@@ -178,9 +190,7 @@ export default function ContactPage() {
                     <Input
                       id="subject"
                       value={formData.subject}
-                      onChange={(e) =>
-                        setFormData({ ...formData, subject: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                       required
                       className="h-12"
                     />
@@ -191,20 +201,21 @@ export default function ContactPage() {
                     <textarea
                       id="message"
                       value={formData.message}
-                      onChange={(e) =>
-                        setFormData({ ...formData, message: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                       required
                       rows={6}
-                      className="w-full px-3 py-2 border border-metallic-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-600"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#CC1020] focus:border-[#CC1020] font-body text-sm"
                     />
                   </div>
 
-                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                    <Button type="submit" size="lg" className="w-full h-14 text-lg">
-                      <Send className="mr-2 h-5 w-5" />
+                  <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
+                    <button
+                      type="submit"
+                      className="w-full h-14 bg-[#CC1020] hover:bg-[#a80816] text-white font-display font-bold text-lg tracking-wide uppercase transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Send className="h-5 w-5" />
                       Enviar Mensagem
-                    </Button>
+                    </button>
                   </motion.div>
                 </form>
               </div>

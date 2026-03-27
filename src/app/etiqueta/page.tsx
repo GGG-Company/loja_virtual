@@ -69,7 +69,7 @@ function LabelContent() {
 
   if (!labelData) {
     return (
-      <div className="min-h-screen bg-metallic-50 py-12">
+      <div className="min-h-screen bg-gray-50 py-12">
         <div className="container mx-auto px-4 max-w-2xl">
           <div className="bg-white rounded-lg shadow p-8 text-center">
             <h1 className="text-2xl font-bold text-gray-900 mb-4">Etiqueta não encontrada</h1>
@@ -89,7 +89,7 @@ function LabelContent() {
   }
 
   return (
-    <div className="min-h-screen bg-metallic-50 py-12">
+    <div className="min-h-screen bg-gray-50 py-12">
       <div className="container mx-auto px-4 max-w-2xl">
         {/* Header */}
         <Link href="/minha-conta/pedidos" className="inline-block mb-6">
