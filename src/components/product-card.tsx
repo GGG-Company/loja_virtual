@@ -8,6 +8,7 @@ import { usePrice } from '@/hooks/use-price';
 import { Heart, Loader2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
+import { useCart } from '@/contexts/cart-context';
 
 interface ProductCardProps {
   product: {
@@ -22,11 +23,13 @@ interface ProductCardProps {
     isFeatured?: boolean;
   };
   className?: string;
+  priority?: boolean;
 }
 
-export function ProductCard({ product, className }: ProductCardProps) {
+export function ProductCard({ product, className, priority = false }: ProductCardProps) {
   const finalPrice = product.promotionalPrice ?? product.price;
   const { formatPrice, bestInstallmentText } = usePrice(finalPrice);
+  const { addItem } = useCart();
   const [isFavorite, setIsFavorite] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [heartAnimate, setHeartAnimate] = useState(false);
@@ -58,25 +61,14 @@ export function ProductCard({ product, className }: ProductCardProps) {
     if (isAdding) return;
     setIsAdding(true);
 
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const existingItem = cart.find((item: { id: string }) => item.id === product.id);
+    addItem({
+      id: product.id,
+      name: product.name,
+      price: finalPrice,
+      imageUrl: imageSrc,
+    });
 
-    if (existingItem) {
-      existingItem.quantity += 1;
-    } else {
-      cart.push({
-        id: product.id,
-        name: product.name,
-        price: finalPrice,
-        imageUrl: imageSrc,
-        quantity: 1,
-      });
-    }
-
-    localStorage.setItem('cart', JSON.stringify(cart));
     toast.success('Produto adicionado ao carrinho!');
-    window.dispatchEvent(new Event('cartUpdated'));
-
     addingTimerRef.current = setTimeout(() => setIsAdding(false), 800);
   };
 
@@ -148,8 +140,8 @@ export function ProductCard({ product, className }: ProductCardProps) {
               fill
               className="object-contain drop-shadow-sm"
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-              priority={false}
-              loading="lazy"
+              priority={priority}
+              loading={priority ? 'eager' : 'lazy'}
             />
           </div>
 

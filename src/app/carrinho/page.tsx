@@ -15,6 +15,7 @@ import { generateQuotePdf } from '@/lib/export/quote';
 import { useSession } from 'next-auth/react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { CheckoutProgress } from '@/components/checkout-progress';
+import { useCart } from '@/contexts/cart-context';
 
 
 interface CartItem {
@@ -53,7 +54,13 @@ type PickupPoint = {
 export default function CartPage() {
   const { data: session } = useSession();
   const router = useRouter();
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const {
+    items: cartItems,
+    total: subtotal,
+    updateQuantity: ctxUpdateQuantity,
+    removeItem: ctxRemoveItem,
+    clearCart: ctxClearCart,
+  } = useCart();
   const [shippingZip, setShippingZip] = useState('');
   const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
   const [selectedShipping, setSelectedShipping] = useState<ShippingOption | null>(null);
@@ -73,11 +80,6 @@ export default function CartPage() {
     notes: '',
   });
 
-  useEffect(() => {
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    setCartItems(cart);
-  }, []);
-
 
   useEffect(() => {
     if (session?.user) {
@@ -90,35 +92,19 @@ export default function CartPage() {
   }, [session]);
 
   const updateQuantity = (id: string, delta: number) => {
-    const updatedCart = cartItems.map(item => {
-      if (item.id === id) {
-        const newQuantity = Math.max(1, item.quantity + delta);
-        return { ...item, quantity: newQuantity };
-      }
-      return item;
-    });
-    setCartItems(updatedCart);
-    localStorage.setItem('cart', JSON.stringify(updatedCart));
-    window.dispatchEvent(new Event('cartUpdated'));
+    ctxUpdateQuantity(id, delta);
   };
 
   const removeItem = (id: string) => {
-    const updatedCart = cartItems.filter(item => item.id !== id);
-    setCartItems(updatedCart);
-    localStorage.setItem('cart', JSON.stringify(updatedCart));
-    window.dispatchEvent(new Event('cartUpdated'));
+    ctxRemoveItem(id);
     setRemoveTarget(null);
   };
 
   const clearCart = () => {
-    setCartItems([]);
-    localStorage.setItem('cart', '[]');
-    window.dispatchEvent(new Event('cartUpdated'));
+    ctxClearCart();
     setClearConfirm(false);
     toast.success('Carrinho limpo');
   };
-
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const shippingValue = selectedShipping?.price ?? 0;
   const total = subtotal + shippingValue;
 

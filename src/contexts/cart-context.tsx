@@ -1,0 +1,105 @@
+'use client';
+
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+
+const CART_KEY = 'cart';
+
+export interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  imageUrl: string;
+  quantity: number;
+  selectedVoltage?: string;
+  sku?: string | null;
+  ean?: string | null;
+  weightKg?: number | null;
+  dimensions?: Record<string, unknown> | null;
+}
+
+interface CartContextValue {
+  items: CartItem[];
+  count: number;
+  total: number;
+  addItem: (item: Omit<CartItem, 'quantity'> & { quantity?: number }) => void;
+  removeItem: (id: string) => void;
+  updateQuantity: (id: string, delta: number) => void;
+  clearCart: () => void;
+}
+
+const CartContext = createContext<CartContextValue | null>(null);
+
+function readFromStorage(): CartItem[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    return JSON.parse(localStorage.getItem(CART_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function writeToStorage(items: CartItem[]) {
+  try {
+    localStorage.setItem(CART_KEY, JSON.stringify(items));
+  } catch {
+    // storage unavailable — fail silently
+  }
+}
+
+export function CartProvider({ children }: { children: React.ReactNode }) {
+  const [items, setItems] = useState<CartItem[]>([]);
+
+  // Hydrate from localStorage once on mount
+  useEffect(() => {
+    setItems(readFromStorage());
+  }, []);
+
+  // Persist to localStorage whenever items change (after initial hydration)
+  useEffect(() => {
+    writeToStorage(items);
+  }, [items]);
+
+  const addItem = useCallback((incoming: Omit<CartItem, 'quantity'> & { quantity?: number }) => {
+    const qty = incoming.quantity ?? 1;
+    setItems((prev) => {
+      const existing = prev.find((i) => i.id === incoming.id);
+      if (existing) {
+        return prev.map((i) =>
+          i.id === incoming.id ? { ...i, quantity: i.quantity + qty } : i
+        );
+      }
+      return [...prev, { ...incoming, quantity: qty }];
+    });
+  }, []);
+
+  const removeItem = useCallback((id: string) => {
+    setItems((prev) => prev.filter((i) => i.id !== id));
+  }, []);
+
+  const updateQuantity = useCallback((id: string, delta: number) => {
+    setItems((prev) =>
+      prev.map((i) =>
+        i.id === id ? { ...i, quantity: Math.max(1, i.quantity + delta) } : i
+      )
+    );
+  }, []);
+
+  const clearCart = useCallback(() => {
+    setItems([]);
+  }, []);
+
+  const count = items.reduce((sum, i) => sum + i.quantity, 0);
+  const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+
+  return (
+    <CartContext.Provider value={{ items, count, total, addItem, removeItem, updateQuantity, clearCart }}>
+      {children}
+    </CartContext.Provider>
+  );
+}
+
+export function useCart(): CartContextValue {
+  const ctx = useContext(CartContext);
+  if (!ctx) throw new Error('useCart must be used inside <CartProvider>');
+  return ctx;
+}

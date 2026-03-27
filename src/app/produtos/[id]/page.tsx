@@ -17,6 +17,8 @@ import Image from "next/image";
 import Script from "next/script";
 import { ProductReviews } from "@/components/product-reviews";
 import { Breadcrumb } from "@/components/breadcrumb";
+import { RelatedProducts } from "@/components/related-products";
+import { useRecentlyViewed } from "@/hooks/use-recently-viewed";
 
 type ProductVariant = {
   id: string;
@@ -58,6 +60,8 @@ function ProductDetailContent() {
   const displayPrice = product?.promotionalPrice ?? product?.price ?? 0;
   const { bestInstallment } = usePrice(displayPrice);
 
+  const { addProduct } = useRecentlyViewed();
+
   const fetchProduct = useCallback(async () => {
     try {
       const response = await apiClient.get<{ product: ProductDetail }>(`/api/products/${params?.id}`);
@@ -86,6 +90,13 @@ function ProductDetailContent() {
       fetchProduct();
     }
   }, [params?.id, fetchProduct]);
+
+  // Track this product as recently viewed
+  useEffect(() => {
+    if (product?.id) {
+      addProduct(product.id);
+    }
+  }, [product?.id]);
   const handleAddToCart = () => {
     if (product?.variants && product.variants.length > 0 && !selectedVoltage) {
       toast.error("Selecione uma voltagem");
@@ -256,11 +267,38 @@ function ProductDetailContent() {
                 </div>
               </div>
 
+              {/* Stock Status */}
+              {product.stock !== undefined && (
+                <div className="flex items-center gap-2">
+                  {product.stock === 0 ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold bg-gray-100 text-gray-600 border border-gray-300">
+                      <span className="w-2 h-2 rounded-full bg-gray-400 inline-block" />
+                      Fora de estoque
+                    </span>
+                  ) : product.stock <= 5 ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold bg-orange-50 text-orange-700 border border-orange-200">
+                      <span className="w-2 h-2 rounded-full bg-orange-500 inline-block" />
+                      Últimas {product.stock} unidades
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold bg-green-50 text-green-700 border border-green-200">
+                      <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
+                      Em estoque
+                    </span>
+                  )}
+                </div>
+              )}
+
               {/* CTA Buttons */}
               <div className="flex gap-3">
-                <Button size="lg" className="flex-1 h-14 text-lg" onClick={handleAddToCart}>
+                <Button
+                  size="lg"
+                  className="flex-1 h-14 text-lg"
+                  onClick={handleAddToCart}
+                  disabled={product.stock === 0}
+                >
                   <ShoppingCart className="mr-2 h-5 w-5" />
-                  Adicionar ao Carrinho
+                  {product.stock === 0 ? "Indisponível" : "Adicionar ao Carrinho"}
                 </Button>
                 <Button size="lg" variant="outline" className="h-14 px-6" aria-label="Adicionar aos favoritos">
                   <Heart className="h-5 w-5" />
@@ -315,6 +353,9 @@ function ProductDetailContent() {
             <h2 className="text-2xl font-bold text-metallic-900 mb-6">Avaliações dos Clientes</h2>
             <ProductReviews productId={product.id} productName={product.name} />
           </div>
+
+          {/* Produtos Relacionados */}
+          <RelatedProducts productId={product.id} />
         </div>
       </main>
       {!searchParams.get("embed") && <Footer />}

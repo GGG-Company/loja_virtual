@@ -8,27 +8,18 @@ import { NotificationBell } from './notification-bell';
 import { useState, useEffect, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { useCart } from '@/contexts/cart-context';
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [cartCount, setCartCount] = useState(0);
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const { data: session } = useSession();
   const router = useRouter();
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const { count: cartCount } = useCart();
   type UserRole = "CUSTOMER" | "ADMIN" | "OWNER";
   const role = (session?.user as { role?: UserRole } | undefined)?.role;
-
-  const updateCartCount = () => {
-    try {
-      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-      const total = cart.reduce((sum: number, item: { quantity?: number }) => sum + (item.quantity || 0), 0);
-      setCartCount(total);
-    } catch {
-      setCartCount(0);
-    }
-  };
 
   const handleSearch = () => {
     const q = searchQuery.trim();
@@ -47,16 +38,6 @@ export function Header() {
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, []);
-
-  useEffect(() => {
-    updateCartCount();
-    window.addEventListener("cartUpdated", updateCartCount);
-    return () => window.removeEventListener("cartUpdated", updateCartCount);
-  }, []);
-
-  useEffect(() => {
-    updateCartCount();
-  }, [session]);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 8);
@@ -199,7 +180,11 @@ export function Header() {
                 >
                   <ShoppingCart className="h-5 w-5" />
                   {cartCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-[#CC1020] text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                    <span
+                      aria-live="polite"
+                      aria-atomic="true"
+                      className="absolute -top-1 -right-1 bg-[#CC1020] text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center"
+                    >
                       {cartCount}
                     </span>
                   )}

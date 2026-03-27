@@ -1,0 +1,60 @@
+<h2>Onde focar as melhorias?</h2>
+<p class="subtitle">Encontrei 6 grandes áreas para melhorar. Quais são mais importantes para você agora?</p>
+
+<div class="options" data-multiselect>
+  <div class="option" data-choice="seguranca" onclick="toggleSelect(this)">
+    <div class="letter" style="background:#dc2626;color:#fff">🔴</div>
+    <div class="content">
+      <h3>Segurança Crítica</h3>
+      <p>Admin categories sem autenticação, webhook Mercado Pago sem verificação de assinatura, endpoint /api/dev/log exposto</p>
+      <small style="color:#dc2626;font-weight:600">CRÍTICO — vulnerabilidades reais</small>
+    </div>
+  </div>
+
+  <div class="option" data-choice="ux-frontend" onclick="toggleSelect(this)">
+    <div class="letter" style="background:#ea580c;color:#fff">🟠</div>
+    <div class="content">
+      <h3>UX / Frontend</h3>
+      <p>Exibir estoque no produto, checkout para convidados, campo de cupom no checkout, datas de entrega estimadas, error boundaries</p>
+      <small style="color:#ea580c;font-weight:600">ALTO — impacta conversão diretamente</small>
+    </div>
+  </div>
+
+  <div class="option" data-choice="apis-backend" onclick="toggleSelect(this)">
+    <div class="letter" style="background:#d97706;color:#fff">🟡</div>
+    <div class="content">
+      <h3>APIs Backend Faltantes</h3>
+      <p>API do carrinho (atualmente só frontend), gerenciamento de endereços, redefinição de senha, lista de desejos</p>
+      <small style="color:#d97706;font-weight:600">ALTO — funcionalidades essenciais ausentes</small>
+    </div>
+  </div>
+
+  <div class="option" data-choice="qualidade" onclick="toggleSelect(this)">
+    <div class="letter" style="background:#2563eb;color:#fff">🔵</div>
+    <div class="content">
+      <h3>Qualidade de Código</h3>
+      <p>Refatorar componente chat (1.366 linhas), checkout (866 linhas), adicionar testes automatizados, validações Zod faltantes</p>
+      <small style="color:#2563eb;font-weight:600">MÉDIO — sustentabilidade do código</small>
+    </div>
+  </div>
+
+  <div class="option" data-choice="performance" onclick="toggleSelect(this)">
+    <div class="letter" style="background:#7c3aed;color:#fff">🟣</div>
+    <div class="content">
+      <h3>Performance</h3>
+      <p>Otimizar queries N+1, atualizações otimistas, gerenciamento de estado do carrinho (Context/Zustand), lazy loading correto</p>
+      <small style="color:#7c3aed;font-weight:600">MÉDIO — velocidade percebida</small>
+    </div>
+  </div>
+
+  <div class="option" data-choice="features" onclick="toggleSelect(this)">
+    <div class="letter" style="background:#059669;color:#fff">🟢</div>
+    <div class="content">
+      <h3>Novas Features</h3>
+      <p>Produtos relacionados, vistos recentemente, comparação de produtos, lista de desejos, recuperação de carrinho abandonado</p>
+      <small style="color:#059669;font-weight:600">BAIXO — melhorias de valor</small>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:1.5rem;color:#6b7280;font-size:0.875rem">Pode selecionar múltiplas áreas. Vou focar no que for mais importante para você.</p>
