@@ -1,11 +1,23 @@
 import logger from "@/lib/logger";
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { OrderStatus } from '@prisma/client';
 import { sendOrderStatusUpdate } from '@/lib/webhooks';
 
 export async function POST(req: NextRequest) {
   try {
+    // Bloquear em produção
+    if (process.env.NODE_ENV === 'production' && process.env.MERCADO_PAGO_SANDBOX !== 'true') {
+      return NextResponse.json({ error: 'Endpoint desabilitado em produção' }, { status: 403 });
+    }
+
+    // Requer autenticação de admin
+    const session = await auth();
+    if (!session?.user || (session.user.role !== 'ADMIN' && session.user.role !== 'OWNER')) {
+      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
+    }
+
     const body = await req.json();
     const { paymentId } = body;
 

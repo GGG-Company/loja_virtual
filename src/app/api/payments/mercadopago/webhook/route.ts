@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import logger from "@/lib/logger";
 import { getMercadoPagoKeys } from '@/lib/mercadopago-config';
 import { prisma } from '@/lib/prisma';
@@ -8,9 +9,62 @@ import { notifyOrderStatusChange, notifyPaymentStatus } from '@/lib/notification
 import type { OrderStatus as OrderStatusType } from '@/lib/i18n';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
 
+/**
+ * Verifica a assinatura HMAC-SHA256 do webhook do Mercado Pago.
+ * Retorna true se a assinatura for válida ou se a verificação estiver desabilitada.
+ */
+function verifyWebhookSignature(req: NextRequest, rawBody: string): boolean {
+  const webhookSecret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    logger.warn('MERCADO_PAGO_WEBHOOK_SECRET não configurado — aceitando webhook sem verificação');
+    return true;
+  }
+
+  const xSignature = req.headers.get('x-signature') || '';
+  const xRequestId = req.headers.get('x-request-id') || '';
+
+  if (!xSignature || !xRequestId) {
+    logger.warn('Webhook sem headers x-signature ou x-request-id');
+    return false;
+  }
+
+  // Extrair ts e v1 do header x-signature (formato: "ts=...,v1=...")
+  const parts = Object.fromEntries(
+    xSignature.split(',').map(p => {
+      const [k, ...rest] = p.trim().split('=');
+      return [k, rest.join('=')];
+    })
+  );
+
+  const ts = parts['ts'];
+  const v1 = parts['v1'];
+  if (!ts || !v1) return false;
+
+  // Extrair data.id do body
+  let dataId = '';
+  try {
+    const parsed = JSON.parse(rawBody);
+    dataId = parsed?.data?.id ? String(parsed.data.id) : '';
+  } catch { /* ignore */ }
+
+  // Montar template conforme docs do MP
+  const template = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
+  const hash = crypto.createHmac('sha256', webhookSecret).update(template).digest('hex');
+
+  return hash === v1;
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const rawBody = await req.text();
+
+    // Verificar assinatura do webhook
+    if (!verifyWebhookSignature(req, rawBody)) {
+      logger.warn('Webhook Mercado Pago com assinatura inválida — rejeitado');
+      return NextResponse.json({ error: 'Assinatura inválida' }, { status: 401 });
+    }
+
+    const body = JSON.parse(rawBody);
 
     logger.info({ body }, "Webhook Mercado Pago recebido");
 
@@ -73,8 +127,22 @@ export async function POST(req: NextRequest) {
           orderStatus = OrderStatus.PENDING;
       }
 
+      // Validar transição de estado — evitar regressão de status por webhooks atrasados
+      const VALID_TRANSITIONS: Record<string, string[]> = {
+        PENDING: ['CONFIRMED', 'CANCELLED'],
+        CONFIRMED: ['PROCESSING', 'CANCELLED', 'REFUNDED'],
+        PROCESSING: ['SHIPPED', 'CANCELLED', 'REFUNDED'],
+        SHIPPED: ['DELIVERED', 'CANCELLED', 'REFUNDED'],
+        DELIVERED: ['REFUNDED'],
+      };
+
+      const allowedNext = VALID_TRANSITIONS[currentOrder.status as string];
+      if (allowedNext && !allowedNext.includes(orderStatus)) {
+        logger.warn({ orderId, currentStatus: currentOrder.status, attemptedStatus: orderStatus }, 'Transição de estado inválida via webhook — ignorado');
+        return NextResponse.json({ received: true, ignored: true });
+      }
+
       // 2. Só disparar webhooks se o status mudou OU se o status de pagamento do MP mudou
-      // Isso evita webhooks duplicados em notificações repetidas do Mercado Pago
       const statusChanged = currentOrder.status !== orderStatus;
       const paymentStatusChanged = currentOrder.paymentStatus !== paymentInfo.status;
 
@@ -142,7 +210,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     logger.error(error as Error, 'Erro ao processar webhook');
     return NextResponse.json(
-      { error: error.message || 'Erro ao processar webhook' },
+      { error: 'Erro ao processar webhook' },
       { status: 500 }
     );
   }

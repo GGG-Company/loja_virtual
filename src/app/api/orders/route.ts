@@ -1,18 +1,23 @@
 import logger from "@/lib/logger";
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { getShippingOptions } from "@/lib/shipping-calculator";
 import { sendOrderStatusUpdate } from "@/lib/webhooks";
 import { notifyOrderStatusChange } from "@/lib/notifications";
+import { orderLimiter } from '@/lib/rate-limit';
 
 function formatOrderNumber(seq: number) {
   const year = new Date().getFullYear();
   return `ORD-${year}-${String(seq).padStart(6, "0")}`;
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    // Rate limiting para evitar spam de pedidos
+    const blocked = await orderLimiter.check(req);
+    if (blocked) return blocked;
+
     const session = await auth();
     logger.info({
       userId: session?.user?.id,
@@ -41,6 +46,22 @@ export async function POST(req: Request) {
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: "Carrinho vazio" }, { status: 400 });
+    }
+
+    // Validar quantidade de cada item
+    for (const item of items) {
+      if (!Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 100) {
+        return NextResponse.json({ error: 'Quantidade inválida' }, { status: 400 });
+      }
+      if (typeof item.price !== 'number' || item.price <= 0) {
+        return NextResponse.json({ error: 'Preço inválido' }, { status: 400 });
+      }
+    }
+
+    // Validar formato do CEP
+    const cepLimpo = (entrega?.cep || '').replace(/\D/g, '');
+    if (!/^\d{8}$/.test(cepLimpo)) {
+      return NextResponse.json({ error: 'CEP inválido' }, { status: 400 });
     }
 
     logger.info({ items }, '[ORDER_CREATE_ITEMS]');
@@ -126,25 +147,43 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 400 });
     }
 
-    // Verificar se todos os produtos existem
-    const productIds = items.map((item) => item.id);
-    const existingProducts = await prisma.product.findMany({
-      where: { id: { in: productIds } },
-      select: { id: true },
-    });
-
-    const existingProductIds = new Set(existingProducts.map((p) => p.id));
-    const missingProducts = productIds.filter((id) => !existingProductIds.has(id));
-
-    if (missingProducts.length > 0) {
-      logger.error({ missingProducts }, '[ORDER_CREATE] Produtos não encontrados');
-      return NextResponse.json({ 
-        error: 'Alguns produtos não foram encontrados', 
-        missingProducts 
-      }, { status: 400 });
-    }
-
     const result = await prisma.$transaction(async (tx) => {
+      // Verificar estoque e preços dentro da transação para evitar race conditions
+      const productIds = items.map((item) => item.id);
+      const products = await tx.product.findMany({
+        where: { id: { in: productIds } },
+        select: { id: true, name: true, price: true, promotionalPrice: true, stock: true },
+      });
+
+      const productMap = new Map(products.map((p) => [p.id, p]));
+      const missingProducts = productIds.filter((id) => !productMap.has(id));
+
+      if (missingProducts.length > 0) {
+        throw new Error(`VALIDATION:Alguns produtos não foram encontrados`);
+      }
+
+      // Validar estoque e preço de cada item
+      for (const item of items) {
+        const product = productMap.get(item.id)!;
+        if (product.stock < item.quantity) {
+          throw new Error(`VALIDATION:Estoque insuficiente para "${product.name}" (disponível: ${product.stock})`);
+        }
+        // Validar preço no servidor — usar promotionalPrice se existir
+        const serverPrice = product.promotionalPrice ?? product.price;
+        if (Math.abs(item.price - Number(serverPrice)) > 0.01) {
+          logger.warn({ itemId: item.id, clientPrice: item.price, serverPrice: Number(serverPrice) }, '[ORDER_CREATE] Preço divergente detectado');
+          throw new Error(`VALIDATION:Preço do produto "${product.name}" foi alterado. Atualize o carrinho.`);
+        }
+      }
+
+      // Decrementar estoque atomicamente
+      for (const item of items) {
+        await tx.product.update({
+          where: { id: item.id },
+          data: { stock: { decrement: item.quantity } },
+        });
+      }
+
       const count = await tx.order.count();
       const orderNumber = formatOrderNumber(count + 1);
 
@@ -209,7 +248,11 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(result, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
+    // Erros de validação de negócio (estoque, preço) retornam 400
+    if (error?.message?.startsWith('VALIDATION:')) {
+      return NextResponse.json({ error: error.message.replace('VALIDATION:', '') }, { status: 400 });
+    }
     logger.error(error as Error, '[ORDER_CREATE]');
     return NextResponse.json({ error: 'Erro ao criar pedido' }, { status: 500 });
   }

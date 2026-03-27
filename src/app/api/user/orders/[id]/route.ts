@@ -63,9 +63,9 @@ export async function GET(
       return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
     }
 
-      // Cancelar automaticamente se passou de 30 segundos pendente
-      const thirtySecondsAgo = new Date(Date.now() - 30 * 1000);
-      if (order.status === 'PENDING' && order.createdAt < thirtySecondsAgo) {
+      // Cancelar automaticamente se passou de 30 minutos pendente
+      const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+      if (order.status === 'PENDING' && order.createdAt < thirtyMinutesAgo) {
         const cancelled = await prisma.order.update({
           where: { id: order.id },
           data: { status: 'CANCELLED' },
@@ -95,5 +95,78 @@ export async function GET(
   } catch (error) {
     logger.error(error as Error, '[USER_ORDER_GET]');
     return NextResponse.json({ error: 'Erro ao buscar pedido' }, { status: 500 });
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const session = await auth();
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
+    }
+
+    const body = await request.json();
+
+    if (body.action !== 'cancel') {
+      return NextResponse.json({ error: 'Ação inválida' }, { status: 400 });
+    }
+
+    const order = await prisma.order.findFirst({
+      where: { id, userId: user.id },
+      include: { items: true },
+    });
+
+    if (!order) {
+      return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
+    }
+
+    if (order.status !== 'PENDING') {
+      return NextResponse.json({ error: 'Apenas pedidos pendentes podem ser cancelados' }, { status: 400 });
+    }
+
+    // Restore stock for each item
+    for (const item of order.items) {
+      await prisma.product.update({
+        where: { id: item.productId },
+        data: { stock: { increment: item.quantity } },
+      });
+    }
+
+    const cancelled = await prisma.order.update({
+      where: { id: order.id },
+      data: { status: 'CANCELLED' },
+      include: {
+        items: { include: { product: { select: { name: true, imageUrl: true } } } },
+        user: true,
+      },
+    });
+
+    await sendOrderStatusUpdate({
+      orderId: cancelled.id,
+      orderNumber: cancelled.orderNumber,
+      status: 'CANCELLED',
+      total: cancelled.total,
+      user: cancelled.user,
+      items: cancelled.items,
+    });
+
+    return NextResponse.json(cancelled);
+  } catch (error) {
+    logger.error(error as Error, '[USER_ORDER_CANCEL]');
+    return NextResponse.json({ error: 'Erro ao cancelar pedido' }, { status: 500 });
   }
 }

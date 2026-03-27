@@ -61,7 +61,7 @@ export default function MeusPedidosPage() {
       const response = await fetch('/api/user/orders');
       if (!response.ok) throw new Error('Erro ao carregar pedidos');
       const data = await response.json();
-      setOrders(data);
+      setOrders(data.orders || []);
     } catch (error) {
       console.error('Erro ao carregar pedidos:', error);
       toast.error('Erro ao carregar pedidos');

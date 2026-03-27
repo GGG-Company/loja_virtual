@@ -1,18 +1,42 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ShoppingCart, User, Search, Menu } from 'lucide-react';
 import { Button } from './ui/button';
 import { NotificationBell } from './notification-bell';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
+import { io, Socket } from 'socket.io-client';
 
 export function Header() {
+  const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Array<{ id: string; name: string; price: number; promotionalPrice?: number | null; imageUrl?: string | null; images?: Array<{ url: string }> }>>([]);
+  const [showResults, setShowResults] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const socketRef = useRef<Socket | null>(null);
   const { data: session } = useSession();
   type UserRole = "CUSTOMER" | "ADMIN" | "OWNER";
   const role = (session?.user as { role?: UserRole } | undefined)?.role;
+
+  // Conectar ao Socket.io para buscas
+  useEffect(() => {
+    const url = process.env.NEXT_PUBLIC_SOCKET_URL;
+    if (!url) return;
+
+    const socket = io(url, { transports: ['websocket'], reconnectionAttempts: 3 });
+    socketRef.current = socket;
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, []);
 
   const updateCartCount = () => {
     const cart = JSON.parse(localStorage.getItem("cart") || "[]");
@@ -21,21 +45,84 @@ export function Header() {
   };
 
   useEffect(() => {
-    // Atualiza contagem inicial
     updateCartCount();
-
-    // Escuta evento de atualização do carrinho
     window.addEventListener("cartUpdated", updateCartCount);
-
-    return () => {
-      window.removeEventListener("cartUpdated", updateCartCount);
-    };
+    return () => window.removeEventListener("cartUpdated", updateCartCount);
   }, []);
 
-  // Atualiza contagem sempre que a sessão muda (ex: login/logout)
   useEffect(() => {
     updateCartCount();
   }, [session]);
+
+  // Fechar dropdown ao clicar fora
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowResults(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Busca via Socket.io com debounce
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+
+    if (value.trim().length < 2) {
+      setSearchResults([]);
+      setShowResults(false);
+      return;
+    }
+
+    searchTimerRef.current = setTimeout(() => {
+      const socket = socketRef.current;
+      if (!socket?.connected) {
+        // Fallback para fetch se socket não estiver conectado
+        fetchSearchFallback(value.trim());
+        return;
+      }
+
+      setIsSearching(true);
+      socket.emit('product_search', { query: value.trim() }, (response: { products: Array<{ id: string; name: string; price: number; promotionalPrice?: number | null; imageUrl?: string | null }> }) => {
+        const results = (response?.products || []).slice(0, 6);
+        setSearchResults(results);
+        setShowResults(results.length > 0);
+        setIsSearching(false);
+      });
+    }, 300);
+  };
+
+  // Fallback caso socket não esteja disponível
+  const fetchSearchFallback = async (query: string) => {
+    setIsSearching(true);
+    try {
+      const res = await fetch(`/api/products?search=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      const results = (data.products || []).slice(0, 6);
+      setSearchResults(results);
+      setShowResults(results.length > 0);
+    } catch {
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      setShowResults(false);
+      router.push(`/produtos?search=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
+  const goToProduct = (id: string) => {
+    setShowResults(false);
+    setSearchQuery('');
+    router.push(`/produtos/${id}`);
+  };
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-metallic-200 shadow-sm">
@@ -52,11 +139,58 @@ export function Header() {
           </Link>
 
           {/* Search Bar - Desktop */}
-          <div className="hidden md:flex flex-1 max-w-2xl mx-8">
-            <div className="relative w-full">
-              <input type="text" placeholder="Buscar ferramentas, marcas..." className="w-full px-4 py-2.5 pl-10 border border-metallic-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
+          <div className="hidden md:flex flex-1 max-w-2xl mx-8" ref={searchRef}>
+            <form onSubmit={handleSearchSubmit} className="relative w-full">
+              <input
+                type="text"
+                placeholder="Buscar ferramentas, marcas..."
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                onFocus={() => searchResults.length > 0 && setShowResults(true)}
+                className="w-full px-4 py-2.5 pl-10 border border-metallic-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
               <Search className="absolute left-3 top-3 h-5 w-5 text-metallic-400" />
-            </div>
+              {isSearching && (
+                <div className="absolute right-3 top-3">
+                  <div className="h-5 w-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+
+              {/* Dropdown de resultados */}
+              {showResults && searchResults.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-metallic-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+                  {searchResults.map((product) => (
+                    <button
+                      key={product.id}
+                      type="button"
+                      onClick={() => goToProduct(product.id)}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-metallic-50 transition-colors text-left"
+                    >
+                      {(product.imageUrl || product.images?.[0]?.url) && (
+                        <img
+                          src={product.imageUrl || product.images?.[0]?.url}
+                          alt={product.name}
+                          className="w-10 h-10 object-cover rounded"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-metallic-900 truncate">{product.name}</p>
+                        <p className="text-sm text-primary-600 font-semibold">
+                          R$ {(product.promotionalPrice ?? product.price).toFixed(2)}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => handleSearchSubmit(new Event('submit') as any)}
+                    className="w-full px-4 py-2 text-sm text-primary-600 hover:bg-primary-50 font-medium border-t border-metallic-100"
+                  >
+                    Ver todos os resultados para &ldquo;{searchQuery}&rdquo;
+                  </button>
+                </div>
+              )}
+            </form>
           </div>
 
           {/* Actions */}
@@ -131,6 +265,60 @@ export function Header() {
         {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="lg:hidden py-4 border-t border-metallic-100">
+            {/* Mobile Search Bar */}
+            <div className="md:hidden mb-4" ref={searchRef}>
+              <form onSubmit={handleSearchSubmit} className="relative">
+                <input
+                  type="text"
+                  placeholder="Buscar ferramentas, marcas..."
+                  value={searchQuery}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  onFocus={() => searchResults.length > 0 && setShowResults(true)}
+                  className="w-full px-4 py-2.5 pl-10 border border-metallic-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+                <Search className="absolute left-3 top-3 h-5 w-5 text-metallic-400" />
+                {isSearching && (
+                  <div className="absolute right-3 top-3">
+                    <div className="h-5 w-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+
+                {showResults && searchResults.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-metallic-200 rounded-lg shadow-lg z-50 max-h-72 overflow-y-auto">
+                    {searchResults.map((product) => (
+                      <button
+                        key={product.id}
+                        type="button"
+                        onClick={() => { goToProduct(product.id); setIsMenuOpen(false); }}
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-metallic-50 transition-colors text-left"
+                      >
+                        {(product.imageUrl || product.images?.[0]?.url) && (
+                          <img
+                            src={product.imageUrl || product.images?.[0]?.url}
+                            alt={product.name}
+                            className="w-10 h-10 object-cover rounded"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-metallic-900 truncate">{product.name}</p>
+                          <p className="text-sm text-primary-600 font-semibold">
+                            R$ {(product.promotionalPrice ?? product.price).toFixed(2)}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => { handleSearchSubmit(new Event('submit') as any); setIsMenuOpen(false); }}
+                      className="w-full px-4 py-2 text-sm text-primary-600 hover:bg-primary-50 font-medium border-t border-metallic-100"
+                    >
+                      Ver todos os resultados para &ldquo;{searchQuery}&rdquo;
+                    </button>
+                  </div>
+                )}
+              </form>
+            </div>
+
             <div className="flex flex-col space-y-3">
               <Link href="/produtos" className="text-sm font-medium text-metallic-700">
                 Todos os Produtos

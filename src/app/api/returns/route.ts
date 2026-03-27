@@ -169,13 +169,24 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // Validar quantidade solicitada vs quantidade comprada
+    for (const item of items) {
+      const orderItem = order.items.find(oi => oi.id === item.orderItemId);
+      if (!orderItem) {
+        return NextResponse.json({ error: 'Item não encontrado no pedido' }, { status: 400 });
+      }
+      if (item.quantity > orderItem.quantity) {
+        return NextResponse.json({
+          error: `Quantidade de devolução (${item.quantity}) excede o comprado (${orderItem.quantity})`,
+        }, { status: 400 });
+      }
+    }
+
     // Calcular valor do reembolso
     let refundAmount = 0;
     for (const item of items) {
-      const orderItem = order.items.find(oi => oi.id === item.orderItemId);
-      if (orderItem) {
-        refundAmount += orderItem.price * item.quantity;
-      }
+      const orderItem = order.items.find(oi => oi.id === item.orderItemId)!;
+      refundAmount += orderItem.price * item.quantity;
     }
 
     // Criar devolução com notificação

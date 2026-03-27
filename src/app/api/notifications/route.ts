@@ -26,8 +26,8 @@ export async function GET(request: NextRequest) {
     // Buscar parâmetros de query
     const searchParams = request.nextUrl.searchParams;
     const unreadOnly = searchParams.get('unreadOnly') === 'true';
-    const limit = parseInt(searchParams.get('limit') || '20', 10);
-    const offset = parseInt(searchParams.get('offset') || '0', 10);
+    const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 100);
+    const offset = Math.min(Math.max(parseInt(searchParams.get('offset') || '0', 10), 0), 10000);
 
     // Construir filtro
     const where = unreadOnly 

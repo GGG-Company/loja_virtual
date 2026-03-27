@@ -66,13 +66,15 @@ function ProductsContent() {
     setIsLoading(true);
     try {
       const categoria = searchParams?.get("categoria");
+      const search = searchParams?.get("search");
       let url = "/api/products";
-      if (categoria) {
-        url += `?categoria=${categoria}`;
-      }
+      const params = new URLSearchParams();
+      if (categoria) params.set("categoria", categoria);
+      if (search) params.set("search", search);
+      if (params.toString()) url += `?${params.toString()}`;
       const response = await apiClient.get<{ products: ProductListItem[] }>(url);
       const arr = response.data.products ?? [];
-      logger.debug({ count: arr.length, categoria, url }, "[PLP] fetchProducts -> fetched");
+      logger.debug({ count: arr.length, categoria, search, url }, "[PLP] fetchProducts -> fetched");
       sendServerLog("fetchProducts", { count: arr.length, categoria, url });
       setAllProducts(arr);
       // By default show all fetched products (user can apply filters)
@@ -192,7 +194,9 @@ function ProductsContent() {
 
     const params = new URLSearchParams();
     const categoria = searchParams?.get("categoria");
+    const search = searchParams?.get("search");
     if (categoria) params.set("categoria", categoria);
+    if (search) params.set("search", search);
     if (sortBy) params.set("sort", sortBy);
     if (min !== 0) params.set("minPrice", String(min));
     if (max !== 5000) params.set("maxPrice", String(max));
@@ -306,8 +310,16 @@ function ProductsContent() {
         {/* Hero */}
         <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white py-16">
           <div className="container mx-auto px-4">
-            <h1 className="text-4xl font-bold mb-4">Nossos Produtos</h1>
-            <p className="text-lg text-primary-100">Encontre as melhores ferramentas profissionais</p>
+            <h1 className="text-4xl font-bold mb-4">
+              {searchParams?.get("search")
+                ? `Resultados para "${searchParams.get("search")}"`
+                : "Nossos Produtos"}
+            </h1>
+            <p className="text-lg text-primary-100">
+              {searchParams?.get("search")
+                ? `${products.length} produto(s) encontrado(s)`
+                : "Encontre as melhores ferramentas profissionais"}
+            </p>
           </div>
         </div>
 

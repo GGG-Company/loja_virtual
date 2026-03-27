@@ -1,5 +1,4 @@
 import { prisma } from '@/lib/prisma';
-import { Buffer } from 'node:buffer';
 
 function melhorEnvioBaseUrl() {
   const isSandbox = (process.env.MELHOR_ENVIO_SANDBOX || 'true').toLowerCase() !== 'false';
@@ -9,13 +8,6 @@ function melhorEnvioBaseUrl() {
 function userAgentHeader() {
   const ua = process.env.MELHOR_ENVIO_USER_AGENT || 'Loja Virtual (contato@exemplo.com)';
   return ua;
-}
-
-function basicAuthHeader() {
-  const clientId = process.env.MELHOR_ENVIO_CLIENT_ID || '';
-  const clientSecret = process.env.MELHOR_ENVIO_CLIENT_SECRET || '';
-  const token = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-  return `Basic ${token}`;
 }
 
 export const ME_SCOPES = (
@@ -53,13 +45,13 @@ export async function exchangeCodeForToken(code: string): Promise<TokenResponse>
   const redirectUri = process.env.MELHOR_ENVIO_CALLBACK || `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/integrations/melhor-envio/callback`;
   if (!clientId || !clientSecret) throw new Error('Client ID/Secret ausentes');
 
-  // OAuth token endpoints geralmente exigem x-www-form-urlencoded
-  const params = new URLSearchParams();
-  params.set('grant_type', 'authorization_code');
-  params.set('client_id', String(clientId).trim());
-  params.set('client_secret', String(clientSecret));
-  params.set('redirect_uri', redirectUri);
-  params.set('code', code);
+  const bodyData = {
+    grant_type: 'authorization_code',
+    client_id: String(clientId).trim(),
+    client_secret: String(clientSecret),
+    redirect_uri: redirectUri,
+    code,
+  };
 
   console.info('[melhorenvio][token] requisitando token', {
     base,
@@ -72,11 +64,10 @@ export async function exchangeCodeForToken(code: string): Promise<TokenResponse>
     method: 'POST',
     headers: {
       Accept: 'application/json',
-      'Content-Type': 'application/x-www-form-urlencoded',
+      'Content-Type': 'application/json',
       'User-Agent': userAgentHeader(),
-      Authorization: basicAuthHeader(),
     },
-    body: params.toString(),
+    body: JSON.stringify(bodyData),
   });
   const raw = await res.text().catch(() => '');
   console.info('[melhorenvio][token] resposta token', {
@@ -85,7 +76,7 @@ export async function exchangeCodeForToken(code: string): Promise<TokenResponse>
     bodyPreview: raw.slice(0, 500),
   });
   if (!res.ok) {
-    throw new Error(`Token exchange failed: ${res.status} ${raw.slice(0, 800)}`);
+    throw new Error(`Token exchange failed: ${res.status}`);
   }
   let data: any = {};
   try { data = JSON.parse(raw); } catch { data = {}; }
@@ -107,11 +98,12 @@ export async function refreshAccessToken(): Promise<TokenResponse> {
   }
   if (!current?.refreshToken) throw new Error('Refresh token ausente');
 
-  const params = new URLSearchParams();
-  params.set('grant_type', 'refresh_token');
-  params.set('client_id', String(clientId).trim());
-  params.set('client_secret', String(clientSecret));
-  params.set('refresh_token', String(current.refreshToken));
+  const bodyData = {
+    grant_type: 'refresh_token',
+    client_id: String(clientId).trim(),
+    client_secret: String(clientSecret),
+    refresh_token: String(current.refreshToken),
+  };
 
   console.info('[melhorenvio][refresh] requisitando refresh', {
     base,
@@ -123,11 +115,10 @@ export async function refreshAccessToken(): Promise<TokenResponse> {
     method: 'POST',
     headers: {
       Accept: 'application/json',
-      'Content-Type': 'application/x-www-form-urlencoded',
+      'Content-Type': 'application/json',
       'User-Agent': userAgentHeader(),
-      Authorization: basicAuthHeader(),
     },
-    body: params.toString(),
+    body: JSON.stringify(bodyData),
   });
   const raw = await res.text().catch(() => '');
   console.info('[melhorenvio][refresh] resposta refresh', {
@@ -136,7 +127,7 @@ export async function refreshAccessToken(): Promise<TokenResponse> {
     bodyPreview: raw.slice(0, 500),
   });
   if (!res.ok) {
-    throw new Error(`Token refresh failed: ${res.status} ${raw.slice(0, 800)}`);
+    throw new Error(`Token refresh failed: ${res.status}`);
   }
   let data: any = {};
   try { data = JSON.parse(raw); } catch { data = {}; }

@@ -214,8 +214,6 @@ export default function CheckoutPage() {
       const items = cartItems.map((item) => ({
         productId: item.id,
         quantity: item.quantity,
-        weightKg: item.weight || 0.5,
-        dimensions: item.dimensions || { height: 10, width: 15, length: 20 },
         price: item.price,
       }));
 
@@ -304,12 +302,37 @@ export default function CheckoutPage() {
     }
   };
 
+  // Validação de CPF (dígitos verificadores)
+  const isValidCpf = (cpf: string): boolean => {
+    const nums = cpf.replace(/\D/g, '');
+    if (nums.length !== 11) return false;
+    if (/^(\d)\1{10}$/.test(nums)) return false; // todos iguais
+    let sum = 0;
+    for (let i = 0; i < 9; i++) sum += parseInt(nums[i]) * (10 - i);
+    let rest = (sum * 10) % 11;
+    if (rest === 10) rest = 0;
+    if (rest !== parseInt(nums[9])) return false;
+    sum = 0;
+    for (let i = 0; i < 10; i++) sum += parseInt(nums[i]) * (11 - i);
+    rest = (sum * 10) % 11;
+    if (rest === 10) rest = 0;
+    return rest === parseInt(nums[10]);
+  };
+
   const handleNextStep = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
     if (currentStep === 1) {
       if (!dadosForm.nome || !dadosForm.email || !dadosForm.telefone || !dadosForm.cpf) {
         toast.error("Preencha todos os campos");
+        return;
+      }
+      if (dadosForm.telefone.replace(/\D/g, '').length < 10) {
+        toast.error("Telefone inválido");
+        return;
+      }
+      if (!isValidCpf(dadosForm.cpf)) {
+        toast.error("CPF inválido");
         return;
       }
     } else if (currentStep === 2) {
@@ -747,7 +770,7 @@ export default function CheckoutPage() {
                           {cartItems.map((item) => (
                             <div key={item.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded">
                               <div className="relative w-16 h-16">
-                                <Image src={!item.imageUrl || item.imageUrl.includes("/products/") ? "/placeholder.svg" : item.imageUrl} alt={item.name} fill className="object-cover rounded" unoptimized={!item.imageUrl || item.imageUrl.includes("/products/")} />
+                                <Image src={item.imageUrl || "/placeholder.svg"} alt={item.name} fill className="object-cover rounded" unoptimized />
                               </div>
                               <div className="flex-1">
                                 <p className="font-medium">{item.name}</p>
@@ -799,7 +822,7 @@ export default function CheckoutPage() {
                       <Button type="button" variant="outline" onClick={() => setCurrentStep(3)} disabled={loading}>
                         Voltar
                       </Button>
-                      <Button onClick={handleConfirmarPedido} variant="outline" className="flex-1" disabled={loading}>
+                      <Button onClick={handleConfirmarPedido} className="flex-1 bg-green-600 hover:bg-green-700 text-white" disabled={loading}>
                         {loading ? (
                           <>
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>

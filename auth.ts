@@ -7,22 +7,71 @@ import { prisma } from '@/lib/prisma';
 import type { UserRole } from '@prisma/client';
 import type { Adapter } from 'next-auth/adapters';
 
+/** Proteção contra brute force — bloqueia após MAX_ATTEMPTS tentativas por WINDOW_MS */
+const LOGIN_MAX_ATTEMPTS = 5;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 minutos
+const loginAttempts = new Map<string, { count: number; blockedUntil: number }>();
+
+function checkLoginAttempt(email: string): { blocked: boolean; retryAfterSec?: number } {
+  const key = email.toLowerCase();
+  const entry = loginAttempts.get(key);
+  const now = Date.now();
+
+  if (entry && now < entry.blockedUntil) {
+    return { blocked: true, retryAfterSec: Math.ceil((entry.blockedUntil - now) / 1000) };
+  }
+
+  if (entry && now >= entry.blockedUntil) {
+    loginAttempts.delete(key);
+  }
+
+  return { blocked: false };
+}
+
+function recordFailedAttempt(email: string) {
+  const key = email.toLowerCase();
+  const entry = loginAttempts.get(key) || { count: 0, blockedUntil: 0 };
+  entry.count++;
+
+  if (entry.count >= LOGIN_MAX_ATTEMPTS) {
+    entry.blockedUntil = Date.now() + LOGIN_WINDOW_MS;
+  }
+
+  loginAttempts.set(key, entry);
+}
+
+function clearAttempts(email: string) {
+  loginAttempts.delete(email.toLowerCase());
+}
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   // Cast para alinhar tipos de Adapter entre @auth/core e next-auth
   adapter: PrismaAdapter(prisma) as Adapter,
   session: {
     strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 dias
+    maxAge: 7 * 24 * 60 * 60, // 7 dias
   },
   pages: {
     signIn: '/auth/login',
     error: '/auth/error',
   },
+  cookies: {
+    sessionToken: {
+      name: process.env.NODE_ENV === 'production'
+        ? '__Secure-next-auth.session-token'
+        : 'next-auth.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+      },
+    },
+  },
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      allowDangerousEmailAccountLinking: true,
     }),
     CredentialsProvider({
       name: 'Credentials',
@@ -35,11 +84,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           throw new Error('Email e senha são obrigatórios');
         }
 
+        const email = credentials.email as string;
+
+        // Verificar bloqueio por tentativas excessivas
+        const { blocked, retryAfterSec } = checkLoginAttempt(email);
+        if (blocked) {
+          throw new Error(`Conta temporariamente bloqueada. Tente novamente em ${retryAfterSec} segundos.`);
+        }
+
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
+          where: { email },
         });
 
         if (!user || !user.password) {
+          recordFailedAttempt(email);
           throw new Error('Credenciais inválidas');
         }
 
@@ -49,8 +107,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         );
 
         if (!isPasswordValid) {
+          recordFailedAttempt(email);
           throw new Error('Credenciais inválidas');
         }
+
+        // Login bem-sucedido — limpar tentativas
+        clearAttempts(email);
 
         return {
           id: user.id,

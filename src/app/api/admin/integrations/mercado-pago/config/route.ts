@@ -1,9 +1,16 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { updateMercadoPagoConfig } from '@/lib/mercadopago-config';
+import { auth } from '@/auth';
 import logger from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   try {
+    // Defesa em profundidade — proxy já protege /api/admin mas valida aqui também
+    const session = await auth();
+    if (!session?.user || (session.user.role !== 'ADMIN' && session.user.role !== 'OWNER')) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
+    }
+
     const body = await req.json();
     const { publicKey, accessToken, environment } = body;
 

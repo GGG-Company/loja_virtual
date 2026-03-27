@@ -33,14 +33,17 @@ export async function POST(req: NextRequest) {
       status: body.data?.status,
     }, '[MELHOR_ENVIO_WEBHOOK] Notificação recebida');
 
-    // Validar token de segurança (opcional, mas recomendado)
+    // Validar token de segurança (obrigatório)
     const webhookToken = process.env.MELHOR_ENVIO_WEBHOOK_TOKEN;
-    if (webhookToken) {
-      const headerToken = req.headers.get('x-webhook-token');
-      if (headerToken !== webhookToken) {
-        logger.warn('[MELHOR_ENVIO_WEBHOOK] Token inválido');
-        return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
-      }
+    if (!webhookToken) {
+      logger.error('MELHOR_ENVIO_WEBHOOK_TOKEN não configurado — rejeitando webhook');
+      return NextResponse.json({ error: 'Token não configurado' }, { status: 500 });
+    }
+
+    const headerToken = req.headers.get('x-webhook-token');
+    if (headerToken !== webhookToken) {
+      logger.warn('[MELHOR_ENVIO_WEBHOOK] Token inválido');
+      return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
     }
 
     const { type, data } = body;

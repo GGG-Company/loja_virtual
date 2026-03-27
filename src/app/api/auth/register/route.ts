@@ -1,8 +1,9 @@
 import logger from "@/lib/logger";
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
+import { authLimiter } from '@/lib/rate-limit';
 
 const RegisterSchema = z.object({
   name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres'),
@@ -18,8 +19,12 @@ const RegisterSchema = z.object({
   }
 });
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // Rate limit: máx 10 tentativas por minuto por IP
+    const blocked = await authLimiter.check(request);
+    if (blocked) return blocked;
+
     const body = await request.json();
     const parsed = RegisterSchema.safeParse(body);
 
@@ -32,15 +37,15 @@ export async function POST(request: Request) {
 
     const { name, email, password, phone, cpf, cnpj, stateRegistration } = parsed.data;
 
-    // Verificar se email já existe
+    // Verificar se email já existe (resposta genérica para evitar enumeração)
     const existingUser = await prisma.user.findUnique({
       where: { email },
     });
 
     if (existingUser) {
       return NextResponse.json(
-        { error: 'Email já cadastrado' },
-        { status: 409 }
+        { error: 'Não foi possível criar a conta. Verifique os dados ou tente fazer login.' },
+        { status: 400 }
       );
     }
 

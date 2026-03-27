@@ -72,15 +72,6 @@ export async function POST(
       items: (updatedOrder as any).items,
     });
 
-    await sendOrderStatusUpdate({
-      orderId: (updatedOrder as any).id,
-      status: 'DELIVERED',
-      deliveredAt: (updatedOrder as any).deliveredAt,
-      user: (updatedOrder as any).user,
-      total: (updatedOrder as any).total,
-      items: (updatedOrder as any).items,
-    });
-
     return NextResponse.json({ 
       success: true,
       order: updatedOrder,

@@ -71,6 +71,7 @@ export default function PedidoDetalhePage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [trackingInfo, setTrackingInfo] = useState<TrackingInfo | null>(null);
   const [isTrackingLoading, setIsTrackingLoading] = useState(false);
 
@@ -127,6 +128,22 @@ export default function PedidoDetalhePage() {
       toast.error("Erro ao confirmar recebimento");
     } finally {
       setIsConfirming(false);
+    }
+  };
+
+  const handleCancelOrder = async () => {
+    if (!confirm("Tem certeza que deseja cancelar este pedido? Esta ação não pode ser desfeita.")) return;
+
+    setIsCancelling(true);
+    try {
+      const response = await apiClient.patch<Order>(`/api/user/orders/${params.id}`, { action: 'cancel' });
+      setOrder(response.data);
+      toast.success("Pedido cancelado com sucesso");
+    } catch (error) {
+      console.error("Erro ao cancelar pedido:", error);
+      toast.error("Erro ao cancelar pedido");
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -335,9 +352,15 @@ export default function PedidoDetalhePage() {
               <div className="border-t border-metallic-200 pt-6">
                 <div className="flex flex-wrap gap-4 justify-center">
                   {order.status === "PENDING" && (
-                    <Button size="lg" onClick={handlePayNow} className="min-w-[200px]">
-                      💳 Pagar Agora
-                    </Button>
+                    <>
+                      <Button size="lg" onClick={handlePayNow} className="min-w-[200px]">
+                        💳 Pagar Agora
+                      </Button>
+                      <Button size="lg" variant="outline" onClick={handleCancelOrder} disabled={isCancelling} className="min-w-[200px] text-red-600 border-red-200 hover:bg-red-50">
+                        <XCircle className="h-4 w-4 mr-2" />
+                        {isCancelling ? "Cancelando..." : "Cancelar Pedido"}
+                      </Button>
+                    </>
                   )}
 
                   {order.status === "DELIVERED" && !order.deliveredAt && (

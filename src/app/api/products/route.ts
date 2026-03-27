@@ -12,12 +12,14 @@ export async function GET(request: Request) {
     const promo = searchParams.get('promo');
     const category = searchParams.get('categoria');
     const limit = searchParams.get('limit');
+    const search = searchParams.get('search');
 
     const products = await listProducts({
       featured: featured === 'true',
       promo: promo === 'true',
       categorySlug: category,
       limit: limit ? parseInt(limit) : null,
+      search: search || null,
     });
 
     return NextResponse.json({

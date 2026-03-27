@@ -147,34 +147,34 @@ function ProductDetailContent() {
     );
   }
 
+  // Structured Data seguro — sanitiza valores para evitar XSS via JSON-LD
+  const structuredData = product ? JSON.stringify({
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    name: product.name,
+    image: product.imageUrl || product.images?.[0]?.url || undefined,
+    description: product.description,
+    sku: product.sku,
+    gtin13: product.ean,
+    productID: product.id,
+    category: product.category?.name,
+    brand: "Shopping das Ferramentas",
+    offers: {
+      "@type": "Offer",
+      priceCurrency: "BRL",
+      price: displayPrice,
+      availability: (product.stock ?? 0) > 0 ? "http://schema.org/InStock" : "http://schema.org/OutOfStock",
+    },
+  }).replace(/</g, '\\u003c') : null;
+
   return (
     <>
-      {product && (
+      {structuredData && (
         <Script
           id="product-structured-data"
           type="application/ld+json"
           strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org/",
-              "@type": "Product",
-              name: product.name,
-              image: product.imageUrl || product.images?.[0]?.url || undefined,
-              description: product.description,
-              sku: product.sku,
-              gtin13: product.ean,
-              productID: product.id,
-              category: product.category?.name,
-              brand: "Shopping das Ferramentas",
-              offers: {
-                "@type": "Offer",
-                priceCurrency: "BRL",
-                price: displayPrice,
-                availability: (product.stock ?? 0) > 0 ? "http://schema.org/InStock" : "http://schema.org/OutOfStock",
-                url: typeof window !== "undefined" ? window.location.href : undefined,
-              },
-            }),
-          }}
+          dangerouslySetInnerHTML={{ __html: structuredData }}
         />
       )}
       {!searchParams.get("embed") && <Header />}

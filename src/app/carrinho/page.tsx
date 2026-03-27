@@ -292,7 +292,7 @@ export default function CartPage() {
                 {cartItems.map((item) => (
                   <motion.div key={item.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="bg-white rounded-lg shadow p-4 flex gap-4">
                     <div className="relative w-24 h-24 flex-shrink-0">
-                      <Image src={!item.imageUrl || item.imageUrl.includes("/products/") ? "/placeholder.svg" : item.imageUrl} alt={item.name} fill className="object-cover rounded" unoptimized={!item.imageUrl || item.imageUrl.includes("/products/")} />
+                      <Image src={item.imageUrl || "/placeholder.svg"} alt={item.name} fill className="object-cover rounded" unoptimized />
                     </div>
 
                     <div className="flex-1">

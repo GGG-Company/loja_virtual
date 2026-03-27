@@ -60,6 +60,24 @@
 }
 
 @layer utilities {
+  /* Password mask - works in all browsers without type=password */
+  .password-mask {
+    -webkit-text-security: disc;
+  }
+
+  /* Firefox fallback (doesn't support -webkit-text-security) */
+  @-moz-document url-prefix() {
+    .password-mask {
+      color: transparent;
+      text-shadow: 0 0 0 #000;
+      caret-color: black;
+    }
+    .password-mask::placeholder {
+      color: #9ca3af;
+      text-shadow: none;
+    }
+  }
+
   /* Shimmer effect para skeleton loading */
   .shimmer {
     background: linear-gradient(

@@ -44,6 +44,9 @@ export async function POST(request: Request) {
 
     const rawOptions = await getShippingOptions({ items: formattedItems, destinationZip });
     
+    // Se só tem retirada em loja e não é intencional, avisar o frontend
+    const hasShippingOptions = rawOptions.some(opt => !opt.pickup);
+    
     // Mapear para o formato esperado pelo frontend (carrinho e checkout)
     const options = rawOptions.map((opt) => ({
       id: opt.id,
@@ -58,7 +61,11 @@ export async function POST(request: Request) {
       notes: opt.notes || undefined,
     }));
 
-    return NextResponse.json({ success: true, options });
+    return NextResponse.json({ 
+      success: true, 
+      options,
+      warning: !hasShippingOptions ? 'Não foi possível obter cotações de frete para este CEP. Tente novamente.' : undefined,
+    });
   } catch (error) {
     logger.error(error, '[SHIPPING_QUOTE]');
     return NextResponse.json({ error: 'Erro ao calcular frete' }, { status: 500 });

@@ -3,9 +3,13 @@ import logger from "@/lib/logger";
 import { getMercadoPagoKeys } from '@/lib/mercadopago-config';
 import { prisma } from '@/lib/prisma';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
+import { paymentLimiter } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
   try {
+    const blocked = await paymentLimiter.check(req);
+    if (blocked) return blocked;
+
     const body = await req.json();
     const { orderId, amount, userEmail, userName, userCpf } = body;
 
@@ -13,10 +17,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "orderId e amount são obrigatórios" }, { status: 400 });
     }
 
-    // Buscar dados do pedido para pegar endereço
+    // Buscar dados do pedido e validar valor no servidor
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       select: {
+        total: true,
         shippingAddress: true,
       },
     });
@@ -24,6 +29,14 @@ export async function POST(req: NextRequest) {
     if (!order) {
       return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 });
     }
+
+    // Nunca confiar no amount do client
+    if (Math.abs(Number(amount) - order.total) > 0.01) {
+      logger.warn({ clientAmount: amount, serverAmount: order.total, orderId }, 'Tentativa de manipulação de preço detectada (boleto)');
+      return NextResponse.json({ error: 'Valor do pagamento não confere com o pedido' }, { status: 400 });
+    }
+
+    const serverAmount = order.total;
 
     // Extrair endereço do JSON
     const address = order.shippingAddress as any;
@@ -45,7 +58,7 @@ export async function POST(req: NextRequest) {
     dueDate.setDate(dueDate.getDate() + 3);
 
     const paymentData = {
-      transaction_amount: Number(amount),
+      transaction_amount: Number(serverAmount),
       description: `Pedido #${orderId}`,
       payment_method_id: "bolbradesco",
       payer: {
@@ -90,6 +103,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: any) {
     logger.error(error as Error, "Erro ao gerar Boleto");
-    return NextResponse.json({ error: error.message || "Erro ao gerar Boleto" }, { status: 500 });
+    return NextResponse.json({ error: 'Erro ao gerar boleto. Tente novamente ou contate o suporte.' }, { status: 500 });
   }
 }

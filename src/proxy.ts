@@ -7,14 +7,18 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const originHeader = request.headers.get("origin") || "";
   const allowedOrigins = ["http://localhost:3000", "https://loja.azura.dev.br", "https://socket.azura.dev.br"];
-  const allowOrigin = allowedOrigins.includes(originHeader) ? originHeader : "https://loja.azura.dev.br";
+  const isAllowedOrigin = allowedOrigins.includes(originHeader);
   
-  const corsHeaders = {
-    "Access-Control-Allow-Origin": allowOrigin,
+  const corsHeaders: Record<string, string> = {
     "Access-Control-Allow-Credentials": "true",
     "Access-Control-Allow-Methods": "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, X-Internal-Api-Key",
   };
+
+  // Só define Access-Control-Allow-Origin se a origin estiver na whitelist
+  if (isAllowedOrigin) {
+    corsHeaders["Access-Control-Allow-Origin"] = originHeader;
+  }
 
   const applyCors = (res: NextResponse | Response) => {
     try {
@@ -36,7 +40,18 @@ export async function proxy(request: NextRequest) {
   }
 
   // ============================================
-  // 1. PROTEÇÃO DE ROTAS ADMIN (Páginas)
+  // 1. PROTEÇÃO DE ROTAS DO CLIENTE
+  // ============================================
+
+  const protectedCustomerRoutes = ["/minha-conta", "/checkout"];
+  if (protectedCustomerRoutes.some(route => pathname.startsWith(route))) {
+    if (!session?.user) {
+      return NextResponse.redirect(new URL("/auth/login", request.url));
+    }
+  }
+
+  // ============================================
+  // 2. PROTEÇÃO DE ROTAS ADMIN (Páginas)
   // ============================================
 
   if (pathname.startsWith("/admin/financial")) {
@@ -58,7 +73,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // ============================================
-  // 2. PROTEÇÃO DE API ROUTES
+  // 3. PROTEÇÃO DE API ROUTES
   // ============================================
   
   if (pathname.startsWith('/api')) {
@@ -104,5 +119,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/:path*"],
+  matcher: ["/admin/:path*", "/api/:path*", "/minha-conta/:path*", "/checkout/:path*"],
 };

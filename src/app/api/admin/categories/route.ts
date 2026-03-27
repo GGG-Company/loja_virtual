@@ -1,9 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/auth';
 import logger from "@/lib/logger";
+
+/** Verifica se o usuário é admin ou owner */
+async function requireAdmin() {
+  const session = await auth();
+  if (!session?.user) return { error: NextResponse.json({ error: 'Não autorizado' }, { status: 401 }) };
+  if (session.user.role !== 'ADMIN' && session.user.role !== 'OWNER') {
+    return { error: NextResponse.json({ error: 'Acesso negado' }, { status: 403 }) };
+  }
+  return { session };
+}
 
 export async function GET() {
   try {
+    const { error } = await requireAdmin();
+    if (error) return error;
+
     const categories = await prisma.category.findMany({ orderBy: { name: 'asc' } });
     return NextResponse.json({ categories });
   } catch (error) {
@@ -14,6 +28,9 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const { error } = await requireAdmin();
+    if (error) return error;
+
     const body = await req.json();
     const { name, slug, description, image } = body || {};
     if (!name || !slug) {
@@ -36,6 +53,9 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
+    const { error } = await requireAdmin();
+    if (error) return error;
+
     const body = await req.json();
     const { id, name, slug, description, image } = body || {};
     if (!id || !name || !slug) return NextResponse.json({ error: 'id, name e slug obrigatórios' }, { status: 400 });
@@ -53,6 +73,9 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const { error } = await requireAdmin();
+    if (error) return error;
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 });

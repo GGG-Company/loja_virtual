@@ -3,15 +3,36 @@ import logger from "@/lib/logger";
 import { getMercadoPagoKeys } from '@/lib/mercadopago-config';
 import { prisma } from '@/lib/prisma';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
+import { paymentLimiter } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
   try {
+    const blocked = await paymentLimiter.check(req);
+    if (blocked) return blocked;
+
     const body = await req.json();
     const { orderId, amount, userEmail, userName } = body;
 
     if (!orderId || !amount) {
       return NextResponse.json({ error: "orderId e amount são obrigatórios" }, { status: 400 });
     }
+
+    // Validar valor no servidor — nunca confiar no amount do client
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: { total: true },
+    });
+
+    if (!order) {
+      return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
+    }
+
+    if (Math.abs(Number(amount) - order.total) > 0.01) {
+      logger.warn({ clientAmount: amount, serverAmount: order.total, orderId }, 'Tentativa de manipulação de preço detectada (PIX)');
+      return NextResponse.json({ error: 'Valor do pagamento não confere com o pedido' }, { status: 400 });
+    }
+
+    const serverAmount = order.total;
 
     const { accessToken } = getMercadoPagoKeys();
 
@@ -26,7 +47,7 @@ export async function POST(req: NextRequest) {
     const payment = new Payment(client);
     
     const paymentData = {
-      transaction_amount: Number(amount),
+      transaction_amount: Number(serverAmount),
       description: `Pedido #${orderId}`,
       payment_method_id: "pix",
       payer: {
@@ -59,7 +80,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     logger.error(error as Error, 'Erro ao gerar PIX');
     return NextResponse.json(
-      { error: error.message || 'Erro ao gerar PIX' },
+      { error: 'Erro ao gerar PIX. Tente novamente ou contate o suporte.' },
       { status: 500 }
     );
   }

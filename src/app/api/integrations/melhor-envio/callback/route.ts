@@ -1,6 +1,7 @@
 import logger from "@/lib/logger";
 import { NextRequest, NextResponse } from 'next/server';
 import { exchangeCodeForToken, saveToken } from '@/lib/melhorenvio-oauth';
+import { cookies } from 'next/headers';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -9,6 +10,15 @@ export async function GET(req: NextRequest) {
   if (!code) {
     logger.warn({ url: req.url, state }, '[melhorenvio][callback] code ausente');
     return NextResponse.json({ error: 'code ausente' }, { status: 400 });
+  }
+
+  // Verify CSRF state
+  const cookieStore = await cookies();
+  const savedState = cookieStore.get('melhorenvio_oauth_state')?.value;
+  cookieStore.delete('melhorenvio_oauth_state');
+  if (!savedState || savedState !== state) {
+    logger.warn({ state, savedState }, '[melhorenvio][callback] state inválido (CSRF)');
+    return NextResponse.json({ error: 'State inválido' }, { status: 400 });
   }
 
   try {

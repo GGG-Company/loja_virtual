@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 
 export async function GET() {
+  // Bloquear em produção
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Não disponível' }, { status: 404 });
+  }
+
   try {
     const session = await auth();
     if (!session?.user) {
@@ -13,7 +18,6 @@ export async function GET() {
         id: session.user.id,
         name: session.user.name || null,
         email: session.user.email || null,
-        role: session.user.role || null,
       },
     });
   } catch (err) {

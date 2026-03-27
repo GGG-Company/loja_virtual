@@ -25,14 +25,18 @@ export async function GET() {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: profileSelect,
+    select: { ...profileSelect, password: true },
   });
 
   if (!user) {
     return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
   }
 
-  return NextResponse.json(user);
+  const { password, ...safeUser } = user;
+  return NextResponse.json({
+    ...safeUser,
+    hasPassword: !!password,
+  });
 }
 
 export async function PUT(request: Request) {

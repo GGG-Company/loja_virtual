@@ -5,6 +5,7 @@ const { createAdapter } = require('@socket.io/redis-adapter');
 
 const PORT = process.env.SOCKET_PORT || 4000;
 const INTERNAL_KEY = process.env.X_INTERNAL_API_KEY;
+const NEXT_APP_URL = process.env.NEXT_APP_URL || 'http://localhost:3000';
 
 const io = new Server(PORT, {
   maxHttpBufferSize: 1e6,
@@ -129,8 +130,45 @@ io.on('connection', (socket) => {
     socket.to(`chat_${chatId}`).emit('user_typing', { isTyping });
   });
 
+  // Product search via socket
+  let searchCount = 0;
+  const searchResetInterval = setInterval(() => { searchCount = 0; }, 60000);
+
+  socket.on('product_search', async (data, callback) => {
+    if (++searchCount > 30) {
+      if (typeof callback === 'function') callback({ error: 'rate_limit', products: [] });
+      return;
+    }
+    const query = typeof data === 'string' ? data : data?.query;
+    if (!query || typeof query !== 'string' || query.trim().length < 2) {
+      if (typeof callback === 'function') callback({ products: [] });
+      return;
+    }
+
+    try {
+      const url = `${NEXT_APP_URL}/api/products?search=${encodeURIComponent(query.trim())}`;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeout);
+
+      if (!res.ok) {
+        if (typeof callback === 'function') callback({ products: [] });
+        return;
+      }
+      const json = await res.json();
+      const products = (json.products || []).slice(0, 6);
+      if (typeof callback === 'function') callback({ products });
+    } catch (e) {
+      console.error('[REMOTE] product_search error', e.message);
+      if (typeof callback === 'function') callback({ products: [] });
+    }
+  });
+
   socket.on('disconnect', (reason) => {
     clearInterval(resetInterval);
+    clearInterval(searchResetInterval);
     console.log(`[REMOTE DISCONNECT] ${socket.id} reason=${reason}`);
   });
 });

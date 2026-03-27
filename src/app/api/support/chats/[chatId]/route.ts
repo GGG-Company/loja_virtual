@@ -18,6 +18,20 @@ export async function GET(
 
     // lightweight check: return only the last message timestamp
     if (onlyLast) {
+      // Verificar autorização antes de retornar dados
+      const chat = await prisma.supportChat.findUnique({
+        where: { id: chatId },
+        select: { userId: true },
+      });
+      if (!chat) {
+        return NextResponse.json({ error: 'Chat não encontrado' }, { status: 404 });
+      }
+      const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'OWNER';
+      const isOwner = session?.user?.id === chat.userId;
+      if (!isAdmin && !isOwner) {
+        return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+      }
+
       const lastMsg = await prisma.supportMessage.findFirst({
         where: { chatId },
         orderBy: { createdAt: 'desc' },
@@ -56,9 +70,8 @@ export async function GET(
 
       const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'OWNER';
       const isOwner = session?.user?.id === chat.userId;
-      const isGuestChat = chat.userId === null;
 
-      if (!isAdmin && !isOwner && !isGuestChat) {
+      if (!isAdmin && !isOwner) {
         return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
       }
 
@@ -66,14 +79,29 @@ export async function GET(
     }
 
     // Paginated fetch: messages before a given ISO timestamp
+    // Verificar autorização
+    const chatForPagination = await prisma.supportChat.findUnique({
+      where: { id: chatId },
+      select: { userId: true },
+    });
+    if (!chatForPagination) {
+      return NextResponse.json({ error: 'Chat não encontrado' }, { status: 404 });
+    }
+    const isAdminPaginated = session?.user?.role === 'ADMIN' || session?.user?.role === 'OWNER';
+    const isOwnerPaginated = session?.user?.id === chatForPagination.userId;
+    if (!isAdminPaginated && !isOwnerPaginated) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
+
     const beforeDate = new Date(before);
+    const cappedLimit = Math.min(limit, 100);
     const msgs = await prisma.supportMessage.findMany({
       where: {
         chatId,
         createdAt: { lt: beforeDate },
       },
       orderBy: { createdAt: 'desc' },
-      take: limit,
+      take: cappedLimit,
     });
 
     // return messages ordered asc for UI
@@ -111,12 +139,11 @@ export async function POST(
       return NextResponse.json({ error: 'Chat não encontrado' }, { status: 404 });
     }
 
-    // Verifica permissão: admin, owner ou chat de visitante
+    // Verifica permissão: admin ou owner do chat
     const isAdminPost = session?.user?.role === 'ADMIN' || session?.user?.role === 'OWNER';
     const isOwnerPost = session?.user?.id === chat.userId;
-    const isGuestChatPost = chat.userId === null;
 
-    if (!isAdminPost && !isOwnerPost && !isGuestChatPost) {
+    if (!isAdminPost && !isOwnerPost) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
@@ -187,6 +214,12 @@ export async function PATCH(
     const session = await auth();
     const body = await request.json();
     const { status } = body;
+
+    // Apenas admins podem alterar status do chat
+    const isAdminPatch = session?.user?.role === 'ADMIN' || session?.user?.role === 'OWNER';
+    if (!isAdminPatch) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
 
     if (!['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'].includes(status)) {
       return NextResponse.json({ error: 'Status inválido' }, { status: 400 });

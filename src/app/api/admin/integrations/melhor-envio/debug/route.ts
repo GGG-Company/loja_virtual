@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
+import { auth } from '@/auth';
 import { buildAuthorizeUrl, commonHeaders, ME_SCOPES } from '@/lib/melhorenvio-oauth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  const session = await auth();
+  if (!session?.user || (session.user.role !== 'ADMIN' && session.user.role !== 'OWNER')) {
+    return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
+  }
+
   const sandbox = (process.env.MELHOR_ENVIO_SANDBOX || 'true').toLowerCase() !== 'false';
   const base = sandbox ? 'https://sandbox.melhorenvio.com.br' : 'https://melhorenvio.com.br';
   const nextauthUrl = process.env.NEXTAUTH_URL || null;

@@ -94,6 +94,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Campos obrigatórios faltando' }, { status: 400 });
     }
 
+    const parsedValue = parseFloat(value);
+    if (isNaN(parsedValue) || parsedValue <= 0) {
+      return NextResponse.json({ error: 'Valor do desconto deve ser positivo' }, { status: 400 });
+    }
+
+    if (discountType === 'PERCENTAGE' && parsedValue > 100) {
+      return NextResponse.json({ error: 'Desconto percentual não pode exceder 100%' }, { status: 400 });
+    }
+
+    if (maxDiscount && parseFloat(maxDiscount) <= 0) {
+      return NextResponse.json({ error: 'Desconto máximo deve ser positivo' }, { status: 400 });
+    }
+
+    if (usagePerUser && usageLimit && parseInt(usagePerUser) > parseInt(usageLimit)) {
+      return NextResponse.json({ error: 'Uso por usuário não pode exceder o limite total' }, { status: 400 });
+    }
+
+    if (startDate && endDate && new Date(startDate) >= new Date(endDate)) {
+      return NextResponse.json({ error: 'Data inicial deve ser anterior à data final' }, { status: 400 });
+    }
+
     // Verifica se código já existe
     const existingCoupon = await prisma.coupon.findUnique({
       where: { code: code.toUpperCase() },

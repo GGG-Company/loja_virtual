@@ -6,6 +6,17 @@ import { sendOrderStatusUpdate } from '@/lib/webhooks';
 import { notifyOrderStatusChange } from '@/lib/notifications';
 import type { OrderStatus } from '@/lib/i18n';
 
+/** Transições válidas de status — evita pular etapas (ex: PENDING → DELIVERED) */
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  PENDING:    ['CONFIRMED', 'CANCELLED'],
+  CONFIRMED:  ['PROCESSING', 'CANCELLED'],
+  PROCESSING: ['SHIPPED', 'CANCELLED'],
+  SHIPPED:    ['DELIVERED', 'CANCELLED'],
+  DELIVERED:  ['REFUNDED'],
+  CANCELLED:  [],
+  REFUNDED:   [],
+};
+
 const UpdateStatusSchema = z.object({
   orderNumber: z.string(),
   status: z.enum([
@@ -21,22 +32,15 @@ const UpdateStatusSchema = z.object({
   trackingUrl: z.string().url().optional(),
 });
 
-/**
- * POST /api/integrations/orders/update-status
- * 
- * Webhook para atualizar status de pedidos.
- * Usado por transportadoras, Mercado Livre, ou automações externas.
- * 
- * Body:
- * {
- *   "orderNumber": "ORD-2025-000001",
- *   "status": "SHIPPED",
- *   "trackingCode": "BR123456789",
- *   "trackingUrl": "https://rastreio.correios.com.br/..."
- * }
- */
 export async function POST(request: NextRequest) {
   try {
+    // Autenticação obrigatória via API key
+    const apiKey = request.headers.get('X-INTERNAL-API-KEY');
+    const validKey = process.env.X_INTERNAL_API_KEY;
+    if (!validKey || !apiKey || apiKey !== validKey) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
+
     const body = await request.json();
     const parsed = UpdateStatusSchema.safeParse(body);
 
@@ -57,6 +61,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: `Pedido ${orderNumber} não encontrado` },
         { status: 404 }
+      );
+    }
+
+    // Validar transição de estado
+    const allowed = VALID_TRANSITIONS[order.status] || [];
+    if (!allowed.includes(status)) {
+      return NextResponse.json(
+        { error: `Transição inválida: ${order.status} → ${status}` },
+        { status: 422 }
       );
     }
 

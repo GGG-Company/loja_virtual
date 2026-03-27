@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
 import logger from '@/lib/logger';
+import { supportChatLimiter } from '@/lib/rate-limit';
 
 // GET - Listar chats de suporte (admin)
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
 
@@ -63,8 +65,12 @@ export async function GET(request: Request) {
 }
 
 // POST - Criar novo chat de suporte
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // Rate limiting para evitar spam de chats
+    const blocked = await supportChatLimiter.check(request);
+    if (blocked) return blocked;
+
     const session = await auth();
     const body = await request.json();
     const { userName, userEmail, subject, initialMessage } = body;

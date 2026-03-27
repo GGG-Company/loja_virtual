@@ -160,11 +160,17 @@ async function quoteWithMelhorEnvio(params: { items: ShippingItem[]; destination
   logger.info({ body }, '[shipping] Cotação Melhor Envio - Request Body');
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     const res = await fetch(`${baseUrl}/api/v2/me/shipment/calculate`, {
       method: 'POST',
       headers: { ...commonHeaders(), Authorization: `Bearer ${token}` },
       body: JSON.stringify(body),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     const responseStatus = res.status;
     const responseText = await res.text();
@@ -216,13 +222,19 @@ async function listPickupPointsFromMelhorEnvio(zip: string): Promise<PickupPoint
 
   const baseUrl = melhorEnvioBaseUrl();
   const url = new URL(`${baseUrl}/api/v2/me/pickup-points`);
-  url.searchParams.set('postal_code', zip);
+  url.searchParams.set('postal_code', zip.replace(/\D/g, ''));
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     const res = await fetch(url.toString(), {
       headers: { ...commonHeaders(), Authorization: `Bearer ${token}` },
       cache: 'no-store',
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!res.ok) {
       const body = await res.text().catch(() => '');
@@ -266,12 +278,18 @@ async function trackWithMelhorEnvio(codes: string[]): Promise<TrackingInfo[] | n
   const baseUrl = melhorEnvioBaseUrl();
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     const res = await fetch(`${baseUrl}/api/v2/me/tracking`, {
       method: 'POST',
       headers: { ...commonHeaders(), Authorization: `Bearer ${token}` },
       body: JSON.stringify({ codes }),
       cache: 'no-store',
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!res.ok) {
       await res.text().catch(() => {});
@@ -331,7 +349,7 @@ export async function loadShippingItems(rawItems: ShippingItem[]) {
   });
 }
 
-export async function getShippingOptions(params: { items: ShippingItem[]; destinationZip: string; originZip?: string; }) {
+export async function getShippingOptions(params: { items: ShippingItem[]; destinationZip: string; originZip?: string; }): Promise<ShippingOption[]> {
   logger.info({
     itemsCount: params.items.length,
     destinationZip: params.destinationZip,

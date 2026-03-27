@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { reviewLimiter } from '@/lib/rate-limit';
 
 const createReviewSchema = z.object({
   rating: z.number().int().min(1).max(5),
@@ -23,7 +24,7 @@ export async function GET(
     const { id } = await params;
     const searchParams = request.nextUrl.searchParams;
     const page = parseInt(searchParams.get('page') || '1', 10);
-    const limit = parseInt(searchParams.get('limit') || '5', 10);
+    const limit = Math.min(parseInt(searchParams.get('limit') || '5', 10), 50);
     const sortBy = searchParams.get('sortBy') || 'recent'; // recent, helpful, rating_high, rating_low
     const filterRating = searchParams.get('rating'); // 1, 2, 3, 4, 5
 
@@ -126,6 +127,11 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
+
+    // Rate limiting para evitar spam de reviews
+    const blocked = await reviewLimiter.check(request);
+    if (blocked) return blocked;
+
     const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });

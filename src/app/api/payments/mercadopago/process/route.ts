@@ -4,9 +4,13 @@ import { prisma } from '@/lib/prisma';
 import { sendOrderStatusUpdate } from '@/lib/webhooks';
 import logger from '@/lib/logger';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
+import { paymentLimiter } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
   try {
+    const blocked = await paymentLimiter.check(req);
+    if (blocked) return blocked;
+
     const body = await req.json();
     const { formData, orderId, amount } = body;
 
@@ -19,6 +23,23 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Validar valor no servidor — nunca confiar no amount do client
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: { total: true, status: true },
+    });
+
+    if (!order) {
+      return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
+    }
+
+    if (Math.abs(Number(amount) - order.total) > 0.01) {
+      logger.warn({ clientAmount: amount, serverAmount: order.total, orderId }, 'Tentativa de manipulação de preço detectada');
+      return NextResponse.json({ error: 'Valor do pagamento não confere com o pedido' }, { status: 400 });
+    }
+
+    const serverAmount = order.total;
 
     // Buscar credenciais
     const { accessToken } = getMercadoPagoKeys();
@@ -42,7 +63,7 @@ export async function POST(req: NextRequest) {
     const paymentFormData = formData.formData || formData;
     
     const paymentData = {
-      transaction_amount: Number(amount),
+      transaction_amount: Number(serverAmount),
       token: paymentFormData.token,
       description: `Pedido #${orderId}`,
       installments: Number(paymentFormData.installments),
@@ -115,7 +136,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     logger.error({ error: error.message, stack: error.stack }, 'Erro crítico ao processar pagamento no Mercado Pago');
     return NextResponse.json(
-      { error: error.message || 'Erro ao processar pagamento' },
+      { error: 'Erro ao processar pagamento. Tente novamente ou contate o suporte.' },
       { status: 500 }
     );
   }

@@ -998,12 +998,18 @@ export async function createShippingLabelForOrder(orderId: string): Promise<Melh
     return { success: true, status: 'pickup', error: 'Retirada em loja - sem etiqueta' };
   }
 
+  // Validar dados obrigatórios da loja
+  if (!process.env.STORE_CPF) {
+    logger.error('[MELHOR_ENVIO] STORE_CPF não configurado - impossível gerar etiqueta');
+    return { success: false, error: 'STORE_CPF não configurado nas variáveis de ambiente' };
+  }
+
   // Dados do remetente (loja)
   const from = {
     name: process.env.NEXT_PUBLIC_APP_NAME || 'Shopping das Ferramentas',
     phone: process.env.STORE_PHONE || '75999999999',
     email: process.env.STORE_EMAIL || 'contato@shoppingdasferramentas.com.br',
-    document: process.env.STORE_CPF || '12345678900', // CPF do responsável
+    document: process.env.STORE_CPF || '', // CPF do responsável - OBRIGATÓRIO em STORE_CPF
     company_document: process.env.STORE_CNPJ || undefined,
     state_register: process.env.STORE_IE || undefined,
     address: process.env.STORE_ADDRESS || 'Rua Exemplo',
@@ -1076,10 +1082,10 @@ export async function createShippingLabelForOrder(orderId: string): Promise<Melh
   const serviceId = order.shippingServiceId || shippingAddr?.serviceId || '1'; // Default: PAC (1)
   logger.info('[MELHOR_ENVIO] Serviço selecionado: %s', serviceId);
 
-  // Limitar insurance_value a R$ 1000 (limite para envios não comerciais no sandbox)
-  const maxInsurance = 1000;
-  const insuranceValue = Math.min(totalInsurance, maxInsurance);
-  logger.info('[MELHOR_ENVIO] Valor seguro: %d (original: %d)', insuranceValue, totalInsurance);
+  // Em sandbox, limitar insurance a R$ 1000 (limite sandbox). Em produção, usar valor real.
+  const isSandbox = (process.env.MELHOR_ENVIO_SANDBOX || 'true').toLowerCase() !== 'false';
+  const insuranceValue = isSandbox ? Math.min(totalInsurance, 1000) : totalInsurance;
+  logger.info('[MELHOR_ENVIO] Valor seguro: %d (original: %d, sandbox: %s)', insuranceValue, totalInsurance, isSandbox);
 
   // 1. Adicionar ao carrinho
   const cartResult = await addToMelhorEnvioCart({
@@ -1090,7 +1096,7 @@ export async function createShippingLabelForOrder(orderId: string): Promise<Melh
     products,
     volumes,
     options: {
-      insurance_value: insuranceValue, // Limitado a R$ 1000 para envios não comerciais
+      insurance_value: insuranceValue,
       platform: process.env.NEXT_PUBLIC_APP_NAME || 'Loja Virtual',
       reminder: `Pedido ${order.orderNumber}`, // Anotação na etiqueta
       tags: [{ tag: order.orderNumber }],
