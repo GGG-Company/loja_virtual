@@ -3,7 +3,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
-import { Package, ShoppingCart, Clock, DollarSign, TrendingUp, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
+import { Package, ShoppingCart, Clock, DollarSign, TrendingUp, AlertCircle, AlertTriangle } from 'lucide-react';
 import { statusToPt, statusBadgeClass } from '@/lib/i18n';
 import { apiClient } from '@/lib/api-client';
 
@@ -16,6 +17,7 @@ export default function AdminDashboard() {
     totalRevenue: number;
     recentOrders: Array<{
       id: string;
+      orderNumber: string;
       total: number;
       status: string;
       createdAt: string;
@@ -24,7 +26,9 @@ export default function AdminDashboard() {
       id: string;
       name: string;
       sku: string;
+      slug: string;
       stock: number;
+      minStock: number;
     }>;
   };
 
@@ -59,25 +63,25 @@ export default function AdminDashboard() {
       label: 'Produtos Cadastrados',
       value: stats?.totalProducts || 0,
       icon: Package,
-      color: 'from-blue-500 to-blue-600',
-      bgColor: 'bg-blue-50',
-      textColor: 'text-blue-700',
+      color: 'from-[#CC1020] to-[#a80816]',
+      bgColor: 'bg-red-50',
+      textColor: 'text-[#CC1020]',
     },
     {
       label: 'Pedidos Total',
       value: stats?.totalOrders || 0,
       icon: ShoppingCart,
-      color: 'from-green-500 to-green-600',
-      bgColor: 'bg-green-50',
-      textColor: 'text-green-700',
+      color: 'from-[#1A1A1A] to-[#333333]',
+      bgColor: 'bg-gray-100',
+      textColor: 'text-[#1A1A1A]',
     },
     {
       label: 'Pedidos Pendentes',
       value: stats?.pendingOrders || 0,
       icon: Clock,
-      color: 'from-yellow-500 to-yellow-600',
-      bgColor: 'bg-yellow-50',
-      textColor: 'text-yellow-700',
+      color: 'from-amber-500 to-amber-600',
+      bgColor: 'bg-amber-50',
+      textColor: 'text-amber-700',
     },
     {
       label: 'Faturamento',
@@ -86,9 +90,9 @@ export default function AdminDashboard() {
         currency: 'BRL',
       }).format(stats?.totalRevenue || 0),
       icon: DollarSign,
-      color: 'from-primary-500 to-primary-600',
-      bgColor: 'bg-primary-50',
-      textColor: 'text-primary-700',
+      color: 'from-[#CC1020] to-[#a80816]',
+      bgColor: 'bg-red-50',
+      textColor: 'text-[#CC1020]',
     },
   ];
 
@@ -96,12 +100,15 @@ export default function AdminDashboard() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-4xl font-bold text-metallic-900">
-          Dashboard Administrativo
-        </h1>
-        <p className="text-metallic-600 mt-2 text-lg">
-          Bem-vindo, <span className="font-semibold">{session?.user?.name}</span> 
-          <span className="ml-2 px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-medium">
+        <div className="flex items-center gap-3 mb-1">
+          <div className="w-1 h-10 bg-[#CC1020] rounded-full" />
+          <h1 className="font-display text-4xl font-bold text-[#1A1A1A] uppercase">
+            Dashboard
+          </h1>
+        </div>
+        <p className="text-gray-500 mt-1 font-body ml-4">
+          Bem-vindo, <span className="font-semibold text-[#1A1A1A]">{session?.user?.name}</span>
+          <span className="ml-2 px-3 py-1 bg-red-50 text-[#CC1020] rounded-sm text-sm font-bold font-display">
             {(session?.user as { role?: string } | null)?.role}
           </span>
         </p>
@@ -154,11 +161,11 @@ export default function AdminDashboard() {
               stats.recentOrders.map((order) => (
                 <div
                   key={order.id}
-                  className="flex justify-between items-center p-4 bg-metallic-50 rounded-lg hover:bg-metallic-100 transition-colors"
+                  className="flex justify-between items-center p-4 bg-gray-50 rounded-sm hover:bg-gray-100 transition-colors"
                 >
                   <div>
                     <p className="font-semibold text-metallic-900">
-                      Pedido #{order.id.slice(0, 8)}
+                      {order.orderNumber ?? `#${order.id.slice(0, 8)}`}
                     </p>
                     <p className="text-sm text-metallic-600">
                       {new Date(order.createdAt).toLocaleDateString('pt-BR')}
@@ -194,26 +201,33 @@ export default function AdminDashboard() {
           </h2>
           <div className="space-y-3">
             {stats?.lowStockProducts?.length ? (
-              stats.lowStockProducts.map((product) => (
-                <div
-                  key={product.id}
-                  className="flex justify-between items-center p-4 bg-orange-50 rounded-lg"
-                >
-                  <div className="flex-1">
-                    <p className="font-semibold text-metallic-900 line-clamp-1">
-                      {product.name}
-                    </p>
-                    <p className="text-sm text-metallic-600">
-                      SKU: {product.sku}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-orange-600">
-                      {product.stock} un.
-                    </p>
-                  </div>
-                </div>
-              ))
+              stats.lowStockProducts.map((product) => {
+                const isCritical = product.stock === 0;
+                return (
+                  <Link
+                    key={product.id}
+                    href={`/admin/products/${product.id}`}
+                    className={`flex justify-between items-center p-4 rounded-lg transition-colors hover:opacity-80 ${isCritical ? 'bg-red-50 border border-red-200' : 'bg-orange-50'}`}
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      {isCritical
+                        ? <AlertTriangle className="h-4 w-4 text-red-600 shrink-0" />
+                        : <AlertCircle className="h-4 w-4 text-orange-500 shrink-0" />}
+                      <div className="min-w-0">
+                        <p className="font-semibold text-metallic-900 line-clamp-1 text-sm">
+                          {product.name}
+                        </p>
+                        <p className="text-xs text-metallic-600">
+                          SKU: {product.sku} · Mín: {(product as any).minStock ?? 5} un.
+                        </p>
+                      </div>
+                    </div>
+                    <span className={`font-bold text-sm shrink-0 ml-3 ${isCritical ? 'text-red-600' : 'text-orange-600'}`}>
+                      {product.stock === 0 ? 'SEM ESTOQUE' : `${product.stock} un.`}
+                    </span>
+                  </Link>
+                );
+              })
             ) : (
               <p className="text-metallic-600 text-center py-8">
                 Estoque normalizado
