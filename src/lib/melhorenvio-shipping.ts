@@ -1006,7 +1006,7 @@ export async function createShippingLabelForOrder(orderId: string): Promise<Melh
 
   // Dados do remetente (loja)
   const from = {
-    name: process.env.NEXT_PUBLIC_APP_NAME || 'Shopping das Ferramentas',
+    name: process.env.NEXT_PUBLIC_APP_NAME || 'Feira das Ferramentas',
     phone: process.env.STORE_PHONE || '75999999999',
     email: process.env.STORE_EMAIL || 'contato@shoppingdasferramentas.com.br',
     document: process.env.STORE_CPF || '', // CPF do responsável - OBRIGATÓRIO em STORE_CPF

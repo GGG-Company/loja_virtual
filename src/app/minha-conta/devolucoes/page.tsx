@@ -169,7 +169,7 @@ export default function MinhaContaDevolucoesPage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-metallic-50 py-12">
+      <main className="min-h-screen bg-gray-50 py-12">
         <div className="container mx-auto px-4 max-w-4xl">
           {/* Header */}
           <div className="flex items-center justify-between mb-8">

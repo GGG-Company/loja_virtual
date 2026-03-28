@@ -2,11 +2,15 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 
 /**
  * Singleton Axios Instance com Interceptors
- * 
+ *
  * Features:
- * - Interceptor de Request: adiciona Authorization header automaticamente
- * - Interceptor de Response: tratamento global de erros
- * - Toast notifications integradas (via Sonner)
+ * - Request interceptor: adiciona Authorization header se houver token em localStorage
+ * - Response interceptor: tratamento global de erros HTTP
+ *
+ * NOTA DE SEGURANÇA: O token de autenticação principal é gerenciado pelo NextAuth
+ * via cookies httpOnly. O `auth-token` em localStorage é usado apenas para tokens
+ * de fluxos específicos (ex: integrações externas). Nunca armazene o token de sessão
+ * NextAuth em localStorage.
  */
 
 class ApiClient {
@@ -14,7 +18,11 @@ class ApiClient {
 
   constructor() {
     this.instance = axios.create({
-      baseURL: typeof window !== 'undefined' ? '' : (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
+      // Em client-side, usa URL relativa (mesmo origem).
+      // Em server-side (SSR/API routes), usa NEXT_PUBLIC_APP_URL.
+      baseURL: typeof window !== 'undefined'
+        ? ''
+        : (process.env.NEXT_PUBLIC_APP_URL ?? ''),
       timeout: 15000,
       headers: {
         'Content-Type': 'application/json',
@@ -25,14 +33,17 @@ class ApiClient {
   }
 
   private setupInterceptors() {
-    // Request Interceptor
+    // ── Request ──────────────────────────────────────────────────────────
     this.instance.interceptors.request.use(
       (config) => {
-        // Adicionar token se existir (para APIs autenticadas)
         if (typeof window !== 'undefined') {
-          const token = localStorage.getItem('auth-token');
-          if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
+          try {
+            const token = localStorage.getItem('auth-token');
+            if (token) {
+              config.headers.Authorization = `Bearer ${token}`;
+            }
+          } catch {
+            // localStorage inacessível (ex: iframe com sandbox restrito)
           }
         }
         return config;
@@ -40,34 +51,31 @@ class ApiClient {
       (error) => Promise.reject(error)
     );
 
-    // Response Interceptor
+    // ── Response ─────────────────────────────────────────────────────────
     this.instance.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
         const { response } = error;
 
-        // Tratamento de erros HTTP
         if (response) {
           switch (response.status) {
             case 401:
               // Não redireciona automaticamente — cada página protegida
-              // deve tratar o 401 individualmente para evitar redirect
-              // indesejado em páginas públicas (Home, Produtos, etc).
+              // trata o 401 individualmente para evitar redirect em páginas públicas.
               break;
             case 403:
-              console.error('Acesso negado');
+              // Acesso negado — deixar cada chamada tratar conforme contexto
               break;
             case 404:
-              console.error('Recurso não encontrado');
+              // Recurso não encontrado — sem log genérico (muito ruído)
               break;
             case 500:
-              console.error('Erro interno do servidor');
+              // Erro de servidor — o backend já loga; não duplicar no client
               break;
           }
-        } else if (error.request) {
-          // Request foi feito mas sem resposta (timeout, network error)
-          console.error('Erro de rede ou timeout');
         }
+        // Erros de rede (timeout, offline) chegam aqui sem `response`
+        // Cada chamada deve usar try/catch e exibir toast adequado.
 
         return Promise.reject(error);
       }

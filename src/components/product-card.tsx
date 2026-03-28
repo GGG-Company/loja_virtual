@@ -5,10 +5,10 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { usePrice } from '@/hooks/use-price';
-import { Heart, ShoppingCart } from 'lucide-react';
-import { useState } from 'react';
+import { Heart, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-// Permitimos adicionar ao carrinho sem exigir login — cache local em localStorage
+import { useCart } from '@/contexts/cart-context';
 
 interface ProductCardProps {
   product: {
@@ -23,14 +23,23 @@ interface ProductCardProps {
     isFeatured?: boolean;
   };
   className?: string;
+  priority?: boolean;
 }
 
-export function ProductCard({ product, className }: ProductCardProps) {
-  // Usar preço promocional se existir, senão usar preço normal
-  const finalPrice = product.promotionalPrice || product.price;
+export function ProductCard({ product, className, priority = false }: ProductCardProps) {
+  const finalPrice = product.promotionalPrice ?? product.price;
   const { formatPrice, bestInstallmentText } = usePrice(finalPrice);
+  const { addItem } = useCart();
   const [isFavorite, setIsFavorite] = useState(false);
-  // Não exigimos sessão aqui; o carrinho é mantido em localStorage para usuários anônimos
+  const [isAdding, setIsAdding] = useState(false);
+  const [heartAnimate, setHeartAnimate] = useState(false);
+  const addingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (addingTimerRef.current) clearTimeout(addingTimerRef.current);
+    };
+  }, []);
 
   const imageSrc = (() => {
     const candidate = product.imageUrl || product.images?.[0]?.url;
@@ -40,153 +49,138 @@ export function ProductCard({ product, className }: ProductCardProps) {
   })();
   const productUrl = `/produtos/${product.slug || product.id}`;
 
-  // Calcular desconto apenas se houver preço promocional
-  const discount = product.promotionalPrice && product.promotionalPrice < product.price
-    ? Math.round(
-        ((product.price - product.promotionalPrice) / product.price) * 100
-      )
-    : 0;
+  const discount =
+    product.promotionalPrice && product.promotionalPrice < product.price
+      ? Math.round(((product.price - product.promotionalPrice) / product.price) * 100)
+      : 0;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    // Adiciona ao carrinho no localStorage
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const existingItem = cart.find((item: any) => item.id === product.id);
-    
-    if (existingItem) {
-      existingItem.quantity += 1;
-    } else {
-      cart.push({
-        id: product.id,
-        name: product.name,
-        price: finalPrice,
-        imageUrl: imageSrc,
-        quantity: 1,
-      });
-    }
-    
-    localStorage.setItem('cart', JSON.stringify(cart));
+
+    if (isAdding) return;
+    setIsAdding(true);
+
+    addItem({
+      id: product.id,
+      name: product.name,
+      price: finalPrice,
+      imageUrl: imageSrc,
+    });
+
     toast.success('Produto adicionado ao carrinho!');
-    
-    // Dispara evento customizado para atualizar o header
-    window.dispatchEvent(new Event('cartUpdated'));
+    addingTimerRef.current = setTimeout(() => setIsAdding(false), 800);
+  };
+
+  const handleFavorite = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsFavorite((prev) => !prev);
+    setHeartAnimate(true);
   };
 
   return (
     <Link href={productUrl}>
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
+        initial={{ opacity: 0, scale: 0.97 }}
         animate={{ opacity: 1, scale: 1 }}
-        whileHover={{ y: -8 }}
-        transition={{ duration: 0.3 }}
+        whileHover={{ y: -6 }}
+        transition={{ duration: 0.25 }}
         className={cn(
-          'group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl overflow-hidden cursor-pointer',
+          'group relative bg-white rounded-sm shadow-md hover:shadow-xl overflow-hidden cursor-pointer border border-gray-100 transition-shadow duration-300',
           className
         )}
       >
-      {/* Badge de Destaque */}
-      {product.isFeatured && (
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
-          className="absolute top-3 left-3 z-10 bg-primary-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-lg"
-        >
-          Destaque
-        </motion.div>
-      )}
+        {/* ── Image area ───────────────────────────────── */}
+        <div className="relative w-full aspect-square bg-gray-50 overflow-hidden">
 
-      {/* Badge de Desconto */}
-      {discount > 0 && (
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
-          className="absolute top-3 right-3 z-10 bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg"
-        >
-          -{discount}%
-        </motion.div>
-      )}
-
-      {/* Favorite Button */}
-      <motion.button
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        onClick={(e) => {
-          e.preventDefault();
-          setIsFavorite(!isFavorite);
-        }}
-        className="absolute top-3 left-3 z-20 p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
-      >
-        <Heart
-          className={`h-5 w-5 ${
-            isFavorite ? 'fill-red-500 text-red-500' : 'text-metallic-600'
-          }`}
-        />
-      </motion.button>
-
-      {/* Imagem */}
-      <div className="relative w-full aspect-square bg-gradient-to-b from-metallic-50 to-metallic-100 overflow-hidden">
-        <motion.div whileHover={{ scale: 1.05 }} transition={{ duration: 0.3 }} className="relative w-full h-full p-4">
-          <Image
-            src={imageSrc}
-            alt={product.images?.[0]?.alt || product.name}
-            fill
-            className="object-contain drop-shadow-md"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            priority={false}
-          />
-        </motion.div>
-
-        {/* Quick Add Button on Hover */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
-        >
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="w-full bg-white text-metallic-900 py-2 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-metallic-100 transition-colors"
-            onClick={handleAddToCart}
-          >
-            <ShoppingCart className="h-4 w-4" />
-            Adicionar
-          </motion.button>
-        </motion.div>
-      </div>
-
-      {/* Conteúdo */}
-      <div className="p-4 space-y-2">
-        <h3 className="font-semibold text-lg text-metallic-900 line-clamp-2 min-h-[3.5rem]">
-          {product.name}
-        </h3>
-
-        <div className="space-y-1">
-          {product.promotionalPrice && product.promotionalPrice < product.price && (
-            <p className="text-sm text-metallic-500 line-through">
-              {formatPrice(product.price)}
-            </p>
+          {/* Featured badge — top-left */}
+          {product.isFeatured && (
+            <div className="absolute top-0 left-0 z-10 bg-[#CC1020] text-white px-3 py-1 text-xs font-display font-bold tracking-widest uppercase">
+              Destaque
+            </div>
           )}
-          <p className="text-2xl font-bold text-primary-600">
-            {formatPrice(finalPrice)}
-          </p>
-          <p className="text-xs text-metallic-600">
-            {bestInstallmentText()}
-          </p>
+
+          {/* Discount badge — top-left below featured, or top-left when no featured */}
+          {discount > 0 && (
+            <div
+              className={cn(
+                'badge-wiggle absolute left-2 z-10 bg-[#CC1020] text-white px-2.5 py-1 text-xs font-display font-bold rounded-sm shadow',
+                product.isFeatured ? 'top-8' : 'top-2'
+              )}
+            >
+              -{discount}%
+            </div>
+          )}
+
+          {/* Heart button — top-right, always visible, pops on click */}
+          <button
+            onClick={handleFavorite}
+            onAnimationEnd={() => setHeartAnimate(false)}
+            className={cn(
+              'absolute top-2 right-2 z-20 p-2 bg-white/85 group-hover:bg-white backdrop-blur-sm rounded-full shadow-md',
+              'opacity-50 group-hover:opacity-100 transition-all duration-200 hover:scale-110',
+              heartAnimate && 'heart-pop'
+            )}
+            aria-label={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+          >
+            <Heart
+              className={cn(
+                'h-4 w-4 transition-colors duration-150',
+                isFavorite ? 'fill-[#CC1020] text-[#CC1020]' : 'text-gray-400 group-hover:text-gray-600'
+              )}
+            />
+          </button>
+
+          {/* Product image */}
+          <div className="card-img-zoom relative w-full h-full p-4">
+            <Image
+              src={imageSrc}
+              alt={product.images?.[0]?.alt || product.name}
+              fill
+              className="object-contain drop-shadow-sm"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              priority={priority}
+              loading={priority ? 'eager' : 'lazy'}
+            />
+          </div>
+
         </div>
 
-        {/* Botão Optimistic */}
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          className="w-full mt-3 bg-primary-500 hover:bg-primary-600 text-white font-semibold py-2 rounded-md transition-colors"
-          onClick={handleAddToCart}
-        >
-          Adicionar ao Carrinho
-        </motion.button>
-      </div>
-    </motion.div>
+        {/* ── Content ───────────────────────────────────── */}
+        <div className="p-4 space-y-2">
+          <h3 className="font-body font-semibold text-sm text-[#1A1A1A] line-clamp-2 min-h-[2.8rem] leading-snug">
+            {product.name}
+          </h3>
+
+          <div className="space-y-0.5">
+            {product.promotionalPrice && product.promotionalPrice < product.price && (
+              <p className="text-xs text-gray-400 line-through font-body">
+                {formatPrice(product.price)}
+              </p>
+            )}
+            <p className="text-xl font-display font-bold text-[#CC1020]">
+              {formatPrice(finalPrice)}
+            </p>
+            <p className="text-[11px] text-gray-500 font-body">
+              {bestInstallmentText()}
+            </p>
+          </div>
+
+          <button
+            className="cart-icon-bounce btn-fill w-full mt-2 bg-[#1A1A1A] text-white font-display font-bold text-sm tracking-wide uppercase py-2.5 transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-70"
+            onClick={handleAddToCart}
+            disabled={isAdding}
+            aria-label={`Adicionar ${product.name} ao carrinho`}
+          >
+            {isAdding ? (
+              <><Loader2 className="h-4 w-4 animate-spin" /> Adicionando...</>
+            ) : (
+              'Adicionar ao Carrinho'
+            )}
+          </button>
+        </div>
+      </motion.div>
     </Link>
   );
 }

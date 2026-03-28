@@ -2,12 +2,14 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ShoppingCart, User, Search, Menu } from 'lucide-react';
+import Image from 'next/image';
+import { ShoppingCart, User, Search, Menu, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { NotificationBell } from './notification-bell';
 import { useState, useEffect, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { io, Socket } from 'socket.io-client';
+import { useCart } from '@/contexts/cart-context';
 
 export function Header() {
   const router = useRouter();
@@ -20,7 +22,10 @@ export function Header() {
   const searchRef = useRef<HTMLDivElement>(null);
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
   const { data: session } = useSession();
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  // const { count: cartCount } = useCart();
   type UserRole = "CUSTOMER" | "ADMIN" | "OWNER";
   const role = (session?.user as { role?: UserRole } | undefined)?.role;
 
@@ -42,17 +47,32 @@ export function Header() {
     const cart = JSON.parse(localStorage.getItem("cart") || "[]");
     const total = cart.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
     setCartCount(total);
+  const handleSearch = () => {
+    const q = searchQuery.trim();
+    if (!q) return;
+    router.push(`/produtos?busca=${encodeURIComponent(q)}`);
   };
 
+  // H7: Keyboard shortcut "/" to focus search
   useEffect(() => {
     updateCartCount();
     window.addEventListener("cartUpdated", updateCartCount);
     return () => window.removeEventListener("cartUpdated", updateCartCount);
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
   }, []);
 
   useEffect(() => {
-    updateCartCount();
-  }, [session]);
+    const handleScroll = () => setIsScrolled(window.scrollY > 8);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Fechar dropdown ao clicar fora
   useEffect(() => {
@@ -125,18 +145,23 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-metallic-200 shadow-sm">
-      <div className="container mx-auto px-4">
-        {/* Top Bar */}
-        <div className="flex items-center justify-between py-4">
-          {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="text-2xl">🔨</div>
-            <div>
-              <h1 className="text-xl font-bold text-metallic-900">Shopping das Ferramentas</h1>
-              <p className="text-xs text-metallic-600">Qualidade Profissional</p>
+    <header
+      className={`sticky top-0 z-50 transition-shadow duration-200 ${
+        isScrolled ? 'shadow-lg' : 'shadow-sm'
+      }`}
+    >
+      {/* Top bar — brand red */}
+      <div className="bg-[#CC1020] text-white">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between py-2 text-xs font-medium">
+            <span className="hidden sm:block tracking-wide">
+              📍 Feira de Santana, BA &nbsp;|&nbsp; DESDE 2004
+            </span>
+            <div className="flex items-center gap-4">
+              <span>☎ (75) 3333-4444</span>
+              <span className="hidden sm:block">✉ contato@feiradeferramentas.com.br</span>
             </div>
-          </Link>
+          </div>
 
           {/* Search Bar - Desktop */}
           <div className="hidden md:flex flex-1 max-w-2xl mx-8" ref={searchRef}>
@@ -239,97 +264,254 @@ export function Header() {
             </Button>
           </div>
         </div>
+      </div>
 
-        {/* Navigation */}
-        <nav className="hidden lg:flex items-center space-x-8 py-3 border-t border-metallic-100">
-          <Link href="/produtos" className="text-sm font-medium text-metallic-700 hover:text-primary-600 transition-colors">
-            Todos os Produtos
-          </Link>
-          <Link href="/produtos?categoria=ferramentas-eletricas" className="text-sm font-medium text-metallic-700 hover:text-primary-600 transition-colors">
-            Ferramentas Elétricas
-          </Link>
-          <Link href="/produtos?categoria=ferramentas-manuais" className="text-sm font-medium text-metallic-700 hover:text-primary-600 transition-colors">
-            Ferramentas Manuais
-          </Link>
-          <Link href="/produtos?categoria=jardinagem" className="text-sm font-medium text-metallic-700 hover:text-primary-600 transition-colors">
-            Jardinagem
-          </Link>
-          <Link href="/produtos?categoria=epis" className="text-sm font-medium text-metallic-700 hover:text-primary-600 transition-colors">
-            EPIs
-          </Link>
-          <Link href="/ofertas" className="text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors">
-            🔥 Ofertas
-          </Link>
-        </nav>
-
-        {/* Mobile Menu */}
-        {isMenuOpen && (
-          <div className="lg:hidden py-4 border-t border-metallic-100">
-            {/* Mobile Search Bar */}
-            <div className="md:hidden mb-4" ref={searchRef}>
-              <form onSubmit={handleSearchSubmit} className="relative">
-                <input
-                  type="text"
-                  placeholder="Buscar ferramentas, marcas..."
-                  value={searchQuery}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  onFocus={() => searchResults.length > 0 && setShowResults(true)}
-                  className="w-full px-4 py-2.5 pl-10 border border-metallic-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+      {/* Main header — white */}
+      <div className="bg-white border-b-2 border-[#CC1020]">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between py-3 gap-4">
+            {/* Logo */}
+            <Link href="/" className="flex items-center gap-3 shrink-0">
+              <div className="relative w-14 h-14 logo-stamp logo-shine logo-pulse">
+                <Image
+                  src="/logo_shopping_das_ferramentas.jpg"
+                  alt="Feira das Ferramentas"
+                  fill
+                  className="object-contain"
+                  priority
                 />
-                <Search className="absolute left-3 top-3 h-5 w-5 text-metallic-400" />
-                {isSearching && (
-                  <div className="absolute right-3 top-3">
-                    <div className="h-5 w-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
-                  </div>
-                )}
+              </div>
+              <div className="hidden sm:block">
+                <div className="font-display text-xl leading-none">
+                  <span className="text-[#CC1020]">Feira</span>{' '}
+                  <span className="text-[#1A1A1A]">das</span>
+                </div>
+                <div className="font-display text-xl leading-none text-[#1A1A1A]">
+                  Ferramentas
+                </div>
+                <p className="text-[9px] font-semibold text-[#CC1020] tracking-widest uppercase mt-0.5">
+                  Onde você encontra tudo!
+                </p>
+              </div>
+            </Link>
 
-                {showResults && searchResults.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-metallic-200 rounded-lg shadow-lg z-50 max-h-72 overflow-y-auto">
-                    {searchResults.map((product) => (
-                      <button
-                        key={product.id}
-                        type="button"
-                        onClick={() => { goToProduct(product.id); setIsMenuOpen(false); }}
-                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-metallic-50 transition-colors text-left"
-                      >
-                        {(product.imageUrl || product.images?.[0]?.url) && (
-                          <img
-                            src={product.imageUrl || product.images?.[0]?.url}
-                            alt={product.name}
-                            className="w-10 h-10 object-cover rounded"
-                          />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-metallic-900 truncate">{product.name}</p>
-                          <p className="text-sm text-primary-600 font-semibold">
-                            R$ {(product.promotionalPrice ?? product.price).toFixed(2)}
-                          </p>
-                        </div>
-                      </button>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() => { handleSearchSubmit(new Event('submit') as any); setIsMenuOpen(false); }}
-                      className="w-full px-4 py-2 text-sm text-primary-600 hover:bg-primary-50 font-medium border-t border-metallic-100"
-                    >
-                      Ver todos os resultados para &ldquo;{searchQuery}&rdquo;
-                    </button>
-                  </div>
-                )}
-              </form>
+            {/* Search Bar — Desktop */}
+            <div className="hidden md:flex flex-1 max-w-2xl mx-4">
+              <div className="relative w-full flex">
+                <input
+                  ref={searchInputRef}
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  placeholder="Buscar ferramentas, marcas... (pressione / para focar)"
+                  aria-label="Buscar produtos"
+                  className="w-full px-4 py-2.5 pl-4 border-2 border-[#CC1020] rounded-l-md focus:outline-none focus:ring-2 focus:ring-[#CC1020]/30 font-body text-sm"
+                />
+                <button
+                  onClick={handleSearch}
+                  aria-label="Buscar"
+                  className="bg-[#CC1020] hover:bg-[#a80816] text-white px-4 rounded-r-md transition-colors flex items-center gap-2 font-display font-bold text-sm tracking-wide"
+                >
+                  <Search className="h-4 w-4" />
+                  <span className="hidden lg:block">BUSCAR</span>
+                </button>
+              </div>
             </div>
 
-            <div className="flex flex-col space-y-3">
-              <Link href="/produtos" className="text-sm font-medium text-metallic-700">
-                Todos os Produtos
+            {/* Actions */}
+            <div className="flex items-center gap-2">
+              {session ? (
+                <div className="flex items-center gap-2">
+                  <NotificationBell />
+
+                  <Link href="/minha-conta">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-[#1A1A1A] hover:text-[#CC1020] hover:bg-red-50"
+                    >
+                      <User className="h-5 w-5 mr-1.5" />
+                      <span className="hidden lg:inline text-sm font-semibold">
+                        {session.user?.name?.split(" ")[0]}
+                      </span>
+                    </Button>
+                  </Link>
+
+                  {role !== "CUSTOMER" && role && (
+                    <Link href="/admin">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-[#CC1020] text-[#CC1020] hover:bg-[#CC1020] hover:text-white text-xs font-bold"
+                      >
+                        Admin
+                      </Button>
+                    </Link>
+                  )}
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => signOut()}
+                    className="text-metallic-500 hover:text-[#CC1020] text-xs"
+                  >
+                    Sair
+                  </Button>
+                </div>
+              ) : (
+                <Link href="/auth/login">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-[#1A1A1A] hover:text-[#CC1020] hover:bg-red-50"
+                  >
+                    <User className="h-5 w-5 mr-1.5" />
+                    <span className="hidden lg:inline text-sm font-semibold">Entrar</span>
+                  </Button>
+                </Link>
+              )}
+
+              <Link href="/carrinho" aria-label={`Carrinho${cartCount > 0 ? ` — ${cartCount} ${cartCount === 1 ? 'item' : 'itens'}` : ''}`}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="relative text-[#1A1A1A] hover:text-[#CC1020] hover:bg-red-50"
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  {cartCount > 0 && (
+                    <span
+                      aria-live="polite"
+                      aria-atomic="true"
+                      className="absolute -top-1 -right-1 bg-[#CC1020] text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center"
+                    >
+                      {cartCount}
+                    </span>
+                  )}
+                </Button>
               </Link>
-              <Link href="/ofertas" className="text-sm font-medium text-primary-600">
-                🔥 Ofertas
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className="lg:hidden text-[#1A1A1A]"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                aria-label={isMenuOpen ? 'Fechar menu' : 'Abrir menu'}
+                aria-expanded={isMenuOpen}
+              >
+                {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation bar — dark */}
+      <nav className="hidden lg:block bg-[#1A1A1A]">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center gap-1 py-0">
+            <Link
+              href="/produtos"
+              className="px-4 py-3 text-sm font-display font-bold text-white hover:bg-[#CC1020] transition-colors tracking-wide uppercase"
+            >
+              Todos os Produtos
+            </Link>
+            <Link
+              href="/produtos?categoria=ferramentas-eletricas"
+              className="px-4 py-3 text-sm font-display font-bold text-white hover:bg-[#CC1020] transition-colors tracking-wide uppercase"
+            >
+              Elétricas
+            </Link>
+            <Link
+              href="/produtos?categoria=ferramentas-manuais"
+              className="px-4 py-3 text-sm font-display font-bold text-white hover:bg-[#CC1020] transition-colors tracking-wide uppercase"
+            >
+              Manuais
+            </Link>
+            <Link
+              href="/produtos?categoria=jardinagem"
+              className="px-4 py-3 text-sm font-display font-bold text-white hover:bg-[#CC1020] transition-colors tracking-wide uppercase"
+            >
+              Jardinagem
+            </Link>
+            <Link
+              href="/produtos?categoria=casa"
+              className="px-4 py-3 text-sm font-display font-bold text-white hover:bg-[#CC1020] transition-colors tracking-wide uppercase"
+            >
+              Casa
+            </Link>
+            <Link
+              href="/produtos?categoria=epis"
+              className="px-4 py-3 text-sm font-display font-bold text-white hover:bg-[#CC1020] transition-colors tracking-wide uppercase"
+            >
+              EPIs
+            </Link>
+            <div className="ml-auto">
+              <Link
+                href="/ofertas"
+                className="flex items-center gap-1.5 px-5 py-3 bg-[#CC1020] text-white text-sm font-display font-bold tracking-widest uppercase hover:bg-[#a80816] transition-colors"
+              >
+                🔥 OFERTAS IMPERDÍVEIS
               </Link>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      </nav>
+
+      {/* Mobile Menu */}
+      {isMenuOpen && (
+        <div className="lg:hidden bg-white border-t border-gray-100 shadow-xl">
+          {/* Mobile Search */}
+          <div className="p-4 border-b border-gray-100">
+            <div className="flex">
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                placeholder="Buscar ferramentas..."
+                aria-label="Buscar produtos"
+                className="w-full px-3 py-2 border-2 border-[#CC1020] rounded-l-md text-sm focus:outline-none focus:ring-2 focus:ring-[#CC1020]/30"
+              />
+              <button
+                onClick={handleSearch}
+                aria-label="Buscar"
+                className="bg-[#CC1020] text-white px-3 rounded-r-md"
+              >
+                <Search className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+          <div className="flex flex-col">
+            {[
+              { href: '/produtos', label: 'Todos os Produtos' },
+              { href: '/produtos?categoria=ferramentas-eletricas', label: 'Ferramentas Elétricas' },
+              { href: '/produtos?categoria=ferramentas-manuais', label: 'Ferramentas Manuais' },
+              { href: '/produtos?categoria=jardinagem', label: 'Jardinagem' },
+              { href: '/produtos?categoria=casa', label: 'Casa' },
+              { href: '/produtos?categoria=epis', label: 'EPIs' },
+              { href: '/sobre', label: 'Sobre Nós' },
+              { href: '/contato', label: 'Contato' },
+            ].map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setIsMenuOpen(false)}
+                className="px-5 py-3.5 text-sm font-semibold text-[#1A1A1A] hover:bg-red-50 hover:text-[#CC1020] border-b border-gray-50 transition-colors"
+              >
+                {link.label}
+              </Link>
+            ))}
+            <Link
+              href="/ofertas"
+              onClick={() => setIsMenuOpen(false)}
+              className="px-5 py-3.5 text-sm font-bold text-white bg-[#CC1020] hover:bg-[#a80816] transition-colors"
+            >
+              🔥 Ofertas Imperdíveis
+            </Link>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

@@ -9,16 +9,38 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion } from 'framer-motion';
-import { ShoppingCart, Package, Check, Truck, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
+import { CheckoutProgress } from '@/components/checkout-progress';
 
-const steps = [
-  { icon: ShoppingCart, label: 'Carrinho', href: '/carrinho' },
-  { icon: Package, label: 'Dados', href: '/checkout/dados', active: true },
-  { icon: Truck, label: 'Entrega', href: '/checkout/entrega' },
-  { icon: CreditCard, label: 'Pagamento', href: '/checkout/pagamento' },
-  { icon: Check, label: 'Confirmação', href: '/checkout/confirmacao' },
-];
+// ── Masks ──────────────────────────────────────────────────────────────────
+function maskPhone(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 10) {
+    return digits.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3').replace(/-$/, '');
+  }
+  return digits.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3').replace(/-$/, '');
+}
+
+function maskCpf(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  return digits
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/(\d{3})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3-$4');
+}
+
+// ── Validation helpers ─────────────────────────────────────────────────────
+function validateEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function validatePhone(phone: string) {
+  return phone.replace(/\D/g, '').length >= 10;
+}
+
+function validateCpf(cpf: string) {
+  return cpf.replace(/\D/g, '').length === 11;
+}
 
 export default function CheckoutDadosPage() {
   const router = useRouter();
@@ -29,37 +51,74 @@ export default function CheckoutDadosPage() {
     telefone: '',
     cpf: '',
   });
+  const [touched, setTouched] = useState({
+    nome: false,
+    email: false,
+    telefone: false,
+    cpf: false,
+  });
 
   useEffect(() => {
     if (status === 'unauthenticated') {
       toast.error('Faça login para continuar');
       router.push('/auth/login');
     }
-
     if (session?.user) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        nome: session.user.name || '',
-        email: session.user.email || '',
+        nome: prev.nome || session.user.name || '',
+        email: prev.email || session.user.email || '',
       }));
     }
   }, [session, status, router]);
 
+  const errors = {
+    nome: touched.nome && formData.nome.trim().length < 3
+      ? 'Informe seu nome completo'
+      : '',
+    email: touched.email && !validateEmail(formData.email)
+      ? 'E-mail inválido'
+      : '',
+    telefone: touched.telefone && !validatePhone(formData.telefone)
+      ? 'Telefone inválido. Use o formato (00) 00000-0000'
+      : '',
+    cpf: touched.cpf && !validateCpf(formData.cpf)
+      ? 'CPF inválido. Digite os 11 dígitos'
+      : '',
+  };
+
+  const isValid =
+    formData.nome.trim().length >= 3 &&
+    validateEmail(formData.email) &&
+    validatePhone(formData.telefone) &&
+    validateCpf(formData.cpf);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Salva dados no localStorage
+    setTouched({ nome: true, email: true, telefone: true, cpf: true });
+    if (!isValid) return;
     localStorage.setItem('checkoutDados', JSON.stringify(formData));
-    toast.success('Dados salvos com sucesso!');
+    toast.success('Dados salvos!');
     router.push('/checkout/entrega');
   };
+
+  const field = <K extends keyof typeof formData>(key: K) => ({
+    value: formData[key],
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+      let val = e.target.value;
+      if (key === 'telefone') val = maskPhone(val);
+      if (key === 'cpf') val = maskCpf(val);
+      setFormData({ ...formData, [key]: val });
+    },
+    onBlur: () => setTouched((t) => ({ ...t, [key]: true })),
+  });
 
   if (status === 'loading') {
     return (
       <>
         <Header />
         <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#CC1020]" />
         </div>
         <Footer />
       </>
@@ -69,95 +128,99 @@ export default function CheckoutDadosPage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-metallic-50 py-12">
+      <main className="min-h-screen bg-gray-50 py-12">
         <div className="container mx-auto px-4 max-w-4xl">
-          {/* Steps */}
-          <div className="mb-12">
-            <div className="flex items-center justify-center gap-4 overflow-x-auto pb-4">
-              {steps.map((step, index) => {
-                const Icon = step.icon;
-                return (
-                  <div key={index} className="flex items-center">
-                    <div className={`flex flex-col items-center ${
-                      step.active ? 'text-primary-600' : 'text-metallic-400'
-                    }`}>
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                        step.active ? 'bg-primary-600 text-white' : 'bg-metallic-200'
-                      }`}>
-                        <Icon className="h-6 w-6" />
-                      </div>
-                      <span className="text-xs mt-2 font-medium">{step.label}</span>
-                    </div>
-                    {index < steps.length - 1 && (
-                      <div className={`h-0.5 w-12 mx-2 ${
-                        step.active ? 'bg-primary-600' : 'bg-metallic-200'
-                      }`} />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <CheckoutProgress currentStep={1} />
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-lg shadow p-8"
+            className="bg-white rounded-sm shadow-md border-t-4 border-[#CC1020] p-8"
           >
-            <h1 className="text-2xl font-bold mb-6">Dados Pessoais</h1>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-1 h-7 bg-[#CC1020] rounded-full" />
+              <h1 className="font-display text-2xl font-bold text-[#1A1A1A] uppercase">
+                Dados Pessoais
+              </h1>
+            </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+              {/* Nome */}
               <div>
-                <Label htmlFor="nome">Nome Completo</Label>
+                <Label htmlFor="nome">Nome Completo *</Label>
                 <Input
                   id="nome"
-                  value={formData.nome}
-                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                  required
+                  autoComplete="name"
+                  placeholder="Seu nome completo"
+                  className={`h-12 mt-1 ${errors.nome ? 'border-red-500 focus-visible:ring-red-400' : ''}`}
+                  {...field('nome')}
                 />
+                {errors.nome && (
+                  <p className="text-xs text-red-600 mt-1">{errors.nome}</p>
+                )}
               </div>
 
+              {/* Email */}
               <div>
-                <Label htmlFor="email">E-mail</Label>
+                <Label htmlFor="email">E-mail *</Label>
                 <Input
                   id="email"
                   type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
+                  autoComplete="email"
+                  placeholder="seu@email.com"
+                  className={`h-12 mt-1 ${errors.email ? 'border-red-500 focus-visible:ring-red-400' : ''}`}
+                  {...field('email')}
                 />
+                {errors.email && (
+                  <p className="text-xs text-red-600 mt-1">{errors.email}</p>
+                )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Telefone */}
                 <div>
-                  <Label htmlFor="telefone">Telefone</Label>
+                  <Label htmlFor="telefone">Telefone *</Label>
                   <Input
                     id="telefone"
-                    value={formData.telefone}
-                    onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                    type="tel"
+                    inputMode="numeric"
+                    autoComplete="tel"
                     placeholder="(00) 00000-0000"
-                    required
+                    className={`h-12 mt-1 ${errors.telefone ? 'border-red-500 focus-visible:ring-red-400' : ''}`}
+                    {...field('telefone')}
                   />
+                  {errors.telefone && (
+                    <p className="text-xs text-red-600 mt-1">{errors.telefone}</p>
+                  )}
                 </div>
 
+                {/* CPF */}
                 <div>
-                  <Label htmlFor="cpf">CPF</Label>
+                  <Label htmlFor="cpf">CPF *</Label>
                   <Input
                     id="cpf"
-                    value={formData.cpf}
-                    onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+                    inputMode="numeric"
+                    autoComplete="off"
                     placeholder="000.000.000-00"
-                    required
+                    className={`h-12 mt-1 ${errors.cpf ? 'border-red-500 focus-visible:ring-red-400' : ''}`}
+                    {...field('cpf')}
                   />
+                  {errors.cpf && (
+                    <p className="text-xs text-red-600 mt-1">{errors.cpf}</p>
+                  )}
                 </div>
               </div>
 
-              <div className="flex gap-4 pt-6">
-                <Button type="button" variant="outline" onClick={() => router.push('/carrinho')}>
-                  Voltar
+              <div className="flex gap-4 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.push('/carrinho')}
+                >
+                  ← Voltar
                 </Button>
-                <Button type="submit" className="flex-1">
-                  Continuar para Entrega
+                <Button type="submit" className="flex-1 h-12" disabled={!isValid}>
+                  Continuar para Entrega →
                 </Button>
               </div>
             </form>

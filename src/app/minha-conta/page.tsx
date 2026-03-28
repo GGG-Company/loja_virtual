@@ -9,7 +9,7 @@ import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { User, Package, MapPin, RotateCcw, Loader2, Lock } from 'lucide-react';
+import { User, Package, MapPin, RotateCcw, Loader2, Check, RefreshCw, Lock } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { statusToPt, statusBadgeClass } from '@/lib/i18n';
 import { toast } from 'sonner';
@@ -27,6 +27,16 @@ type ProfileData = {
   addressCity: string;
   addressState: string;
 };
+// ── Masks ──────────────────────────────────────────────────────────────────
+function maskPhone(v: string) {
+  const d = v.replace(/\D/g, '').slice(0, 11);
+  if (d.length <= 10) return d.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3').replace(/-$/, '');
+  return d.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3').replace(/-$/, '');
+}
+function maskCpf(v: string) {
+  const d = v.replace(/\D/g, '').slice(0, 11);
+  return d.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})\.(\d{3})(\d)/, '$1.$2.$3').replace(/(\d{3})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3-$4');
+}
 
 type Order = {
   id: string;
@@ -88,6 +98,11 @@ function formatCep(value: string): string {
   if (digits.length <= 5) return digits;
   return `${digits.slice(0, 5)}-${digits.slice(5)}`;
 }
+type ProfileForm = {
+  name: string;
+  phone: string;
+  cpf: string;
+};
 
 export default function MyAccountPage() {
   const { data: session, status } = useSession();
@@ -105,6 +120,13 @@ export default function MyAccountPage() {
 
   // Orders state
   const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [reorderingId, setReorderingId] = useState<string | null>(null);
+
+  // ── Profile form state ────────────────────────────────────────────────────
+  // const [profile, setProfile] = useState<ProfileForm>({ name: '', phone: '', cpf: '' });
+  // const [profileSaving, setProfileSaving] = useState(false);
+  // const [profileSaved, setProfileSaved] = useState(false);
 
   // Returns state
   const [returns, setReturns] = useState<ReturnItem[]>([]);
@@ -122,9 +144,7 @@ export default function MyAccountPage() {
   const [cepLoading, setCepLoading] = useState(false);
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/login');
-    }
+    if (status === 'unauthenticated') router.push('/auth/login');
   }, [status, router]);
 
   // Load profile on mount
@@ -134,9 +154,13 @@ export default function MyAccountPage() {
     }
   }, [status]);
 
+  // Pre-populate from session
   useEffect(() => {
-    if (activeTab === 'pedidos') {
-      fetchOrders();
+    if (session?.user) {
+      setProfile((prev) => ({
+        ...prev,
+        name: prev.name || session.user.name || '',
+      }));
     }
     if (activeTab === 'devolucoes') {
       fetchReturns();
@@ -236,15 +260,6 @@ export default function MyAccountPage() {
     }
   };
 
-  const fetchOrders = async () => {
-    try {
-      const response = await apiClient.get('/api/user/orders');
-      setOrders(response.data.orders);
-    } catch {
-      console.error('Erro ao carregar pedidos');
-    }
-  };
-
   const fetchReturns = async () => {
     try {
       setReturnsLoading(true);
@@ -282,13 +297,67 @@ export default function MyAccountPage() {
     }
   };
 
+  const fetchOrders = useCallback(async () => {
+    setOrdersLoading(true);
+    try {
+      const response = await apiClient.get('/api/user/orders');
+      setOrders(response.data.orders ?? []);
+    } catch {
+      toast.error('Não foi possível carregar seus pedidos. Tente novamente.');
+    } finally {
+      setOrdersLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'pedidos') fetchOrders();
+  }, [activeTab, fetchOrders]);
+
+  const handleReorder = useCallback(async (orderId: string) => {
+    setReorderingId(orderId);
+    try {
+      const response = await apiClient.get<{ items: { productId?: string; quantity: number; price: number; product: { name: string; imageUrl?: string | null } }[] }>(`/api/user/orders/${orderId}`);
+      const items = (response.data as any).items ?? [];
+      if (items.length === 0) {
+        toast.error('Não foi possível obter os itens do pedido.');
+        return;
+      }
+      const cart: unknown[] = JSON.parse(localStorage.getItem('cart') || '[]');
+      for (const item of items) {
+        const id = item.productId ?? item.product?.id;
+        if (!id) continue;
+        const existing = (cart as any[]).find((c) => c.id === id);
+        if (existing) {
+          existing.quantity += item.quantity;
+        } else {
+          (cart as any[]).push({
+            id,
+            name: item.product?.name ?? '',
+            price: item.price,
+            imageUrl: item.product?.imageUrl ?? '/placeholder.jpg',
+            quantity: item.quantity,
+          });
+        }
+      }
+      localStorage.setItem('cart', JSON.stringify(cart));
+      window.dispatchEvent(new Event('cartUpdated'));
+      toast.success('Itens adicionados ao carrinho!');
+    } catch {
+      toast.error('Não foi possível adicionar os itens ao carrinho.');
+    } finally {
+      setReorderingId(null);
+    }
+  }, []);
+
   if (status === 'loading') {
-    return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#CC1020]" />
+      </div>
+    );
   }
 
-  if (!session) {
-    return null;
-  }
+  if (!session) return null;
 
   const tabs = [
     { id: 'perfil' as const, label: 'Meu Perfil', icon: User },
@@ -300,31 +369,36 @@ export default function MyAccountPage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-metallic-50 py-12">
+      <main className="min-h-screen bg-gray-50 py-12">
         <div className="container mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="max-w-6xl mx-auto"
           >
-            <h1 className="text-4xl font-bold text-metallic-900 mb-8">
-              Minha Conta
-            </h1>
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-1 h-10 bg-[#CC1020] rounded-full" />
+              <h1 className="font-display text-4xl font-bold text-[#1A1A1A] uppercase">
+                Minha Conta
+              </h1>
+            </div>
 
             <div className="grid lg:grid-cols-4 gap-6">
               {/* Sidebar */}
               <div className="lg:col-span-1">
-                <div className="bg-white rounded-lg shadow-md p-6 space-y-2">
+                <div className="bg-white rounded-sm shadow-md border-t-4 border-[#CC1020] p-5 space-y-1">
                   {tabs.map((tab) => {
                     const Icon = tab.icon;
                     return (
                       <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                        role="tab"
+                        aria-selected={activeTab === tab.id}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm transition-colors font-body ${
                           activeTab === tab.id
-                            ? 'bg-primary-600 text-white'
-                            : 'hover:bg-metallic-100 text-metallic-700'
+                            ? 'bg-[#CC1020] text-white'
+                            : 'hover:bg-gray-100 text-gray-600'
                         }`}
                       >
                         <Icon className="h-5 w-5" />
@@ -337,7 +411,9 @@ export default function MyAccountPage() {
 
               {/* Content */}
               <div className="lg:col-span-3">
-                <div className="bg-white rounded-lg shadow-md p-8">
+                <div className="bg-white rounded-sm shadow-md border-t-4 border-[#CC1020] p-8">
+
+                  {/* ── PERFIL ──────────────────────────────────────────── */}
                   {activeTab === 'perfil' && (
                     <div className="space-y-8">
                       <h2 className="text-2xl font-bold text-metallic-900">
@@ -503,20 +579,47 @@ export default function MyAccountPage() {
                     </div>
                   )}
 
+                  {/* ── PEDIDOS ─────────────────────────────────────────── */}
                   {activeTab === 'pedidos' && (
                     <div className="space-y-6">
-                      <h2 className="text-2xl font-bold text-metallic-900">
-                        Histórico de Pedidos
-                      </h2>
+                      <div className="flex items-center gap-3">
+                        <div className="w-1 h-6 bg-[#CC1020] rounded-full" />
+                        <h2 className="font-display text-xl font-bold text-[#1A1A1A] uppercase">
+                          Histórico de Pedidos
+                        </h2>
+                      </div>
 
-                      {orders.length === 0 ? (
+                      {ordersLoading ? (
+                        <div className="space-y-4">
+                          {[...Array(3)].map((_, i) => (
+                            <div key={i} className="border border-gray-200 rounded-sm p-5 animate-pulse">
+                              <div className="flex justify-between items-start mb-3">
+                                <div className="space-y-2">
+                                  <div className="h-4 w-32 bg-gray-200 rounded" />
+                                  <div className="h-3 w-24 bg-gray-100 rounded" />
+                                </div>
+                                <div className="h-6 w-20 bg-gray-200 rounded-sm" />
+                              </div>
+                              <div className="flex justify-between items-center pt-3 border-t border-gray-100">
+                                <div className="h-6 w-24 bg-gray-200 rounded" />
+                                <div className="h-8 w-28 bg-gray-200 rounded-sm" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : orders.length === 0 ? (
                         <div className="text-center py-12">
-                          <Package className="h-16 w-16 text-metallic-300 mx-auto mb-4" />
-                          <p className="text-metallic-600">
-                            Você ainda não fez nenhum pedido
+                          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Package className="h-10 w-10 text-gray-400" />
+                          </div>
+                          <p className="font-display text-lg font-bold text-[#1A1A1A] uppercase mb-1">
+                            Nenhum pedido ainda
                           </p>
-                          <Button asChild className="mt-4">
-                            <a href="/produtos">Começar a Comprar</a>
+                          <p className="text-sm text-gray-500 mb-6">
+                            Quando você fizer um pedido, ele aparecerá aqui.
+                          </p>
+                          <Button asChild>
+                            <a href="/produtos">Explorar Produtos</a>
                           </Button>
                         </div>
                       ) : (
@@ -524,44 +627,50 @@ export default function MyAccountPage() {
                           {orders.map((order) => (
                             <div
                               key={order.id}
-                              className="border border-metallic-200 rounded-lg p-6 hover:shadow-md transition-shadow"
+                              className="border border-gray-200 rounded-sm p-5 hover:border-[#CC1020]/40 hover:shadow-sm transition-all"
                             >
-                              <div className="flex justify-between items-start mb-4">
+                              <div className="flex justify-between items-start mb-3">
                                 <div>
-                                  <p className="font-semibold text-lg">
-                                    Pedido #{order.id.slice(0, 8)}
+                                  <p className="font-semibold text-[#1A1A1A]">
+                                    Pedido #{order.id.slice(0, 8).toUpperCase()}
                                   </p>
-                                  <p className="text-sm text-metallic-600">
-                                    {new Date(order.createdAt).toLocaleDateString('pt-BR')}
+                                  <p className="text-sm text-gray-500 mt-0.5">
+                                    {new Date(order.createdAt).toLocaleDateString('pt-BR', {
+                                      day: '2-digit', month: 'long', year: 'numeric',
+                                    })}
                                   </p>
                                 </div>
-                                <span className="px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-medium">
+                                <span className={`px-3 py-1 rounded-sm text-xs font-bold uppercase tracking-wide ${statusBadgeClass(order.status)}`}>
                                   {statusToPt(order.status)}
                                 </span>
                               </div>
-                              <div className="flex flex-wrap gap-3 justify-between items-center">
-                                <p className="text-2xl font-bold text-primary-600">
-                                  R$ {order.total.toFixed(2)}
+                              <div className="flex flex-wrap gap-3 justify-between items-center pt-3 border-t border-gray-100">
+                                <p className="text-xl font-bold text-[#CC1020]">
+                                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.total)}
                                 </p>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 flex-wrap">
                                   {order.status === 'PENDING' && (
-                                    <Button
-                                      size="sm"
-                                      asChild
-                                    >
-                                      <a href={`/pagamento/${order.id}`}>
-                                        Pagar Agora
-                                      </a>
+                                    <Button size="sm" asChild>
+                                      <a href={`/pagamento/${order.id}`}>Pagar Agora</a>
                                     </Button>
                                   )}
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    asChild
-                                  >
-                                    <a href={`/minha-conta/pedidos/${order.id}`}>
-                                      Ver Detalhes
-                                    </a>
+                                  {order.status !== 'PENDING' && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleReorder(order.id)}
+                                      disabled={reorderingId === order.id}
+                                    >
+                                      {reorderingId === order.id ? (
+                                        <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                                      ) : (
+                                        <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                                      )}
+                                      Comprar de novo
+                                    </Button>
+                                  )}
+                                  <Button variant="outline" size="sm" asChild>
+                                    <a href={`/minha-conta/pedidos/${order.id}`}>Ver Detalhes</a>
                                   </Button>
                                 </div>
                               </div>
@@ -572,6 +681,7 @@ export default function MyAccountPage() {
                     </div>
                   )}
 
+                  {/* ── ENDEREÇOS ───────────────────────────────────────── */}
                   {activeTab === 'enderecos' && (
                     <div className="space-y-6">
                       <h2 className="text-2xl font-bold text-metallic-900">
@@ -678,13 +788,35 @@ export default function MyAccountPage() {
                           </Button>
                         </>
                       )}
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                          <div className="w-1 h-6 bg-[#CC1020] rounded-full" />
+                          <h2 className="font-display text-xl font-bold text-[#1A1A1A] uppercase">
+                            Endereços de Entrega
+                          </h2>
+                        </div>
+                        <Button size="sm">Adicionar Endereço</Button>
+                      </div>
+                      <div className="text-center py-12">
+                        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <MapPin className="h-10 w-10 text-gray-400" />
+                        </div>
+                        <p className="font-display text-lg font-bold text-[#1A1A1A] uppercase mb-1">
+                          Nenhum endereço cadastrado
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Adicione um endereço para agilizar futuros pedidos.
+                        </p>
+                      </div>
                     </div>
                   )}
 
+                  {/* ── DEVOLUÇÕES ──────────────────────────────────────── */}
                   {activeTab === 'devolucoes' && (
                     <div className="space-y-6">
-                      <div className="flex justify-between items-center">
-                        <h2 className="text-2xl font-bold text-metallic-900">
+                      <div className="flex items-center gap-3">
+                        <div className="w-1 h-6 bg-[#CC1020] rounded-full" />
+                        <h2 className="font-display text-xl font-bold text-[#1A1A1A] uppercase">
                           Minhas Devoluções
                         </h2>
                       </div>
@@ -743,8 +875,23 @@ export default function MyAccountPage() {
                           })}
                         </div>
                       )}
+                      <div className="text-center py-12">
+                        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <RotateCcw className="h-10 w-10 text-gray-400" />
+                        </div>
+                        <p className="font-display text-lg font-bold text-[#1A1A1A] uppercase mb-1">
+                          Nenhuma devolução
+                        </p>
+                        <p className="text-sm text-gray-500 mb-6">
+                          Gerencie suas solicitações de devolução aqui.
+                        </p>
+                        <Button asChild variant="outline">
+                          <a href="/minha-conta/devolucoes">Ver Devoluções</a>
+                        </Button>
+                      </div>
                     </div>
                   )}
+
                 </div>
               </div>
             </div>

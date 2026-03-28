@@ -147,7 +147,7 @@ export default function ShippedOrdersPage() {
                   </div>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-3 mt-3 bg-metallic-50 border border-metallic-100 rounded-lg p-3">
+                <div className="grid md:grid-cols-2 gap-3 mt-3 bg-gray-50 border border-metallic-100 rounded-lg p-3">
                   <div className="flex items-start gap-2 text-sm text-metallic-700">
                     <User className="h-4 w-4 text-primary-600 mt-0.5" />
                     <div>
@@ -205,15 +205,15 @@ export default function ShippedOrdersPage() {
                 </div>
 
                 <div className="mt-4 grid md:grid-cols-3 gap-3">
-                  <div className="bg-metallic-50 rounded-lg p-3 border border-metallic-100">
+                  <div className="bg-gray-50 rounded-lg p-3 border border-metallic-100">
                     <p className="text-sm text-metallic-600">Pagamento</p>
                     <p className="font-semibold text-metallic-900">{paymentToPt(order.paymentMethod)}</p>
                   </div>
-                  <div className="bg-metallic-50 rounded-lg p-3 border border-metallic-100">
+                  <div className="bg-gray-50 rounded-lg p-3 border border-metallic-100">
                     <p className="text-sm text-metallic-600">Total</p>
                     <p className="font-semibold text-metallic-900">R$ {order.total.toFixed(2)}</p>
                   </div>
-                  <div className="bg-metallic-50 rounded-lg p-3 border border-metallic-100">
+                  <div className="bg-gray-50 rounded-lg p-3 border border-metallic-100">
                     <p className="text-sm text-metallic-600">Frete / Desconto</p>
                     <p className="font-semibold text-metallic-900">Frete R$ {order.shipping.toFixed(2)} | Desc R$ {order.discount.toFixed(2)}</p>
                   </div>

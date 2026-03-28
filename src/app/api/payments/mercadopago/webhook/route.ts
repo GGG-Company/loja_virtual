@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { createHmac } from 'crypto';
 import logger from "@/lib/logger";
-import { getMercadoPagoKeys } from '@/lib/mercadopago-config';
+import { getMercadoPagoKeys, getMercadoPagoConfig } from '@/lib/mercadopago-config';
 import { prisma } from '@/lib/prisma';
 import { OrderStatus } from '@prisma/client';
 import { sendOrderStatusUpdate } from '@/lib/webhooks';
@@ -53,6 +54,35 @@ function verifyWebhookSignature(req: NextRequest, rawBody: string): boolean {
 
   return hash === v1;
 }
+async function verifyMercadoPagoSignature(req: NextRequest, paymentId: string | undefined): Promise<boolean> {
+  const webhookSecret = process.env.MP_WEBHOOK_SECRET || (await getMercadoPagoConfig())?.webhookSecret;
+  if (!webhookSecret) {
+    logger.warn('MP_WEBHOOK_SECRET not configured — skipping signature verification');
+    return true; // allow through but log the warning
+  }
+
+  const xSignature = req.headers.get('x-signature');
+  const xRequestId = req.headers.get('x-request-id');
+
+  if (!xSignature || !xRequestId) {
+    return false;
+  }
+
+  // x-signature format: "ts=<timestamp>,v1=<hash>"
+  const parts = Object.fromEntries(xSignature.split(',').map(p => p.split('=')));
+  const ts = parts['ts'];
+  const v1 = parts['v1'];
+
+  if (!ts || !v1) {
+    return false;
+  }
+
+  // MercadoPago manifest format: id:<data.id>;request-date:<x-request-id>;ts:<ts>;
+  const manifest = `id:${paymentId};request-date:${xRequestId};ts:${ts};`;
+  const expectedHash = createHmac('sha256', webhookSecret).update(manifest).digest('hex');
+
+  return expectedHash === v1;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -68,12 +98,18 @@ export async function POST(req: NextRequest) {
 
     logger.info({ body }, "Webhook Mercado Pago recebido");
 
+    // Verificar assinatura do webhook
+    const paymentId = body.data?.id;
+    const signatureValid = await verifyMercadoPagoSignature(req, paymentId);
+    if (!signatureValid) {
+      logger.warn({ paymentId }, 'Webhook Mercado Pago com assinatura inválida ou ausente');
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    }
+
     // Verificar se é uma notificação de pagamento
     if (body.type !== "payment") {
       return NextResponse.json({ received: true });
     }
-
-    const paymentId = body.data?.id;
 
     if (!paymentId) {
       return NextResponse.json({ error: "Payment ID não encontrado" }, { status: 400 });
@@ -207,10 +243,13 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ received: true });
-  } catch (error: any) {
+  } catch (error) {
     logger.error(error as Error, 'Erro ao processar webhook');
     return NextResponse.json(
-      { error: 'Erro ao processar webhook' },
+      { 
+        error: 'Erro ao processar webhook', 
+        message: error instanceof Error ? error.message : undefined 
+      },
       { status: 500 }
     );
   }

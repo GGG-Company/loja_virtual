@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, Package, Check, Truck, CreditCard, Barcode, CheckCircle, Smartphone } from 'lucide-react';
+import { ShoppingCart, Package, Check, Truck, CreditCard, Barcode, CheckCircle, Smartphone, Tag, X } from 'lucide-react';
 import { toast } from 'sonner';
 import Image from 'next/image';
 import { MercadoPagoProvider } from '@/components/mercadopago-provider';
@@ -58,6 +58,17 @@ export default function CheckoutPage() {
   const [loadingPayment, setLoadingPayment] = useState(false);
   const [paymentProcessed, setPaymentProcessed] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
+
+  // Cupom de desconto
+  const [couponCode, setCouponCode] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    couponId: string;
+    code: string;
+    discount: number;
+    description?: string | null;
+  } | null>(null);
+  const [couponError, setCouponError] = useState('');
 
   // Estados para frete
   const [shippingOptions, setShippingOptions] = useState<Array<{
@@ -199,7 +210,8 @@ export default function CheckoutPage() {
 
   const total = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shippingCost = selectedShipping?.price || 0;
-  const totalWithShipping = total + shippingCost;
+  const couponDiscount = appliedCoupon?.discount ?? 0;
+  const totalWithShipping = total + shippingCost - couponDiscount;
 
   // Função para calcular frete via Melhor Envio
   const calcularFrete = async (cep: string) => {
@@ -415,6 +427,47 @@ export default function CheckoutPage() {
     }
   };
 
+  const handleApplyCoupon = async () => {
+    const code = couponCode.trim();
+    if (!code) return;
+
+    setCouponLoading(true);
+    setCouponError('');
+
+    try {
+      const response = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, cartTotal: total }),
+      });
+
+      const data = await response.json();
+
+      if (data.valid) {
+        setAppliedCoupon({
+          couponId: data.couponId,
+          code: data.code,
+          discount: data.discount,
+          description: data.description,
+        });
+        setCouponCode('');
+        toast.success(`Cupom "${data.code}" aplicado! Desconto de R$ ${data.discount.toFixed(2).replace('.', ',')}`);
+      } else {
+        setCouponError(data.reason || 'Cupom inválido');
+      }
+    } catch {
+      setCouponError('Erro ao validar cupom. Tente novamente.');
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponError('');
+    setCouponCode('');
+  };
+
   const handleConfirmarPedido = async () => {
     setLoading(true);
 
@@ -433,6 +486,8 @@ export default function CheckoutPage() {
               deliveryTime: selectedShipping.delivery_time,
             }
           : null,
+        // Cupom aplicado
+        ...(appliedCoupon ? { couponId: appliedCoupon.couponId } : {}),
       };
 
       const response = await fetch("/api/orders", {
@@ -488,7 +543,7 @@ export default function CheckoutPage() {
   return (
     <MercadoPagoProvider>
       <Header />
-      <main className="min-h-screen bg-metallic-50 py-12">
+      <main className="min-h-screen bg-gray-50 py-12">
         <div className="container mx-auto px-4 max-w-6xl">
           {/* Steps Indicator */}
           <div className="mb-12">
@@ -522,12 +577,12 @@ export default function CheckoutPage() {
                     <form onSubmit={handleNextStep} className="space-y-4">
                       <div>
                         <Label htmlFor="nome">Nome Completo</Label>
-                        <Input id="nome" value={dadosForm.nome} onChange={(e) => setDadosForm({ ...dadosForm, nome: e.target.value })} required />
+                        <Input id="nome" autoComplete="name" value={dadosForm.nome} onChange={(e) => setDadosForm({ ...dadosForm, nome: e.target.value })} required />
                       </div>
 
                       <div>
                         <Label htmlFor="email">E-mail</Label>
-                        <Input id="email" type="email" value={dadosForm.email} onChange={(e) => setDadosForm({ ...dadosForm, email: e.target.value })} required />
+                        <Input id="email" type="email" autoComplete="email" value={dadosForm.email} onChange={(e) => setDadosForm({ ...dadosForm, email: e.target.value })} required />
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
@@ -536,6 +591,7 @@ export default function CheckoutPage() {
                           <Input
                             id="telefone"
                             type="tel"
+                            autoComplete="tel"
                             value={dadosForm.telefone}
                             onChange={(e) => {
                               let value = e.target.value.replace(/\D/g, "");
@@ -559,6 +615,7 @@ export default function CheckoutPage() {
                           <Label htmlFor="cpf">CPF</Label>
                           <Input
                             id="cpf"
+                            autoComplete="off"
                             value={dadosForm.cpf}
                             onChange={(e) => {
                               let value = e.target.value.replace(/\D/g, "");
@@ -599,7 +656,7 @@ export default function CheckoutPage() {
                       <div>
                         <Label htmlFor="cep">CEP</Label>
                         <div className="relative">
-                          <Input id="cep" value={entregaForm.cep} onChange={(e) => handleCepChange(e.target.value)} placeholder="00000-000" maxLength={9} required />
+                          <Input id="cep" autoComplete="postal-code" value={entregaForm.cep} onChange={(e) => handleCepChange(e.target.value)} placeholder="00000-000" maxLength={9} required />
                           {loadingCep && (
                             <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
@@ -611,7 +668,7 @@ export default function CheckoutPage() {
 
                       <div>
                         <Label htmlFor="endereco">Endereço</Label>
-                        <Input id="endereco" value={entregaForm.endereco} onChange={(e) => setEntregaForm({ ...entregaForm, endereco: e.target.value })} required />
+                        <Input id="endereco" autoComplete="address-line1" value={entregaForm.endereco} onChange={(e) => setEntregaForm({ ...entregaForm, endereco: e.target.value })} required />
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
@@ -631,7 +688,7 @@ export default function CheckoutPage() {
 
                         <div>
                           <Label htmlFor="complemento">Complemento</Label>
-                          <Input id="complemento" value={entregaForm.complemento} onChange={(e) => setEntregaForm({ ...entregaForm, complemento: e.target.value })} />
+                          <Input id="complemento" autoComplete="address-line2" value={entregaForm.complemento} onChange={(e) => setEntregaForm({ ...entregaForm, complemento: e.target.value })} />
                         </div>
                       </div>
 
@@ -643,12 +700,12 @@ export default function CheckoutPage() {
 
                         <div>
                           <Label htmlFor="cidade">Cidade</Label>
-                          <Input id="cidade" value={entregaForm.cidade} onChange={(e) => setEntregaForm({ ...entregaForm, cidade: e.target.value })} required />
+                          <Input id="cidade" autoComplete="address-level2" value={entregaForm.cidade} onChange={(e) => setEntregaForm({ ...entregaForm, cidade: e.target.value })} required />
                         </div>
 
                         <div>
                           <Label htmlFor="estado">Estado</Label>
-                          <Input id="estado" value={entregaForm.estado} onChange={(e) => setEntregaForm({ ...entregaForm, estado: e.target.value })} maxLength={2} placeholder="UF" required />
+                          <Input id="estado" autoComplete="address-level1" value={entregaForm.estado} onChange={(e) => setEntregaForm({ ...entregaForm, estado: e.target.value })} maxLength={2} placeholder="UF" required />
                         </div>
                       </div>
 
@@ -686,7 +743,18 @@ export default function CheckoutPage() {
                                     {option.company?.picture && <Image src={option.company.picture} alt={option.company.name || option.name} width={40} height={40} className="object-contain" />}
                                     <div>
                                       <p className="font-semibold text-gray-900">{option.name}</p>
-                                      <p className="text-sm text-gray-600">Entrega em até {option.delivery_time} dias úteis</p>
+                                      <p className="text-sm text-gray-600">
+                                        Entrega em até {option.delivery_time} dias úteis
+                                        {' · '}
+                                        <span className="font-medium text-gray-700">
+                                          Entrega estimada:{' '}
+                                          {(() => {
+                                            const d = new Date();
+                                            d.setDate(d.getDate() + option.delivery_time);
+                                            return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                                          })()}
+                                        </span>
+                                      </p>
                                     </div>
                                   </div>
                                   <div className="text-right">
@@ -746,6 +814,72 @@ export default function CheckoutPage() {
                       </label>
                     </div>
 
+                    {/* Cupom de Desconto */}
+                    <div className="mt-6 pt-6 border-t">
+                      <p className="font-semibold mb-3 flex items-center gap-2">
+                        <Tag className="h-4 w-4 text-[#CC1020]" />
+                        Cupom de Desconto
+                      </p>
+
+                      {appliedCoupon ? (
+                        <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-4 py-3">
+                          <div>
+                            <p className="font-semibold text-green-800 text-sm">{appliedCoupon.code}</p>
+                            {appliedCoupon.description && (
+                              <p className="text-xs text-green-700 mt-0.5">{appliedCoupon.description}</p>
+                            )}
+                            <p className="text-green-700 font-bold mt-0.5">
+                              - R$ {appliedCoupon.discount.toFixed(2).replace('.', ',')}
+                            </p>
+                          </div>
+                          <button
+                            onClick={handleRemoveCoupon}
+                            className="p-1.5 rounded-full hover:bg-green-100 text-green-700 transition-colors"
+                            aria-label="Remover cupom"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Digite o código do cupom"
+                              value={couponCode}
+                              onChange={(e) => {
+                                setCouponCode(e.target.value.toUpperCase());
+                                setCouponError('');
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleApplyCoupon();
+                                }
+                              }}
+                              className="uppercase"
+                              disabled={couponLoading}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={handleApplyCoupon}
+                              disabled={couponLoading || !couponCode.trim()}
+                              className="shrink-0 border-[#CC1020] text-[#CC1020] hover:bg-red-50"
+                            >
+                              {couponLoading ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#CC1020]" />
+                              ) : (
+                                'Aplicar'
+                              )}
+                            </Button>
+                          </div>
+                          {couponError && (
+                            <p className="text-sm text-red-600">{couponError}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
                     <div className="flex gap-4 pt-6">
                       <Button type="button" variant="outline" onClick={() => setCurrentStep(2)}>
                         Voltar
@@ -802,6 +936,22 @@ export default function CheckoutPage() {
                         <p className="text-sm text-gray-600">CEP: {entregaForm.cep}</p>
                       </div>
 
+                      {/* Cupom Aplicado */}
+                      {appliedCoupon && (
+                        <div>
+                          <h3 className="font-semibold mb-2">Cupom de Desconto</h3>
+                          <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
+                            <Tag className="h-5 w-5 text-green-600" />
+                            <div>
+                              <span className="font-medium text-green-800">{appliedCoupon.code}</span>
+                              <span className="text-green-700 ml-2">
+                                — desconto de R$ {appliedCoupon.discount.toFixed(2).replace('.', ',')}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Pagamento */}
                       <div>
                         <h3 className="font-semibold mb-2">Forma de Pagamento</h3>
@@ -857,6 +1007,15 @@ export default function CheckoutPage() {
                     <span>Frete</span>
                     {loadingShipping ? <span className="text-gray-400">Calculando...</span> : selectedShipping ? <span className={selectedShipping.price === 0 ? "text-green-600" : ""}>{selectedShipping.price === 0 ? "Grátis" : `R$ ${selectedShipping.price.toFixed(2)}`}</span> : <span className="text-gray-400">Não selecionado</span>}
                   </div>
+                  {appliedCoupon && (
+                    <div className="flex justify-between text-sm text-green-700 font-medium">
+                      <span className="flex items-center gap-1">
+                        <Tag className="h-3 w-3" />
+                        Cupom ({appliedCoupon.code})
+                      </span>
+                      <span>- R$ {appliedCoupon.discount.toFixed(2).replace('.', ',')}</span>
+                    </div>
+                  )}
                   {selectedShipping ? (
                     <div className="text-xs text-gray-500">
                       {selectedShipping.name} - até {selectedShipping.delivery_time} dias úteis

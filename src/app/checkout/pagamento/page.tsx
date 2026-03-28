@@ -7,11 +7,12 @@ import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { Check, CreditCard, Barcode, Smartphone } from 'lucide-react';
+import { Check, CreditCard, Barcode, Smartphone, HelpCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/api-client';
 import { MercadoPagoProvider } from '@/components/mercadopago-provider';
 import { MercadoPagoPaymentBrick } from '@/components/mercadopago-payment-brick';
+import { CheckoutProgress } from '@/components/checkout-progress';
 import Image from "next/image";
 
 function CheckoutPagamentoContent() {
@@ -136,7 +137,13 @@ function CheckoutPagamentoContent() {
             amount: amountNumber,
             userEmail: session?.user?.email,
             userName: session?.user?.name,
-            userCpf: session?.user?.cpf || "12345678909",
+            userCpf: (() => {
+              try {
+                const dados = JSON.parse(localStorage.getItem('checkoutDados') || '{}');
+                const cpf = (dados.cpf as string | undefined)?.replace(/\D/g, '') || '';
+                return cpf.length === 11 ? cpf : (session?.user as { cpf?: string } | undefined)?.cpf || '';
+              } catch { return ''; }
+            })(),
           }),
         });
 
@@ -240,9 +247,10 @@ function CheckoutPagamentoContent() {
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-metallic-50 py-12">
+      <main className="min-h-screen bg-gray-50 py-12">
         <div className="container mx-auto px-4 max-w-3xl">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg shadow p-8 space-y-6">
+          <CheckoutProgress currentStep={3} />
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-sm shadow-md border-t-4 border-[#CC1020] p-8 space-y-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">Pedido</p>
@@ -253,7 +261,7 @@ function CheckoutPagamentoContent() {
               </span>
             </div>
 
-            <div className="bg-metallic-50 border border-metallic-200 rounded-lg p-4 flex items-center justify-between">
+            <div className="bg-gray-50 border border-gray-200 rounded-sm p-4 flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Valor</p>
                 <p className="text-2xl font-bold text-primary-700">R$ {total || "0,00"}</p>
@@ -267,7 +275,7 @@ function CheckoutPagamentoContent() {
                   {!expired && <span className="ml-2 text-xs text-gray-600">Expira às {timeLeft ? new Date(Date.now() + timeLeft * 1000).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : ""}</span>}
                   {!expired && (
                     <div className="mt-2">
-                      <div className="h-2 w-full bg-metallic-100 rounded">
+                      <div className="h-2 w-full bg-gray-100 rounded">
                         <div className="h-2 bg-yellow-500 rounded" style={{ width: `${Math.max(0, Math.min(100, (timeLeft / TOTAL_SECONDS) * 100))}%` }} />
                       </div>
                     </div>
@@ -383,6 +391,12 @@ function CheckoutPagamentoContent() {
                       <Image src="https://http2.mlstatic.com/frontend-assets/mp-web-navigation/ui-navigation/5.21.11/mercadopago/logo__large@2x.png" alt="Mercado Pago" width={80} height={20} className="h-5" />
                     </div>
                     <p className="text-sm text-gray-600">Preencha os dados do cartão abaixo.</p>
+                    <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-100 rounded-sm text-xs text-blue-700">
+                      <HelpCircle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                      <span>
+                        <strong>CVV:</strong> código de segurança de 3 dígitos no verso do cartão (4 dígitos na frente para American Express).
+                      </span>
+                    </div>
                     {orderId && amountNumber > 0 ? (
                       <div className="mt-4">
                         <MercadoPagoPaymentBrick amount={amountNumber} orderId={orderId} userEmail={userEmail} userFirstName={userFirstName} userLastName={userLastName} onPaymentSuccess={handlePaymentSuccess} onPaymentError={handlePaymentError} />

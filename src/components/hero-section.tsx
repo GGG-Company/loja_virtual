@@ -2,105 +2,179 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { ShoppingCart, Zap, Shield, Truck } from 'lucide-react';
+import Image from 'next/image';
+import { ShoppingCart, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import Image from "next/image";
 
 export function HeroSection() {
   return (
-    <section className="relative bg-gradient-to-br from-metallic-900 via-metallic-800 to-primary-900 text-white overflow-hidden">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute inset-0" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-        }} />
+    <section className="relative bg-[#1A1A1A] text-white overflow-hidden">
+      {/* Diagonal red accent stripe — brand visual language */}
+      <div
+        className="absolute inset-0 opacity-[0.04] pointer-events-none"
+        style={{
+          backgroundImage: `repeating-linear-gradient(
+            -55deg,
+            #CC1020 0px,
+            #CC1020 2px,
+            transparent 2px,
+            transparent 28px
+          )`,
+        }}
+      />
+
+      {/* Red top border */}
+      <div className="absolute top-0 left-0 right-0 h-1 bg-[#CC1020]" />
+
+      {/* Background geometric */}
+      <div className="absolute right-0 top-0 bottom-0 w-1/2 overflow-hidden pointer-events-none hidden lg:block">
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'linear-gradient(135deg, transparent 30%, rgba(204,16,32,0.08) 100%)',
+            clipPath: 'polygon(15% 0%, 100% 0%, 100% 100%, 0% 100%)',
+          }}
+        />
       </div>
 
-      <div className="container mx-auto px-4 py-20 relative z-10">
+      <div className="container mx-auto px-4 py-10 lg:py-24 relative z-10">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Content */}
           <motion.div
-            initial={{ opacity: 0, x: -50 }}
+            initial={{ opacity: 0, x: -40 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.7 }}
+            transition={{ duration: 0.6 }}
             className="space-y-6"
           >
-            <div className="inline-block px-4 py-2 bg-primary-500/20 backdrop-blur-sm rounded-full border border-primary-400/30">
-              <span className="text-sm font-semibold text-primary-300">
-                🔥 Lançamento: Parafusadeira Makita 50% OFF
+            {/* Promo badge */}
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[#CC1020] rounded-sm"
+            >
+              <Tag className="h-4 w-4" />
+              <span className="text-sm font-display font-bold tracking-widest uppercase">
+                Lançamento — Até 50% OFF
               </span>
+            </motion.div>
+
+            {/* Main title */}
+            <div>
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.5 }}
+                className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[0.95] uppercase"
+              >
+                <span className="text-white">As Melhores</span>
+                <br />
+                <span className="text-[#CC1020]">Ferramentas</span>
+                <br />
+                <span className="text-white">Profissionais</span>
+              </motion.h1>
             </div>
 
-            <h1 className="text-5xl lg:text-6xl font-bold leading-tight">
-              As Melhores Ferramentas
-              <span className="text-primary-400"> Profissionais</span>
-            </h1>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="text-gray-400 text-lg max-w-lg font-body"
+            >
+              Equipamentos de alta performance para profissionais e entusiastas.
+              Makita, Bosch, DeWalt e muito mais — com os melhores preços.
+            </motion.p>
 
-            <p className="text-lg text-metallic-300 max-w-xl">
-              Equipamentos de alta performance para profissionais e entusiastas. 
-              Marcas confiáveis como Makita, Bosch e DeWalt com os melhores preços.
-            </p>
-
-            <div className="flex flex-wrap gap-4">
-              <Button asChild size="lg" className="h-14 px-8 text-lg">
-                <Link href="/produtos">
-                  <ShoppingCart className="mr-2 h-5 w-5" />
+            {/* CTAs */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="flex flex-wrap gap-3"
+            >
+              <Link href="/produtos">
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="btn-fill flex items-center gap-2 bg-[#CC1020] text-white px-8 py-4 font-display font-bold text-lg tracking-wide uppercase transition-colors"
+                >
+                  <ShoppingCart className="h-5 w-5" />
                   Ver Produtos
-                </Link>
-              </Button>
-              <Button asChild size="lg" variant="outline" className="h-14 px-8 text-lg bg-white/10 hover:bg-white/20 text-white border-white/30">
-                <Link href="/categorias">
-                  Explorar Categorias
-                </Link>
-              </Button>
-            </div>
+                </motion.button>
+              </Link>
+              <Link href="/ofertas">
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="flex items-center gap-2 border-2 border-white/30 hover:border-[#CC1020] hover:text-[#CC1020] text-white px-8 py-4 font-display font-bold text-lg tracking-wide uppercase transition-colors"
+                >
+                  🔥 Ofertas
+                </motion.button>
+              </Link>
+            </motion.div>
 
-            {/* Features */}
-            <div className="grid grid-cols-3 gap-4 pt-8">
-              <div className="flex items-center gap-2">
-                <Truck className="h-8 w-8 text-primary-400" />
-                <div>
-                  <p className="font-semibold text-sm">Frete Grátis</p>
-                  <p className="text-xs text-metallic-400">Acima de R$ 299</p>
-                </div>
+            {/* 20+ anos no mercado */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.8 }}
+              className="flex items-center gap-4 pt-6 border-t border-white/10"
+            >
+              <div className="flex items-baseline gap-1">
+                <span className="font-display font-bold text-4xl lg:text-5xl text-white leading-none">20</span>
+                <span className="font-display font-bold text-4xl lg:text-5xl text-[#CC1020] leading-none">+</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Shield className="h-8 w-8 text-primary-400" />
-                <div>
-                  <p className="font-semibold text-sm">Garantia</p>
-                  <p className="text-xs text-metallic-400">12 meses</p>
-                </div>
+              <div className="h-10 w-px bg-white/15" />
+              <div>
+                <p className="font-display font-bold text-lg text-white uppercase tracking-wide leading-none">Anos no mercado</p>
+                <p className="text-sm text-gray-400 font-body mt-1">Fundada em 2004 · Feira de Santana, BA</p>
               </div>
-              <div className="flex items-center gap-2">
-                <Zap className="h-8 w-8 text-primary-400" />
-                <div>
-                  <p className="font-semibold text-sm">Entrega Rápida</p>
-                  <p className="text-xs text-metallic-400">24-48h BA</p>
-                </div>
-              </div>
-            </div>
+            </motion.div>
           </motion.div>
 
-          {/* Image */}
+          {/* Image side */}
           <motion.div
-            initial={{ opacity: 0, x: 50 }}
+            initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.7, delay: 0.2 }}
-            className="relative h-[500px] hidden lg:block"
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="relative h-[480px] hidden lg:block hero-float"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-primary-500/20 to-transparent rounded-3xl" />
-            <div className="relative h-full flex items-center justify-center">
-              <div className="w-full h-full bg-white/5 backdrop-blur-sm rounded-3xl border border-white/10 flex items-center justify-center relative overflow-hidden">
-                <Image
-                  src="/img.jpg"
-                  alt="Ferramentas Profissionais"
-                  fill
-                  className="object-cover"
-                  priority
-                  unoptimized
-                />
-              </div>
-            </div>
+            {/* Red corner accents — pulsing */}
+            <div className="corner-pulse absolute -top-4 -right-4 w-24 h-24 bg-[#CC1020] rounded-sm" />
+            <div className="corner-pulse-delayed absolute -bottom-4 -left-4 w-16 h-16 bg-[#CC1020] rounded-sm" />
+
+            {/* Image container with scan line */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              transition={{ duration: 0.35 }}
+              className="hero-scan-wrap relative h-full rounded-sm border border-white/10 shadow-2xl overflow-hidden"
+            >
+              {/* Red diagonal gradient overlay */}
+              <div
+                className="absolute inset-0 z-10 pointer-events-none"
+                style={{
+                  background: 'linear-gradient(to right, rgba(204,16,32,0.22) 0%, transparent 45%)',
+                }}
+              />
+
+              {/* Dark vignette bottom */}
+              <div className="absolute inset-x-0 bottom-0 h-1/3 z-10 pointer-events-none"
+                style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 100%)' }}
+              />
+
+              <Image
+                src="/img.jpg"
+                alt="Ferramentas Profissionais de Alta Performance"
+                fill
+                className="object-cover transition-transform duration-700 group-hover:scale-105"
+                priority
+              />
+
+              {/* Red accent lines — industrial feel */}
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#CC1020] z-20" />
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#CC1020]/60 z-20" />
+            </motion.div>
+
           </motion.div>
         </div>
       </div>

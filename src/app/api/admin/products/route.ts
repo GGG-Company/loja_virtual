@@ -1,7 +1,21 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import logger from "@/lib/logger";
+
+const CreateProductSchema = z.object({
+  name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres'),
+  description: z.string().optional(),
+  price: z.number().positive('Preço deve ser positivo'),
+  promotionalPrice: z.number().positive('Preço promocional deve ser positivo').optional().nullable(),
+  stock: z.number().int().min(0, 'Estoque não pode ser negativo').optional(),
+  categoryId: z.string().min(1, 'Categoria é obrigatória'),
+  imageUrl: z.string().url('URL de imagem inválida').optional().nullable(),
+  isFeatured: z.boolean().optional(),
+  isPromo: z.boolean().optional(),
+  stockLocation: z.string().optional().nullable(),
+});
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +29,7 @@ export async function GET(request: Request) {
   try {
     const session = await auth();
 
-    if (!session?.user || session.user.role === 'CUSTOMER') {
+    if (!session?.user || !['ADMIN', 'OWNER'].includes(session.user.role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -75,27 +89,31 @@ export async function POST(request: Request) {
   try {
     const session = await auth();
 
-    if (!session?.user || session.user.role === 'CUSTOMER') {
+    if (!session?.user || !['ADMIN', 'OWNER'].includes(session.user.role)) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { 
-      name, 
-      description, 
-      price, 
+    const rawBody = await request.json();
+    const parsed = CreateProductSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Dados inválidos', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
+    const {
+      name,
+      description,
+      price,
       promotionalPrice,
-      stock, 
-      categoryId, 
+      stock,
+      categoryId,
       imageUrl,
       isFeatured,
       isPromo,
       stockLocation
-    } = body;
-
-    if (!name || !price || !categoryId) {
-      return NextResponse.json({ error: 'Campos obrigatórios ausentes' }, { status: 400 });
-    }
+    } = parsed.data;
 
     const slug = generateSlug(name) + '-' + Math.random().toString(36).substring(2, 7);
     const sku = 'SKU-' + Math.random().toString(36).substring(2, 10).toUpperCase();
@@ -107,8 +125,8 @@ export async function POST(request: Request) {
         sku,
         description,
         price,
-        promotionalPrice: promotionalPrice ? parseFloat(promotionalPrice) : null,
-        stock: parseInt(stock) || 0,
+        promotionalPrice: promotionalPrice ?? null,
+        stock: stock ?? 0,
         categoryId,
         imageUrl: imageUrl || null,
         isFeatured: isFeatured ?? false,

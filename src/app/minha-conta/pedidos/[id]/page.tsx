@@ -10,6 +10,7 @@ import { apiClient } from '@/lib/api-client';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import Image from "next/image";
+import { ConfirmDialog } from '@/components/confirm-dialog';
 
 type OrderItem = {
   id: string;
@@ -72,6 +73,7 @@ export default function PedidoDetalhePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isConfirming, setIsConfirming] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [showConfirmDelivery, setShowConfirmDelivery] = useState(false);
   const [trackingInfo, setTrackingInfo] = useState<TrackingInfo | null>(null);
   const [isTrackingLoading, setIsTrackingLoading] = useState(false);
 
@@ -114,8 +116,6 @@ export default function PedidoDetalhePage() {
   };
 
   const handleConfirmDelivery = async () => {
-    if (!confirm("Confirmar que você recebeu este pedido?")) return;
-
     setIsConfirming(true);
     try {
       await apiClient.post(`/api/user/orders/${params.id}/confirm-delivery`);
@@ -187,7 +187,7 @@ export default function PedidoDetalhePage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-metallic-50 py-8">
+      <main className="min-h-screen bg-gray-50 py-8">
         <div className="container mx-auto px-4">
           <button onClick={() => router.back()} className="flex items-center text-metallic-600 hover:text-metallic-900 mb-6">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -286,7 +286,7 @@ export default function PedidoDetalhePage() {
               <h2 className="text-xl font-semibold text-metallic-900 mb-4">Itens do Pedido</h2>
               <div className="space-y-4">
                 {order.items.map((item) => (
-                  <div key={item.id} className="flex gap-4 p-4 bg-metallic-50 rounded-lg">
+                  <div key={item.id} className="flex gap-4 p-4 bg-gray-50 rounded-lg">
                     <div className="w-20 h-20 bg-white rounded-lg flex items-center justify-center overflow-hidden">{item.product.imageUrl ? <Image src={item.product.imageUrl} alt={item.product.name} width={80} height={80} className="w-full h-full object-cover" /> : <Package className="h-8 w-8 text-metallic-400" />}</div>
                     <div className="flex-1">
                       <p className="font-semibold text-metallic-900">{item.product.name}</p>
@@ -306,7 +306,7 @@ export default function PedidoDetalhePage() {
               {/* Endereço de Entrega */}
               <div>
                 <h2 className="text-xl font-semibold text-metallic-900 mb-4">Endereço de Entrega</h2>
-                <div className="bg-metallic-50 p-4 rounded-lg space-y-1">
+                <div className="bg-gray-50 p-4 rounded-lg space-y-1">
                   <p className="font-medium">
                     {order.shippingAddress?.street}, {order.shippingAddress?.number}
                   </p>
@@ -321,7 +321,7 @@ export default function PedidoDetalhePage() {
               {/* Resumo de Valores */}
               <div>
                 <h2 className="text-xl font-semibold text-metallic-900 mb-4">Resumo de Valores</h2>
-                <div className="bg-metallic-50 p-4 rounded-lg space-y-3">
+                <div className="bg-gray-50 p-4 rounded-lg space-y-3">
                   <div className="flex justify-between">
                     <span className="text-metallic-700">Subtotal:</span>
                     <span className="font-semibold">R$ {order.subtotal.toFixed(2)}</span>
@@ -364,7 +364,7 @@ export default function PedidoDetalhePage() {
                   )}
 
                   {order.status === "DELIVERED" && !order.deliveredAt && (
-                    <Button size="lg" onClick={handleConfirmDelivery} disabled={isConfirming} className="min-w-[200px]">
+                    <Button size="lg" onClick={() => setShowConfirmDelivery(true)} disabled={isConfirming} className="min-w-[200px]">
                       {isConfirming ? "Confirmando..." : "✓ Confirmar Recebimento"}
                     </Button>
                   )}
@@ -381,6 +381,16 @@ export default function PedidoDetalhePage() {
           </motion.div>
         </div>
       </main>
+      <ConfirmDialog
+        open={showConfirmDelivery}
+        title="Confirmar recebimento"
+        description="Confirmar que você recebeu este pedido? Após confirmar, o prazo para solicitar devolução começa a contar."
+        confirmLabel="Confirmar recebimento"
+        cancelLabel="Cancelar"
+        variant="warning"
+        onConfirm={() => { setShowConfirmDelivery(false); handleConfirmDelivery(); }}
+        onCancel={() => setShowConfirmDelivery(false)}
+      />
       <Footer />
     </>
   );

@@ -3,7 +3,7 @@
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { motion } from 'framer-motion';
-import { ShoppingCart, Package, Check, Truck, CreditCard, Trash2, Plus, Minus } from 'lucide-react';
+import { ShoppingCart, Trash2, Plus, Minus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
@@ -13,14 +13,10 @@ import { apiClient } from '@/lib/api-client';
 import { toast } from 'sonner';
 import { generateQuotePdf } from '@/lib/export/quote';
 import { useSession } from 'next-auth/react';
+import { ConfirmDialog } from '@/components/confirm-dialog';
+import { CheckoutProgress } from '@/components/checkout-progress';
+import { useCart } from '@/contexts/cart-context';
 
-const steps = [
-  { icon: ShoppingCart, label: 'Carrinho', active: true },
-  { icon: Package, label: 'Dados', active: false },
-  { icon: Truck, label: 'Entrega', active: false },
-  { icon: CreditCard, label: 'Pagamento', active: false },
-  { icon: Check, label: 'Confirmação', active: false },
-];
 
 interface CartItem {
   id: string;
@@ -58,7 +54,13 @@ type PickupPoint = {
 export default function CartPage() {
   const { data: session } = useSession();
   const router = useRouter();
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const {
+    items: cartItems,
+    total: subtotal,
+    updateQuantity: ctxUpdateQuantity,
+    removeItem: ctxRemoveItem,
+    clearCart: ctxClearCart,
+  } = useCart();
   const [shippingZip, setShippingZip] = useState('');
   const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
   const [selectedShipping, setSelectedShipping] = useState<ShippingOption | null>(null);
@@ -66,6 +68,8 @@ export default function CartPage() {
   const [pickupPoints, setPickupPoints] = useState<PickupPoint[]>([]);
   const [isPickupLoading, setIsPickupLoading] = useState(false);
   const [quoteLoading, setQuoteLoading] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState<string | null>(null);
+  const [clearConfirm, setClearConfirm] = useState(false);
   const [quoteForm, setQuoteForm] = useState({
     name: '',
     email: '',
@@ -75,11 +79,6 @@ export default function CartPage() {
     validityDays: 7,
     notes: '',
   });
-
-  useEffect(() => {
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    setCartItems(cart);
-  }, []);
 
 
   useEffect(() => {
@@ -93,26 +92,19 @@ export default function CartPage() {
   }, [session]);
 
   const updateQuantity = (id: string, delta: number) => {
-    const updatedCart = cartItems.map(item => {
-      if (item.id === id) {
-        const newQuantity = Math.max(1, item.quantity + delta);
-        return { ...item, quantity: newQuantity };
-      }
-      return item;
-    });
-    setCartItems(updatedCart);
-    localStorage.setItem('cart', JSON.stringify(updatedCart));
-    window.dispatchEvent(new Event('cartUpdated'));
+    ctxUpdateQuantity(id, delta);
   };
 
   const removeItem = (id: string) => {
-    const updatedCart = cartItems.filter(item => item.id !== id);
-    setCartItems(updatedCart);
-    localStorage.setItem('cart', JSON.stringify(updatedCart));
-    window.dispatchEvent(new Event('cartUpdated'));
+    ctxRemoveItem(id);
+    setRemoveTarget(null);
   };
 
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const clearCart = () => {
+    ctxClearCart();
+    setClearConfirm(false);
+    toast.success('Carrinho limpo');
+  };
   const shippingValue = selectedShipping?.price ?? 0;
   const total = subtotal + shippingValue;
 
@@ -232,7 +224,7 @@ export default function CartPage() {
         })),
         totals: { subtotal, shipping: shipping?.price || 0, total: subtotal + (shipping?.price || 0) },
         store: {
-          name: process.env.NEXT_PUBLIC_STORE_NAME || 'Shopping das Ferramentas',
+          name: process.env.NEXT_PUBLIC_STORE_NAME || 'Feira das Ferramentas',
           cnpj: process.env.NEXT_PUBLIC_STORE_CNPJ,
           phone: process.env.NEXT_PUBLIC_STORE_PHONE,
           email: process.env.NEXT_PUBLIC_STORE_EMAIL,
@@ -263,34 +255,27 @@ export default function CartPage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-metallic-50 py-12">
+      <main className="min-h-screen bg-gray-50 py-12">
         <div className="container mx-auto px-4">
-          {/* Steps */}
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-12">
-            <div className="flex items-center justify-center gap-4 overflow-x-auto pb-4">
-              {steps.map((step, index) => {
-                const Icon = step.icon;
-                return (
-                  <div key={index} className="flex items-center">
-                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: index * 0.1 }} className={`flex flex-col items-center ${step.active ? "text-primary-600" : "text-metallic-400"}`}>
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${step.active ? "bg-primary-600 text-white" : "bg-metallic-200"}`}>
-                        <Icon className="h-6 w-6" />
-                      </div>
-                      <span className="text-xs mt-2 font-medium">{step.label}</span>
-                    </motion.div>
-                    {index < steps.length - 1 && <div className={`h-0.5 w-12 mx-2 ${step.active ? "bg-primary-600" : "bg-metallic-200"}`} />}
-                  </div>
-                );
-              })}
-            </div>
-          </motion.div>
+          <CheckoutProgress currentStep={0} />
 
           {/* Cart Items */}
           {cartItems.length > 0 && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 space-y-4">
+                {/* Clear cart */}
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setClearConfirm(true)}
+                    className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-[#CC1020] transition-colors font-medium"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Limpar carrinho
+                  </button>
+                </div>
+
                 {cartItems.map((item) => (
-                  <motion.div key={item.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="bg-white rounded-lg shadow p-4 flex gap-4">
+                  <motion.div key={item.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="bg-white rounded-sm shadow-sm border border-gray-100 border-t-2 border-t-[#CC1020] p-4 flex gap-4">
                     <div className="relative w-24 h-24 flex-shrink-0">
                       <Image src={item.imageUrl || "/placeholder.svg"} alt={item.name} fill className="object-cover rounded" unoptimized />
                     </div>
@@ -302,7 +287,11 @@ export default function CartPage() {
                     </div>
 
                     <div className="flex flex-col items-end justify-between">
-                      <button onClick={() => removeItem(item.id)} className="text-red-600 hover:text-red-700">
+                      <button
+                        onClick={() => setRemoveTarget(item.id)}
+                        className="text-red-500 hover:text-[#CC1020] transition-colors"
+                        aria-label={`Remover ${item.name} do carrinho`}
+                      >
                         <Trash2 className="h-5 w-5" />
                       </button>
 
@@ -321,8 +310,11 @@ export default function CartPage() {
               </div>
 
               <div className="lg:col-span-1 space-y-6">
-                <motion.div id="shipping-section" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="bg-white rounded-lg shadow p-6">
-                  <h2 className="text-xl font-bold mb-4">Frete em tempo real *</h2>
+                <motion.div id="shipping-section" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="bg-white rounded-sm shadow-md border-t-4 border-[#CC1020] p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-1 h-6 bg-[#CC1020] rounded-full" />
+                    <h2 className="font-display text-lg font-bold text-[#1A1A1A] uppercase">Frete em Tempo Real</h2>
+                  </div>
                   <p className="text-sm text-gray-600 mb-4">Calcule e selecione o frete para continuar</p>
                   <div className="flex gap-2 mb-4">
                     <input type="text" value={shippingZip} onChange={(e) => setShippingZip(e.target.value)} placeholder="Digite seu CEP" className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
@@ -389,8 +381,11 @@ export default function CartPage() {
                   </div>
                 </motion.div>
 
-                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="bg-white rounded-lg shadow p-6">
-                  <h2 className="text-xl font-bold mb-4">Resumo do Pedido</h2>
+                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="bg-white rounded-sm shadow-md border-t-4 border-[#CC1020] p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-1 h-6 bg-[#CC1020] rounded-full" />
+                    <h2 className="font-display text-lg font-bold text-[#1A1A1A] uppercase">Resumo do Pedido</h2>
+                  </div>
 
                   <div className="space-y-2 mb-4 pb-4 border-b">
                     <div className="flex justify-between text-gray-600">
@@ -440,8 +435,11 @@ export default function CartPage() {
                   </Link>
                 </motion.div>
 
-                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="bg-white rounded-lg shadow p-6">
-                  <h2 className="text-xl font-bold mb-4">Gerar Orçamento (PDF)</h2>
+                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="bg-white rounded-sm shadow-md border-t-4 border-[#CC1020] p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-1 h-6 bg-[#CC1020] rounded-full" />
+                    <h2 className="font-display text-lg font-bold text-[#1A1A1A] uppercase">Gerar Orçamento (PDF)</h2>
+                  </div>
                   <div className="space-y-3">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
@@ -530,6 +528,29 @@ export default function CartPage() {
           )}
         </div>
       </main>
+
+      {/* Remove item confirmation */}
+      <ConfirmDialog
+        open={removeTarget !== null}
+        title="Remover item"
+        description="Tem certeza que deseja remover este produto do carrinho?"
+        confirmLabel="Remover"
+        cancelLabel="Manter"
+        onConfirm={() => removeTarget && removeItem(removeTarget)}
+        onCancel={() => setRemoveTarget(null)}
+      />
+
+      {/* Clear cart confirmation */}
+      <ConfirmDialog
+        open={clearConfirm}
+        title="Limpar carrinho"
+        description="Isso removerá todos os produtos do seu carrinho. Esta ação não pode ser desfeita."
+        confirmLabel="Limpar tudo"
+        cancelLabel="Cancelar"
+        onConfirm={clearCart}
+        onCancel={() => setClearConfirm(false)}
+      />
+
       <Footer />
     </>
   );

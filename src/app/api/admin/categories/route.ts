@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
+import { prisma } from '@/lib/prisma';
 import logger from "@/lib/logger";
 
 /** Verifica se o usuário é admin ou owner */
@@ -17,6 +17,13 @@ export async function GET() {
   try {
     const { error } = await requireAdmin();
     if (error) return error;
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (session.user.role !== 'ADMIN' && session.user.role !== 'OWNER') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const categories = await prisma.category.findMany({ orderBy: { name: 'asc' } });
     return NextResponse.json({ categories });
@@ -30,6 +37,13 @@ export async function POST(req: NextRequest) {
   try {
     const { error } = await requireAdmin();
     if (error) return error;
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (session.user.role !== 'ADMIN' && session.user.role !== 'OWNER') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const body = await req.json();
     const { name, slug, description, image } = body || {};
@@ -55,6 +69,13 @@ export async function PUT(req: NextRequest) {
   try {
     const { error } = await requireAdmin();
     if (error) return error;
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (session.user.role !== 'ADMIN' && session.user.role !== 'OWNER') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const body = await req.json();
     const { id, name, slug, description, image } = body || {};
@@ -75,6 +96,13 @@ export async function DELETE(req: NextRequest) {
   try {
     const { error } = await requireAdmin();
     if (error) return error;
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (session.user.role !== 'ADMIN' && session.user.role !== 'OWNER') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');

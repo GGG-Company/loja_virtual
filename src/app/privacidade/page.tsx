@@ -50,10 +50,18 @@ export default function PrivacyPage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-metallic-50">
-        {/* Hero */}
-        <div className="bg-gradient-to-br from-metallic-800 via-metallic-900 to-black text-white py-20">
-          <div className="container mx-auto px-4">
+      <main className="min-h-screen bg-gray-50">
+        {/* Hero — Dark Industrial */}
+        <div className="relative bg-[#1A1A1A] text-white py-20 overflow-hidden">
+          <div
+            className="absolute inset-0 opacity-[0.04] pointer-events-none"
+            style={{
+              backgroundImage: `repeating-linear-gradient(-55deg, #CC1020 0px, #CC1020 2px, transparent 2px, transparent 28px)`,
+            }}
+          />
+          <div className="absolute top-0 left-0 right-0 h-1 bg-[#CC1020]" />
+
+          <div className="container mx-auto px-4 relative z-10">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -63,19 +71,25 @@ export default function PrivacyPage() {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-                className="w-20 h-20 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-6"
+                className="w-20 h-20 bg-[#CC1020]/20 border border-[#CC1020]/30 flex items-center justify-center mx-auto mb-6"
               >
-                <Shield className="h-10 w-10" />
+                <Shield className="h-10 w-10 text-[#CC1020]" />
               </motion.div>
 
-              <h1 className="text-5xl font-bold mb-6">
+              <div className="flex items-center justify-center gap-3 mb-3">
+                <div className="w-1 h-6 bg-[#CC1020] rounded-full" />
+                <p className="text-xs font-display font-bold text-[#CC1020] tracking-widest uppercase">Legal</p>
+                <div className="w-1 h-6 bg-[#CC1020] rounded-full" />
+              </div>
+
+              <h1 className="font-display text-5xl font-bold uppercase mb-4">
                 Política de Privacidade
               </h1>
-              <p className="text-lg text-white/80">
+              <p className="text-gray-300 font-body">
                 Sua privacidade é importante para nós. Esta política descreve
                 como coletamos, usamos e protegemos suas informações pessoais.
               </p>
-              <p className="text-sm text-white/60 mt-4">
+              <p className="text-sm text-gray-500 mt-3">
                 Última atualização: {new Date().toLocaleDateString('pt-BR')}
               </p>
             </motion.div>
@@ -90,18 +104,19 @@ export default function PrivacyPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="bg-white rounded-2xl shadow-lg p-8 mb-12"
+              className="bg-white rounded-sm shadow-md border-t-4 border-[#CC1020] p-8 mb-12"
             >
-              <h2 className="text-2xl font-bold text-metallic-900 mb-4">
-                Introdução
-              </h2>
-              <p className="text-metallic-700 leading-relaxed mb-4">
-                A <strong>Shopping das Ferramentas</strong> está comprometida
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-1 h-6 bg-[#CC1020] rounded-full" />
+                <h2 className="font-display text-xl font-bold text-[#1A1A1A] uppercase">Introdução</h2>
+              </div>
+              <p className="text-gray-600 leading-relaxed font-body mb-4">
+                A <strong>Feira das Ferramentas</strong> está comprometida
                 em proteger sua privacidade. Esta Política de Privacidade
                 explica como suas informações pessoais são coletadas, usadas e
-                divulgadas pela Shopping das Ferramentas.
+                divulgadas pela Feira das Ferramentas.
               </p>
-              <p className="text-metallic-700 leading-relaxed">
+              <p className="text-gray-600 leading-relaxed font-body">
                 Ao usar nosso site, você concorda com a coleta e uso de
                 informações de acordo com esta política. Se você não concordar
                 com os termos desta política, por favor, não utilize nossos
@@ -120,13 +135,13 @@ export default function PrivacyPage() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: index * 0.1 }}
-                    className="bg-white rounded-2xl shadow-lg p-8"
+                    className="bg-white rounded-sm shadow-md p-8 border-l-4 border-[#CC1020]"
                   >
-                    <div className="flex items-start gap-4 mb-6">
-                      <div className="flex-shrink-0 w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
-                        <Icon className="h-6 w-6 text-primary-600" />
+                    <div className="flex items-start gap-4 mb-5">
+                      <div className="flex-shrink-0 w-11 h-11 bg-red-50 rounded-sm flex items-center justify-center">
+                        <Icon className="h-6 w-6 text-[#CC1020]" />
                       </div>
-                      <h2 className="text-2xl font-bold text-metallic-900 mt-1">
+                      <h2 className="font-display text-xl font-bold text-[#1A1A1A] uppercase mt-1">
                         {section.title}
                       </h2>
                     </div>
@@ -139,9 +154,9 @@ export default function PrivacyPage() {
                           whileInView={{ opacity: 1, x: 0 }}
                           viewport={{ once: true }}
                           transition={{ delay: 0.1 + i * 0.05 }}
-                          className="flex items-start gap-3 text-metallic-700 leading-relaxed"
+                          className="flex items-start gap-3 text-gray-600 leading-relaxed font-body"
                         >
-                          <span className="flex-shrink-0 w-2 h-2 bg-primary-600 rounded-full mt-2" />
+                          <span className="flex-shrink-0 w-2 h-2 bg-[#CC1020] rounded-full mt-2" />
                           <span>{item}</span>
                         </motion.li>
                       ))}
