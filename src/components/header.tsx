@@ -47,17 +47,22 @@ export function Header() {
     const cart = JSON.parse(localStorage.getItem("cart") || "[]");
     const total = cart.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
     setCartCount(total);
+  };
+
   const handleSearch = () => {
     const q = searchQuery.trim();
     if (!q) return;
     router.push(`/produtos?busca=${encodeURIComponent(q)}`);
   };
 
-  // H7: Keyboard shortcut "/" to focus search
   useEffect(() => {
     updateCartCount();
     window.addEventListener("cartUpdated", updateCartCount);
     return () => window.removeEventListener("cartUpdated", updateCartCount);
+  }, []);
+
+  // Keyboard shortcut "/" to focus search
+  useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
         e.preventDefault();
@@ -161,107 +166,6 @@ export function Header() {
               <span>☎ (75) 3333-4444</span>
               <span className="hidden sm:block">✉ contato@feiradeferramentas.com.br</span>
             </div>
-          </div>
-
-          {/* Search Bar - Desktop */}
-          <div className="hidden md:flex flex-1 max-w-2xl mx-8" ref={searchRef}>
-            <form onSubmit={handleSearchSubmit} className="relative w-full">
-              <input
-                type="text"
-                placeholder="Buscar ferramentas, marcas..."
-                value={searchQuery}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                onFocus={() => searchResults.length > 0 && setShowResults(true)}
-                className="w-full px-4 py-2.5 pl-10 border border-metallic-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
-              <Search className="absolute left-3 top-3 h-5 w-5 text-metallic-400" />
-              {isSearching && (
-                <div className="absolute right-3 top-3">
-                  <div className="h-5 w-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
-                </div>
-              )}
-
-              {/* Dropdown de resultados */}
-              {showResults && searchResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-metallic-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
-                  {searchResults.map((product) => (
-                    <button
-                      key={product.id}
-                      type="button"
-                      onClick={() => goToProduct(product.id)}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-metallic-50 transition-colors text-left"
-                    >
-                      {(product.imageUrl || product.images?.[0]?.url) && (
-                        <img
-                          src={product.imageUrl || product.images?.[0]?.url}
-                          alt={product.name}
-                          className="w-10 h-10 object-cover rounded"
-                        />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-metallic-900 truncate">{product.name}</p>
-                        <p className="text-sm text-primary-600 font-semibold">
-                          R$ {(product.promotionalPrice ?? product.price).toFixed(2)}
-                        </p>
-                      </div>
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => handleSearchSubmit(new Event('submit') as any)}
-                    className="w-full px-4 py-2 text-sm text-primary-600 hover:bg-primary-50 font-medium border-t border-metallic-100"
-                  >
-                    Ver todos os resultados para &ldquo;{searchQuery}&rdquo;
-                  </button>
-                </div>
-              )}
-            </form>
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-4">
-            {session ? (
-              <div className="flex items-center gap-3">
-                <NotificationBell />
-
-                <Link href="/minha-conta">
-                  <Button variant="ghost" size="sm">
-                    <User className="h-5 w-5 mr-2" />
-                    <span className="hidden lg:inline">{session.user?.name?.split(" ")[0]}</span>
-                  </Button>
-                </Link>
-
-                {role !== "CUSTOMER" && role && (
-                  <Link href="/admin">
-                    <Button variant="outline" size="sm">
-                      Admin
-                    </Button>
-                  </Link>
-                )}
-
-                <Button variant="ghost" size="sm" onClick={() => signOut()}>
-                  Sair
-                </Button>
-              </div>
-            ) : (
-              <Link href="/auth/login">
-                <Button variant="ghost" size="sm">
-                  <User className="h-5 w-5 mr-2" />
-                  <span className="hidden lg:inline">Entrar</span>
-                </Button>
-              </Link>
-            )}
-
-            <Link href="/carrinho">
-              <Button variant="ghost" size="sm" className="relative">
-                <ShoppingCart className="h-5 w-5" />
-                {cartCount > 0 && <span className="absolute -top-1 -right-1 bg-primary-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">{cartCount}</span>}
-              </Button>
-            </Link>
-
-            <Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-              <Menu className="h-5 w-5" />
-            </Button>
           </div>
         </div>
       </div>
