@@ -92,7 +92,7 @@ function LoginContent() {
             className="w-full h-12 text-base"
             onClick={handleGoogleLogin}
           >
-            <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path
                 fill="currentColor"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -137,6 +137,7 @@ function LoginContent() {
                   setFormData({ ...formData, email: e.target.value })
                 }
                 required
+                autoComplete="email"
                 className="h-12"
               />
             </div>
@@ -152,6 +153,8 @@ function LoginContent() {
                   setFormData({ ...formData, password: e.target.value })
                 }
                 required
+                autoComplete="current-password"
+                spellCheck={false}
                 className="h-12"
               />
             </div>

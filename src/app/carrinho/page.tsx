@@ -296,12 +296,12 @@ export default function CartPage() {
                       </button>
 
                       <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
-                        <button onClick={() => updateQuantity(item.id, -1)} className="p-1 hover:bg-gray-200 rounded">
-                          <Minus className="h-4 w-4" />
+                        <button onClick={() => updateQuantity(item.id, -1)} aria-label={`Diminuir quantidade de ${item.name}`} className="p-1 hover:bg-gray-200 rounded">
+                          <Minus className="h-4 w-4" aria-hidden="true" />
                         </button>
-                        <span className="w-8 text-center font-semibold">{item.quantity}</span>
-                        <button onClick={() => updateQuantity(item.id, 1)} className="p-1 hover:bg-gray-200 rounded">
-                          <Plus className="h-4 w-4" />
+                        <span className="w-8 text-center font-semibold" aria-live="polite" aria-label={`Quantidade: ${item.quantity}`}>{item.quantity}</span>
+                        <button onClick={() => updateQuantity(item.id, 1)} aria-label={`Aumentar quantidade de ${item.name}`} className="p-1 hover:bg-gray-200 rounded">
+                          <Plus className="h-4 w-4" aria-hidden="true" />
                         </button>
                       </div>
                     </div>
@@ -317,7 +317,7 @@ export default function CartPage() {
                   </div>
                   <p className="text-sm text-gray-600 mb-4">Calcule e selecione o frete para continuar</p>
                   <div className="flex gap-2 mb-4">
-                    <input type="text" value={shippingZip} onChange={(e) => setShippingZip(e.target.value)} placeholder="Digite seu CEP" className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    <input type="text" id="shipping-zip" value={shippingZip} onChange={(e) => setShippingZip(e.target.value)} placeholder="00000-000" aria-label="CEP para cálculo de frete" autoComplete="postal-code" inputMode="numeric" className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500" />
                     <Button onClick={calculateShipping} disabled={isShippingLoading}>
                       {isShippingLoading ? "Calculando..." : "Calcular"}
                     </Button>
@@ -443,37 +443,37 @@ export default function CartPage() {
                   <div className="space-y-3">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-sm text-gray-700">Nome</label>
-                        <input className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={quoteForm.name} onChange={(e) => setQuoteForm({ ...quoteForm, name: e.target.value })} />
+                        <label htmlFor="quote-name" className="text-sm text-gray-700">Nome</label>
+                        <input id="quote-name" autoComplete="name" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={quoteForm.name} onChange={(e) => setQuoteForm({ ...quoteForm, name: e.target.value })} />
                       </div>
                       <div>
-                        <label className="text-sm text-gray-700">Email</label>
-                        <input className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={quoteForm.email} onChange={(e) => setQuoteForm({ ...quoteForm, email: e.target.value })} />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-sm text-gray-700">Telefone</label>
-                        <input className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={quoteForm.phone} onChange={(e) => setQuoteForm({ ...quoteForm, phone: e.target.value })} />
-                      </div>
-                      <div>
-                        <label className="text-sm text-gray-700">CPF ou CNPJ</label>
-                        <input className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={quoteForm.taxId} onChange={(e) => setQuoteForm({ ...quoteForm, taxId: e.target.value })} />
+                        <label htmlFor="quote-email" className="text-sm text-gray-700">Email</label>
+                        <input id="quote-email" type="email" autoComplete="email" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={quoteForm.email} onChange={(e) => setQuoteForm({ ...quoteForm, email: e.target.value })} />
                       </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-sm text-gray-700">Inscrição Estadual (se houver)</label>
-                        <input className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={quoteForm.stateRegistration} onChange={(e) => setQuoteForm({ ...quoteForm, stateRegistration: e.target.value })} />
+                        <label htmlFor="quote-phone" className="text-sm text-gray-700">Telefone</label>
+                        <input id="quote-phone" type="tel" autoComplete="tel" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={quoteForm.phone} onChange={(e) => setQuoteForm({ ...quoteForm, phone: e.target.value })} />
                       </div>
                       <div>
-                        <label className="text-sm text-gray-700">Validade (dias)</label>
-                        <input type="number" min={1} max={30} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={quoteForm.validityDays} onChange={(e) => setQuoteForm({ ...quoteForm, validityDays: Number(e.target.value) })} />
+                        <label htmlFor="quote-taxid" className="text-sm text-gray-700">CPF ou CNPJ</label>
+                        <input id="quote-taxid" autoComplete="off" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={quoteForm.taxId} onChange={(e) => setQuoteForm({ ...quoteForm, taxId: e.target.value })} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label htmlFor="quote-ie" className="text-sm text-gray-700">Inscrição Estadual (se houver)</label>
+                        <input id="quote-ie" autoComplete="off" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={quoteForm.stateRegistration} onChange={(e) => setQuoteForm({ ...quoteForm, stateRegistration: e.target.value })} />
+                      </div>
+                      <div>
+                        <label htmlFor="quote-validity" className="text-sm text-gray-700">Validade (dias)</label>
+                        <input id="quote-validity" type="number" min={1} max={30} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={quoteForm.validityDays} onChange={(e) => setQuoteForm({ ...quoteForm, validityDays: Number(e.target.value) })} />
                       </div>
                     </div>
                     <div>
-                      <label className="text-sm text-gray-700">Observações</label>
-                      <textarea className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" rows={3} value={quoteForm.notes} onChange={(e) => setQuoteForm({ ...quoteForm, notes: e.target.value })} placeholder="Dados bancários, condições especiais..." />
+                      <label htmlFor="quote-notes" className="text-sm text-gray-700">Observações</label>
+                      <textarea id="quote-notes" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" rows={3} value={quoteForm.notes} onChange={(e) => setQuoteForm({ ...quoteForm, notes: e.target.value })} placeholder="Dados bancários, condições especiais…" />
                     </div>
                     <Button onClick={handleDownloadQuote} className="w-full" disabled={quoteLoading}>
                       {quoteLoading ? "Gerando PDF..." : "Baixar Orçamento (PDF)"}

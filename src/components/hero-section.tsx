@@ -53,7 +53,7 @@ export function HeroSection() {
               transition={{ delay: 0.2 }}
               className="inline-flex items-center gap-2 px-4 py-2 bg-[#CC1020] rounded-sm"
             >
-              <Tag className="h-4 w-4" />
+              <Tag className="h-4 w-4" aria-hidden="true" />
               <span className="text-sm font-display font-bold tracking-widest uppercase">
                 Lançamento — Até 50% OFF
               </span>
@@ -98,7 +98,7 @@ export function HeroSection() {
                   whileTap={{ scale: 0.97 }}
                   className="btn-fill flex items-center gap-2 bg-[#CC1020] text-white px-8 py-4 font-display font-bold text-lg tracking-wide uppercase transition-colors"
                 >
-                  <ShoppingCart className="h-5 w-5" />
+                  <ShoppingCart className="h-5 w-5" aria-hidden="true" />
                   Ver Produtos
                 </motion.button>
               </Link>

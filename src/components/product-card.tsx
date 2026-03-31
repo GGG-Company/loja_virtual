@@ -80,107 +80,109 @@ export function ProductCard({ product, className, priority = false }: ProductCar
   };
 
   return (
-    <Link href={productUrl}>
-      <motion.div
-        initial={{ opacity: 0, scale: 0.97 }}
-        animate={{ opacity: 1, scale: 1 }}
-        whileHover={{ y: -6 }}
-        transition={{ duration: 0.25 }}
-        className={cn(
-          'group relative bg-white rounded-sm shadow-md hover:shadow-xl overflow-hidden cursor-pointer border border-gray-100 transition-shadow duration-300',
-          className
-        )}
-      >
-        {/* ── Image area ───────────────────────────────── */}
-        <div className="relative w-full aspect-square bg-gray-50 overflow-hidden">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.97 }}
+      animate={{ opacity: 1, scale: 1 }}
+      whileHover={{ y: -6 }}
+      transition={{ duration: 0.25 }}
+      className={cn(
+        'group relative bg-white rounded-sm shadow-md hover:shadow-xl overflow-hidden border border-gray-100 transition-shadow duration-300',
+        className
+      )}
+    >
+      {/* ── Image area — wrapped in link ─────────────── */}
+      <Link href={productUrl} aria-label={product.name} tabIndex={0} className="block relative w-full aspect-square bg-gray-50 overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#CC1020]">
 
-          {/* Featured badge — top-left */}
-          {product.isFeatured && (
-            <div className="absolute top-0 left-0 z-10 bg-[#CC1020] text-white px-3 py-1 text-xs font-display font-bold tracking-widest uppercase">
-              Destaque
-            </div>
-          )}
-
-          {/* Discount badge — top-left below featured, or top-left when no featured */}
-          {discount > 0 && (
-            <div
-              className={cn(
-                'badge-wiggle absolute left-2 z-10 bg-[#CC1020] text-white px-2.5 py-1 text-xs font-display font-bold rounded-sm shadow',
-                product.isFeatured ? 'top-8' : 'top-2'
-              )}
-            >
-              -{discount}%
-            </div>
-          )}
-
-          {/* Heart button — top-right, always visible, pops on click */}
-          <button
-            onClick={handleFavorite}
-            onAnimationEnd={() => setHeartAnimate(false)}
-            className={cn(
-              'absolute top-2 right-2 z-20 p-2 bg-white/85 group-hover:bg-white backdrop-blur-sm rounded-full shadow-md',
-              'opacity-50 group-hover:opacity-100 transition-all duration-200 hover:scale-110',
-              heartAnimate && 'heart-pop'
-            )}
-            aria-label={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
-          >
-            <Heart
-              className={cn(
-                'h-4 w-4 transition-colors duration-150',
-                isFavorite ? 'fill-[#CC1020] text-[#CC1020]' : 'text-gray-400 group-hover:text-gray-600'
-              )}
-            />
-          </button>
-
-          {/* Product image */}
-          <div className="card-img-zoom relative w-full h-full p-4">
-            <Image
-              src={imageSrc}
-              alt={product.images?.[0]?.alt || product.name}
-              fill
-              className="object-contain drop-shadow-sm"
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-              priority={priority}
-              loading={priority ? 'eager' : 'lazy'}
-            />
+        {/* Featured badge — top-left */}
+        {product.isFeatured && (
+          <div className="absolute top-0 left-0 z-10 bg-[#CC1020] text-white px-3 py-1 text-xs font-display font-bold tracking-widest uppercase">
+            Destaque
           </div>
+        )}
 
+        {/* Discount badge */}
+        {discount > 0 && (
+          <div
+            className={cn(
+              'badge-wiggle absolute left-2 z-10 bg-[#CC1020] text-white px-2.5 py-1 text-xs font-display font-bold rounded-sm shadow',
+              product.isFeatured ? 'top-8' : 'top-2'
+            )}
+            aria-label={`${discount}% de desconto`}
+          >
+            -{discount}%
+          </div>
+        )}
+
+        {/* Product image */}
+        <div className="card-img-zoom relative w-full h-full p-4">
+          <Image
+            src={imageSrc}
+            alt={product.images?.[0]?.alt || product.name}
+            fill
+            className="object-contain drop-shadow-sm"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            priority={priority}
+            loading={priority ? 'eager' : 'lazy'}
+          />
         </div>
+      </Link>
 
-        {/* ── Content ───────────────────────────────────── */}
-        <div className="p-4 space-y-2">
+      {/* Heart button — positioned absolute, outside the card link */}
+      <button
+        onClick={handleFavorite}
+        onAnimationEnd={() => setHeartAnimate(false)}
+        className={cn(
+          'absolute top-2 right-2 z-20 p-2 bg-white/85 group-hover:bg-white backdrop-blur-sm rounded-full shadow-md',
+          'opacity-50 group-hover:opacity-100 transition-all duration-200 hover:scale-110',
+          heartAnimate && 'heart-pop'
+        )}
+        aria-label={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+        aria-pressed={isFavorite}
+      >
+        <Heart
+          className={cn(
+            'h-4 w-4 transition-colors duration-150',
+            isFavorite ? 'fill-[#CC1020] text-[#CC1020]' : 'text-gray-400 group-hover:text-gray-600'
+          )}
+          aria-hidden="true"
+        />
+      </button>
+
+      {/* ── Content ───────────────────────────────────── */}
+      <div className="p-4 space-y-2">
+        <Link href={productUrl} tabIndex={-1} aria-hidden="true">
           <h3 className="font-body font-semibold text-sm text-[#1A1A1A] line-clamp-2 min-h-[2.8rem] leading-snug">
             {product.name}
           </h3>
+        </Link>
 
-          <div className="space-y-0.5">
-            {product.promotionalPrice && product.promotionalPrice < product.price && (
-              <p className="text-xs text-gray-400 line-through font-body">
-                {formatPrice(product.price)}
-              </p>
-            )}
-            <p className="text-xl font-display font-bold text-[#CC1020]">
-              {formatPrice(finalPrice)}
+        <div className="space-y-0.5">
+          {product.promotionalPrice && product.promotionalPrice < product.price && (
+            <p className="text-xs text-gray-400 line-through font-body" aria-label={`Preço original: ${formatPrice(product.price)}`}>
+              {formatPrice(product.price)}
             </p>
-            <p className="text-[11px] text-gray-500 font-body">
-              {bestInstallmentText()}
-            </p>
-          </div>
-
-          <button
-            className="cart-icon-bounce btn-fill w-full mt-2 bg-[#1A1A1A] text-white font-display font-bold text-sm tracking-wide uppercase py-2.5 transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-70"
-            onClick={handleAddToCart}
-            disabled={isAdding}
-            aria-label={`Adicionar ${product.name} ao carrinho`}
-          >
-            {isAdding ? (
-              <><Loader2 className="h-4 w-4 animate-spin" /> Adicionando...</>
-            ) : (
-              'Adicionar ao Carrinho'
-            )}
-          </button>
+          )}
+          <p className="text-xl font-display font-bold text-[#CC1020]">
+            {formatPrice(finalPrice)}
+          </p>
+          <p className="text-[11px] text-gray-500 font-body">
+            {bestInstallmentText()}
+          </p>
         </div>
-      </motion.div>
-    </Link>
+
+        <button
+          className="cart-icon-bounce btn-fill w-full mt-2 bg-[#1A1A1A] text-white font-display font-bold text-sm tracking-wide uppercase py-2.5 transition-color duration-200 flex items-center justify-center gap-2 disabled:opacity-70"
+          onClick={handleAddToCart}
+          disabled={isAdding}
+          aria-label={`Adicionar ${product.name} ao carrinho`}
+        >
+          {isAdding ? (
+            <><Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Adicionando…</>
+          ) : (
+            'Adicionar ao Carrinho'
+          )}
+        </button>
+      </div>
+    </motion.div>
   );
 }

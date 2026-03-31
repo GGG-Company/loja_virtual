@@ -70,6 +70,7 @@
 
 @layer base {
   :root {
+    color-scheme: light;
     --duration-fast:   150ms;
     --duration-normal: 250ms;
     --duration-slow:   400ms;
@@ -95,6 +96,11 @@
     --input: 0 0% 88%;
     --ring: 354 85% 43%;
     --radius: 0.375rem;
+  }
+
+  /* touch-action: manipulation on all interactive elements — prevents 300ms tap delay */
+  a, button, [role="button"], input[type="submit"], input[type="button"], input[type="reset"], label[for] {
+    touch-action: manipulation;
   }
 
   .dark {

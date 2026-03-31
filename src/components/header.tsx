@@ -104,16 +104,18 @@ export function Header() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  placeholder="Buscar ferramentas, marcas... (pressione / para focar)"
+                  placeholder="Buscar ferramentas, marcas… (pressione / para focar)"
                   aria-label="Buscar produtos"
-                  className="w-full px-4 py-2.5 pl-4 border-2 border-[#CC1020] rounded-l-md focus:outline-none focus:ring-2 focus:ring-[#CC1020]/30 font-body text-sm"
+                  autoComplete="off"
+                  spellCheck={false}
+                  className="w-full px-4 py-2.5 pl-4 border-2 border-[#CC1020] rounded-l-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CC1020]/30 font-body text-sm"
                 />
                 <button
                   onClick={handleSearch}
                   aria-label="Buscar"
                   className="bg-[#CC1020] hover:bg-[#a80816] text-white px-4 rounded-r-md transition-colors flex items-center gap-2 font-display font-bold text-sm tracking-wide"
                 >
-                  <Search className="h-4 w-4" />
+                  <Search className="h-4 w-4" aria-hidden="true" />
                   <span className="hidden lg:block">BUSCAR</span>
                 </button>
               </div>
@@ -131,7 +133,7 @@ export function Header() {
                       size="sm"
                       className="text-[#1A1A1A] hover:text-[#CC1020] hover:bg-red-50"
                     >
-                      <User className="h-5 w-5 mr-1.5" />
+                      <User className="h-5 w-5 mr-1.5" aria-hidden="true" />
                       <span className="hidden lg:inline text-sm font-semibold">
                         {session.user?.name?.split(" ")[0]}
                       </span>
@@ -166,7 +168,7 @@ export function Header() {
                     size="sm"
                     className="text-[#1A1A1A] hover:text-[#CC1020] hover:bg-red-50"
                   >
-                    <User className="h-5 w-5 mr-1.5" />
+                    <User className="h-5 w-5 mr-1.5" aria-hidden="true" />
                     <span className="hidden lg:inline text-sm font-semibold">Entrar</span>
                   </Button>
                 </Link>
@@ -178,7 +180,7 @@ export function Header() {
                   size="sm"
                   className="relative text-[#1A1A1A] hover:text-[#CC1020] hover:bg-red-50"
                 >
-                  <ShoppingCart className="h-5 w-5" />
+                  <ShoppingCart className="h-5 w-5" aria-hidden="true" />
                   {cartCount > 0 && (
                     <span
                       aria-live="polite"
@@ -199,7 +201,7 @@ export function Header() {
                 aria-label={isMenuOpen ? 'Fechar menu' : 'Abrir menu'}
                 aria-expanded={isMenuOpen}
               >
-                {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                {isMenuOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
               </Button>
             </div>
           </div>
@@ -207,7 +209,7 @@ export function Header() {
       </div>
 
       {/* Navigation bar — dark */}
-      <nav className="hidden lg:block bg-[#1A1A1A]">
+      <nav className="hidden lg:block bg-[#1A1A1A]" aria-label="Categorias">
         <div className="container mx-auto px-4">
           <div className="flex items-center gap-1 py-0">
             <Link
@@ -269,16 +271,18 @@ export function Header() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="Buscar ferramentas..."
+                placeholder="Buscar ferramentas…"
                 aria-label="Buscar produtos"
-                className="w-full px-3 py-2 border-2 border-[#CC1020] rounded-l-md text-sm focus:outline-none focus:ring-2 focus:ring-[#CC1020]/30"
+                autoComplete="off"
+                spellCheck={false}
+                className="w-full px-3 py-2 border-2 border-[#CC1020] rounded-l-md text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CC1020]/30"
               />
               <button
                 onClick={handleSearch}
                 aria-label="Buscar"
                 className="bg-[#CC1020] text-white px-3 rounded-r-md"
               >
-                <Search className="h-4 w-4" />
+                <Search className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
           </div>

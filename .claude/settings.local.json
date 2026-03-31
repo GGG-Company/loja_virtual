@@ -25,7 +25,8 @@
       "Bash(2)",
       "Bash(grep -r \"SELECT.*WHERE\\\\|$\\\\{.*\\\\}\\\\|\\\\.query\\\\|raw\\(\" /c/Users/Kauan/Desktop/Docs/loja_virtual/src --include=\"*.ts\")",
       "Bash(grep -v \":0$\")",
-      "Bash(find /c/Users/Kauan/Desktop/Docs/loja_virtual/src/app -name error.tsx -o -name *error* -type f)"
+      "Bash(find /c/Users/Kauan/Desktop/Docs/loja_virtual/src/app -name error.tsx -o -name *error* -type f)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }

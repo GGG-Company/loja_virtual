@@ -106,6 +106,7 @@ export default function RegisterPage() {
                   setFormData({ ...formData, name: e.target.value })
                 }
                 required
+                autoComplete="name"
                 className="h-12"
               />
             </div>
@@ -121,6 +122,7 @@ export default function RegisterPage() {
                   setFormData({ ...formData, email: e.target.value })
                 }
                 required
+                autoComplete="email"
                 className="h-12"
               />
             </div>
@@ -135,6 +137,7 @@ export default function RegisterPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, phone: e.target.value })
                 }
+                autoComplete="tel"
                 className="h-12"
               />
             </div>
@@ -217,6 +220,8 @@ export default function RegisterPage() {
                 }
                 required
                 minLength={8}
+                autoComplete="new-password"
+                spellCheck={false}
                 className="h-12"
               />
             </div>
@@ -232,6 +237,8 @@ export default function RegisterPage() {
                   setFormData({ ...formData, confirmPassword: e.target.value })
                 }
                 required
+                autoComplete="new-password"
+                spellCheck={false}
                 className="h-12"
               />
             </div>
