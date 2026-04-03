@@ -2,6 +2,7 @@ import logger from "@/lib/logger";
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { toNum, serializeItems } from '@/lib/decimal-helpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,7 +53,17 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json({ success: true, orders });
+    return NextResponse.json({
+      success: true,
+      orders: orders.map(o => ({
+        ...o,
+        total: toNum(o.total),
+        subtotal: toNum(o.subtotal),
+        shipping: toNum(o.shipping),
+        discount: toNum(o.discount),
+        items: serializeItems(o.items),
+      })),
+    });
   } catch (error) {
     logger.error(error, '[USER_ORDERS_GET]');
     return NextResponse.json({ error: 'Erro ao buscar pedidos' }, { status: 500 });

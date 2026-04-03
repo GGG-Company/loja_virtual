@@ -168,6 +168,9 @@ export function HeroSection() {
                 fill
                 className="object-cover transition-transform duration-700 group-hover:scale-105"
                 priority
+                sizes="(max-width: 768px) 100vw, 60vw"
+                placeholder="blur"
+                blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwMCIgaGVpZ2h0PSI2MDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iIzFhMWExYSIvPjwvc3ZnPg=="
               />
 
               {/* Red accent lines — industrial feel */}

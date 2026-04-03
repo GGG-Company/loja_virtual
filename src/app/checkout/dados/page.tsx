@@ -117,8 +117,8 @@ export default function CheckoutDadosPage() {
     return (
       <>
         <Header />
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#CC1020]" />
+        <div className="min-h-screen flex items-center justify-center" role="status" aria-label="Carregando...">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#CC1020]" aria-hidden="true" />
         </div>
         <Footer />
       </>
@@ -152,11 +152,13 @@ export default function CheckoutDadosPage() {
                   id="nome"
                   autoComplete="name"
                   placeholder="Seu nome completo"
+                  aria-invalid={!!errors.nome}
+                  aria-describedby={errors.nome ? 'nome-error' : undefined}
                   className={`h-12 mt-1 ${errors.nome ? 'border-red-500 focus-visible:ring-red-400' : ''}`}
                   {...field('nome')}
                 />
                 {errors.nome && (
-                  <p className="text-xs text-red-600 mt-1">{errors.nome}</p>
+                  <p id="nome-error" role="alert" className="text-xs text-red-600 mt-1">{errors.nome}</p>
                 )}
               </div>
 
@@ -168,11 +170,13 @@ export default function CheckoutDadosPage() {
                   type="email"
                   autoComplete="email"
                   placeholder="seu@email.com"
+                  aria-invalid={!!errors.email}
+                  aria-describedby={errors.email ? 'email-error' : undefined}
                   className={`h-12 mt-1 ${errors.email ? 'border-red-500 focus-visible:ring-red-400' : ''}`}
                   {...field('email')}
                 />
                 {errors.email && (
-                  <p className="text-xs text-red-600 mt-1">{errors.email}</p>
+                  <p id="email-error" role="alert" className="text-xs text-red-600 mt-1">{errors.email}</p>
                 )}
               </div>
 
@@ -186,11 +190,13 @@ export default function CheckoutDadosPage() {
                     inputMode="numeric"
                     autoComplete="tel"
                     placeholder="(00) 00000-0000"
+                    aria-invalid={!!errors.telefone}
+                    aria-describedby={errors.telefone ? 'telefone-error' : undefined}
                     className={`h-12 mt-1 ${errors.telefone ? 'border-red-500 focus-visible:ring-red-400' : ''}`}
                     {...field('telefone')}
                   />
                   {errors.telefone && (
-                    <p className="text-xs text-red-600 mt-1">{errors.telefone}</p>
+                    <p id="telefone-error" role="alert" className="text-xs text-red-600 mt-1">{errors.telefone}</p>
                   )}
                 </div>
 
@@ -202,11 +208,13 @@ export default function CheckoutDadosPage() {
                     inputMode="numeric"
                     autoComplete="off"
                     placeholder="000.000.000-00"
+                    aria-invalid={!!errors.cpf}
+                    aria-describedby={errors.cpf ? 'cpf-error' : undefined}
                     className={`h-12 mt-1 ${errors.cpf ? 'border-red-500 focus-visible:ring-red-400' : ''}`}
                     {...field('cpf')}
                   />
                   {errors.cpf && (
-                    <p className="text-xs text-red-600 mt-1">{errors.cpf}</p>
+                    <p id="cpf-error" role="alert" className="text-xs text-red-600 mt-1">{errors.cpf}</p>
                   )}
                 </div>
               </div>

@@ -29,7 +29,7 @@ export function Breadcrumb({ items, className = '' }: BreadcrumbProps) {
         const isLast = index === items.length - 1;
         return (
           <span key={index} className="flex items-center gap-1">
-            <ChevronRight className="h-3.5 w-3.5 text-gray-300 flex-shrink-0" />
+            <ChevronRight className="h-3.5 w-3.5 text-gray-300 flex-shrink-0" aria-hidden="true" />
             {item.href && !isLast ? (
               <Link
                 href={item.href}
@@ -38,7 +38,7 @@ export function Breadcrumb({ items, className = '' }: BreadcrumbProps) {
                 {item.label}
               </Link>
             ) : (
-              <span className="text-[#1A1A1A] font-semibold">{item.label}</span>
+              <span className="text-[#1A1A1A] font-semibold" aria-current="page">{item.label}</span>
             )}
           </span>
         );

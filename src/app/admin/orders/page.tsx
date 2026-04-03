@@ -106,7 +106,7 @@ export default function AdminOrdersPage() {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  R$ {order.total.toFixed(2)}
+                  R$ {Number(order.total).toFixed(2)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {new Date(order.createdAt).toLocaleDateString('pt-BR')}

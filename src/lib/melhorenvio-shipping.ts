@@ -6,6 +6,7 @@
 import { prisma } from '@/lib/prisma';
 import { getAccessToken, commonHeaders } from '@/lib/melhorenvio-oauth';
 import logger from '@/lib/logger';
+import { toNum } from '@/lib/decimal-helpers';
 
 function melhorEnvioBaseUrl() {
   const isSandbox = (process.env.MELHOR_ENVIO_SANDBOX || 'true').toLowerCase() !== 'false';
@@ -530,7 +531,7 @@ export async function createReverseShippingForOrder(
     serviceId,
     newSenderEmail,
     newSenderPhone,
-    insuranceValue: order.total,
+    insuranceValue: toNum(order.total),
     originalOrderId: order.melhorEnvioOrderId,
     package: {
       weight: Math.max(0.3, totalWeight),
@@ -1055,7 +1056,7 @@ export async function createShippingLabelForOrder(orderId: string): Promise<Melh
     const weight = (product?.weight || 0.5) * item.quantity;
     
     totalWeight += weight;
-    totalInsurance += item.price * item.quantity;
+    totalInsurance += toNum(item.price) * item.quantity;
     maxHeight = Math.max(maxHeight, dims.height || 10);
     maxWidth = Math.max(maxWidth, dims.width || 15);
     totalLength += (dims.length || 20) * item.quantity;
@@ -1063,7 +1064,7 @@ export async function createShippingLabelForOrder(orderId: string): Promise<Melh
     return {
       name: product?.name || 'Produto',
       quantity: item.quantity,
-      unitary_value: item.price, // Valor unitário
+      unitary_value: toNum(item.price), // Valor unitário
     };
   });
 

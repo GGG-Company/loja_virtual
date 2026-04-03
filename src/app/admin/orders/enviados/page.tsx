@@ -211,11 +211,11 @@ export default function ShippedOrdersPage() {
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3 border border-metallic-100">
                     <p className="text-sm text-metallic-600">Total</p>
-                    <p className="font-semibold text-metallic-900">R$ {order.total.toFixed(2)}</p>
+                    <p className="font-semibold text-metallic-900">R$ {Number(order.total).toFixed(2)}</p>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3 border border-metallic-100">
                     <p className="text-sm text-metallic-600">Frete / Desconto</p>
-                    <p className="font-semibold text-metallic-900">Frete R$ {order.shipping.toFixed(2)} | Desc R$ {order.discount.toFixed(2)}</p>
+                    <p className="font-semibold text-metallic-900">Frete R$ {Number(order.shipping).toFixed(2)} | Desc R$ {Number(order.discount).toFixed(2)}</p>
                   </div>
                 </div>
 
@@ -232,7 +232,7 @@ export default function ShippedOrdersPage() {
                       </div>
                       <div className="flex items-center gap-3 mt-1 sm:mt-0">
                         <span>Qtd: {item.quantity}</span>
-                        <span>Preço: R$ {item.price.toFixed(2)}</span>
+                        <span>Preço: R$ {Number(item.price).toFixed(2)}</span>
                       </div>
                     </div>
                   ))}

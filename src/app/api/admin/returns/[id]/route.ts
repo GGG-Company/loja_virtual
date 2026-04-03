@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { createReverseShippingForOrder } from '@/lib/melhorenvio-shipping';
 import { notifyReturnStatusChange } from '@/lib/notifications';
 import type { ReturnStatus } from '@/lib/i18n';
+import { toNum } from '@/lib/decimal-helpers';
 
 /**
  * GET /api/admin/returns/[id]
@@ -67,7 +68,27 @@ export async function GET(
       return NextResponse.json({ error: 'Devolução não encontrada' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, return: returnRequest });
+    const r = returnRequest as any;
+    return NextResponse.json({
+      success: true,
+      return: {
+        ...r,
+        refundAmount: r.refundAmount != null ? Number(r.refundAmount) : null,
+        shippingRefund: r.shippingRefund != null ? Number(r.shippingRefund) : null,
+        order: r.order ? {
+          ...r.order,
+          total: Number(r.order.total),
+          subtotal: Number(r.order.subtotal ?? 0),
+          shipping: Number(r.order.shipping ?? 0),
+          discount: Number(r.order.discount ?? 0),
+          items: (r.order.items ?? []).map((i: any) => ({
+            ...i,
+            price: Number(i.price),
+            subtotal: Number(i.subtotal ?? 0),
+          })),
+        } : r.order,
+      },
+    });
   } catch (error) {
     logger.error(error as Error, '[ADMIN_RETURN_GET]');
     return NextResponse.json({ error: 'Erro ao buscar devolução' }, { status: 500 });
@@ -344,7 +365,7 @@ export async function PUT(
           returnNumber: updated.returnNumber,
           orderId: returnRequest.orderId,
           status: 'REFUND_PENDING' as ReturnStatus,
-          refundAmount: updated.refundAmount,
+          refundAmount: toNum(updated.refundAmount),
         });
 
         return NextResponse.json({
@@ -384,7 +405,7 @@ export async function PUT(
           returnNumber: updated.returnNumber,
           orderId: returnRequest.orderId,
           status: 'REFUNDED' as ReturnStatus,
-          refundAmount: returnRequest.refundAmount,
+          refundAmount: toNum(returnRequest.refundAmount),
         });
 
         return NextResponse.json({

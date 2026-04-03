@@ -81,7 +81,18 @@ export default function PedidoDetalhePage() {
     const fetchOrder = async () => {
       try {
         const response = await apiClient.get<Order>(`/api/user/orders/${params.id}`);
-        setOrder(response.data);
+        const d = response.data as any;
+        setOrder({
+          ...d,
+          total: parseFloat(String(d.total ?? 0)) || 0,
+          subtotal: parseFloat(String(d.subtotal ?? 0)) || 0,
+          shipping: parseFloat(String(d.shipping ?? 0)) || 0,
+          discount: parseFloat(String(d.discount ?? 0)) || 0,
+          items: (d.items ?? []).map((i: any) => ({
+            ...i,
+            price: parseFloat(String(i.price ?? 0)) || 0,
+          })),
+        });
       } catch (error) {
         console.error("Erro ao carregar pedido:", error);
         toast.error("Erro ao carregar pedido");
@@ -291,7 +302,7 @@ export default function PedidoDetalhePage() {
                     <div className="flex-1">
                       <p className="font-semibold text-metallic-900">{item.product.name}</p>
                       <p className="text-sm text-metallic-600">Quantidade: {item.quantity}</p>
-                      <p className="text-sm font-semibold text-primary-600 mt-1">R$ {item.price.toFixed(2)} cada</p>
+                      <p className="text-sm font-semibold text-primary-600 mt-1">R$ {Number(item.price).toFixed(2)} cada</p>
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-bold text-metallic-900">R$ {(item.price * item.quantity).toFixed(2)}</p>
@@ -338,7 +349,7 @@ export default function PedidoDetalhePage() {
                   )}
                   <div className="border-t border-metallic-300 pt-3 flex justify-between">
                     <span className="text-lg font-bold text-metallic-900">Total:</span>
-                    <span className="text-lg font-bold text-primary-600">R$ {order.total.toFixed(2)}</span>
+                    <span className="text-lg font-bold text-primary-600">R$ {Number(order.total).toFixed(2)}</span>
                   </div>
                   <div className="pt-2 border-t border-metallic-200">
                     <p className="text-sm text-metallic-600">Pagamento: {paymentMethodToPt[order.paymentMethod] || order.paymentMethod}</p>

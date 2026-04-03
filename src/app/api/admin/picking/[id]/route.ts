@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { sendOrderStatusUpdate } from '@/lib/webhooks';
 import { notifyOrderStatusChange } from '@/lib/notifications';
 import type { OrderStatus } from '@/lib/i18n';
+import { toNum, serializeItems } from '@/lib/decimal-helpers';
 
 export async function PATCH(
   req: NextRequest,
@@ -95,8 +96,8 @@ export async function PATCH(
       trackingCode: updated.trackingCode,
       trackingUrl: updated.trackingUrl,
       user: updated.user,
-      total: updated.total,
-      items: updated.items,
+      total: toNum(updated.total),
+      items: serializeItems(updated.items),
     });
 
     // Criar notificação para o usuário

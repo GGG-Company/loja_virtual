@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { sendWebhook } from '@/lib/webhooks';
 import logger from '@/lib/logger';
+import { toNum } from '@/lib/decimal-helpers';
 
 // Gerar número da devolução
 function formatReturnNumber(seq: number) {
@@ -186,7 +187,7 @@ export async function POST(request: NextRequest) {
     let refundAmount = 0;
     for (const item of items) {
       const orderItem = order.items.find(oi => oi.id === item.orderItemId)!;
-      refundAmount += orderItem.price * item.quantity;
+      refundAmount += toNum(orderItem.price) * item.quantity;
     }
 
     // Criar devolução com notificação

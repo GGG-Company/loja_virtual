@@ -2,7 +2,11 @@
 
 export function SkeletonCard() {
   return (
-    <div className="bg-white rounded-sm shadow-md overflow-hidden animate-pulse border border-gray-100">
+    <div
+      role="status"
+      aria-label="Carregando produto..."
+      className="bg-white rounded-sm shadow-md overflow-hidden animate-pulse border border-gray-100"
+    >
       {/* Image area */}
       <div className="aspect-square bg-gray-200" />
 
@@ -23,13 +27,14 @@ export function SkeletonCard() {
         {/* Button */}
         <div className="h-9 bg-gray-200 rounded-sm w-full mt-1" />
       </div>
+      <span className="sr-only">Carregando...</span>
     </div>
   );
 }
 
 export function SkeletonCardGrid({ count = 8 }: { count?: number }) {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+    <div role="status" aria-label="Carregando produtos..." aria-busy="true" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
       {Array.from({ length: count }).map((_, i) => (
         <SkeletonCard key={i} />
       ))}

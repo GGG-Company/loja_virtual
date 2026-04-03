@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { createHmac } from 'crypto';
 import logger from "@/lib/logger";
 import { getMercadoPagoKeys, getMercadoPagoConfig } from '@/lib/mercadopago-config';
 import { prisma } from '@/lib/prisma';
@@ -9,15 +8,25 @@ import { sendOrderStatusUpdate } from '@/lib/webhooks';
 import { notifyOrderStatusChange, notifyPaymentStatus } from '@/lib/notifications';
 import type { OrderStatus as OrderStatusType } from '@/lib/i18n';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
+import { getRedisPublisher } from '@/lib/redis';
+import { toNum, serializeItems } from '@/lib/decimal-helpers';
 
 /**
  * Verifica a assinatura HMAC-SHA256 do webhook do Mercado Pago.
- * Retorna true se a assinatura for válida ou se a verificação estiver desabilitada.
+ * Formato do header x-signature: "ts=<timestamp>,v1=<hash>"
+ * Template: "id:<data.id>;request-id:<x-request-id>;ts:<ts>;"
  */
-function verifyWebhookSignature(req: NextRequest, rawBody: string): boolean {
-  const webhookSecret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
+async function verifyWebhookSignature(
+  req: NextRequest,
+  rawBody: string,
+): Promise<boolean> {
+  const webhookSecret =
+    process.env.MERCADO_PAGO_WEBHOOK_SECRET ||
+    process.env.MP_WEBHOOK_SECRET ||
+    (await getMercadoPagoConfig())?.webhookSecret;
+
   if (!webhookSecret) {
-    logger.warn('MERCADO_PAGO_WEBHOOK_SECRET não configurado — aceitando webhook sem verificação');
+    logger.warn('Webhook secret não configurado — aceitando sem verificação');
     return true;
   }
 
@@ -29,228 +38,189 @@ function verifyWebhookSignature(req: NextRequest, rawBody: string): boolean {
     return false;
   }
 
-  // Extrair ts e v1 do header x-signature (formato: "ts=...,v1=...")
+  // Parsear "ts=...,v1=..."
   const parts = Object.fromEntries(
-    xSignature.split(',').map(p => {
+    xSignature.split(',').map((p) => {
       const [k, ...rest] = p.trim().split('=');
       return [k, rest.join('=')];
-    })
+    }),
   );
 
   const ts = parts['ts'];
   const v1 = parts['v1'];
   if (!ts || !v1) return false;
 
-  // Extrair data.id do body
   let dataId = '';
   try {
     const parsed = JSON.parse(rawBody);
     dataId = parsed?.data?.id ? String(parsed.data.id) : '';
   } catch { /* ignore */ }
 
-  // Montar template conforme docs do MP
+  // Template conforme documentação oficial do Mercado Pago
   const template = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
   const hash = crypto.createHmac('sha256', webhookSecret).update(template).digest('hex');
 
   return hash === v1;
-}
-async function verifyMercadoPagoSignature(req: NextRequest, paymentId: string | undefined): Promise<boolean> {
-  const webhookSecret = process.env.MP_WEBHOOK_SECRET || (await getMercadoPagoConfig())?.webhookSecret;
-  if (!webhookSecret) {
-    logger.warn('MP_WEBHOOK_SECRET not configured — skipping signature verification');
-    return true; // allow through but log the warning
-  }
-
-  const xSignature = req.headers.get('x-signature');
-  const xRequestId = req.headers.get('x-request-id');
-
-  if (!xSignature || !xRequestId) {
-    return false;
-  }
-
-  // x-signature format: "ts=<timestamp>,v1=<hash>"
-  const parts = Object.fromEntries(xSignature.split(',').map(p => p.split('=')));
-  const ts = parts['ts'];
-  const v1 = parts['v1'];
-
-  if (!ts || !v1) {
-    return false;
-  }
-
-  // MercadoPago manifest format: id:<data.id>;request-date:<x-request-id>;ts:<ts>;
-  const manifest = `id:${paymentId};request-date:${xRequestId};ts:${ts};`;
-  const expectedHash = createHmac('sha256', webhookSecret).update(manifest).digest('hex');
-
-  return expectedHash === v1;
 }
 
 export async function POST(req: NextRequest) {
   try {
     const rawBody = await req.text();
 
-    // Verificar assinatura do webhook
-    if (!verifyWebhookSignature(req, rawBody)) {
+    if (!await verifyWebhookSignature(req, rawBody)) {
       logger.warn('Webhook Mercado Pago com assinatura inválida — rejeitado');
       return NextResponse.json({ error: 'Assinatura inválida' }, { status: 401 });
     }
 
     const body = JSON.parse(rawBody);
+    logger.info({ type: body.type, dataId: body.data?.id }, 'Webhook Mercado Pago recebido');
 
-    logger.info({ body }, "Webhook Mercado Pago recebido");
-
-    // Verificar assinatura do webhook
-    const paymentId = body.data?.id;
-    const signatureValid = await verifyMercadoPagoSignature(req, paymentId);
-    if (!signatureValid) {
-      logger.warn({ paymentId }, 'Webhook Mercado Pago com assinatura inválida ou ausente');
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-    }
-
-    // Verificar se é uma notificação de pagamento
-    if (body.type !== "payment") {
+    if (body.type !== 'payment') {
       return NextResponse.json({ received: true });
     }
 
+    const paymentId = body.data?.id;
     if (!paymentId) {
-      return NextResponse.json({ error: "Payment ID não encontrado" }, { status: 400 });
+      return NextResponse.json({ error: 'Payment ID não encontrado' }, { status: 400 });
     }
 
-    // Buscar credenciais
+    // ── Idempotência: evitar duplo processamento em retentativas do MP ──
+    const redis = getRedisPublisher();
+    if (redis) {
+      const idempotencyKey = `webhook:mp:${paymentId}`;
+      const set = await redis.set(idempotencyKey, '1', 'EX', 86400, 'NX');
+      if (!set) {
+        logger.info({ paymentId }, 'Webhook duplicado ignorado (idempotência Redis)');
+        return NextResponse.json({ received: true, ignored: true });
+      }
+    }
+
     const { accessToken } = getMercadoPagoKeys();
-
     if (!accessToken) {
-      return NextResponse.json({ error: "Mercado Pago não configurado" }, { status: 500 });
+      return NextResponse.json({ error: 'Mercado Pago não configurado' }, { status: 500 });
     }
 
-    // Configurar SDK
-    const client = new MercadoPagoConfig({ 
-      accessToken: accessToken 
-    });
-
-    // Buscar detalhes do pagamento
+    const client = new MercadoPagoConfig({ accessToken });
     const payment = new Payment(client);
     const paymentInfo = await payment.get({ id: paymentId });
 
-    // Atualizar pedido baseado no status do pagamento
     const orderId = paymentInfo.external_reference;
-
-    if (orderId) {
-      // 1. Buscar o pedido ANTES de atualizar para verificar o estado atual
-      const currentOrder = await prisma.order.findUnique({
-        where: { id: orderId },
-      });
-
-      if (!currentOrder) {
-        return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 });
-      }
-
-      let orderStatus: OrderStatus = OrderStatus.PENDING;
-
-      switch (paymentInfo.status) {
-        case "approved":
-          orderStatus = OrderStatus.CONFIRMED;
-          break;
-        case "rejected":
-          orderStatus = OrderStatus.CANCELLED;
-          break;
-        case "cancelled":
-          orderStatus = OrderStatus.CANCELLED;
-          break;
-        case "refunded":
-          orderStatus = OrderStatus.REFUNDED;
-          break;
-        default:
-          orderStatus = OrderStatus.PENDING;
-      }
-
-      // Validar transição de estado — evitar regressão de status por webhooks atrasados
-      const VALID_TRANSITIONS: Record<string, string[]> = {
-        PENDING: ['CONFIRMED', 'CANCELLED'],
-        CONFIRMED: ['PROCESSING', 'CANCELLED', 'REFUNDED'],
-        PROCESSING: ['SHIPPED', 'CANCELLED', 'REFUNDED'],
-        SHIPPED: ['DELIVERED', 'CANCELLED', 'REFUNDED'],
-        DELIVERED: ['REFUNDED'],
-      };
-
-      const allowedNext = VALID_TRANSITIONS[currentOrder.status as string];
-      if (allowedNext && !allowedNext.includes(orderStatus)) {
-        logger.warn({ orderId, currentStatus: currentOrder.status, attemptedStatus: orderStatus }, 'Transição de estado inválida via webhook — ignorado');
-        return NextResponse.json({ received: true, ignored: true });
-      }
-
-      // 2. Só disparar webhooks se o status mudou OU se o status de pagamento do MP mudou
-      const statusChanged = currentOrder.status !== orderStatus;
-      const paymentStatusChanged = currentOrder.paymentStatus !== paymentInfo.status;
-
-      if (!statusChanged && !paymentStatusChanged) {
-        logger.info({ orderId, orderStatus }, `Pedido ${orderId} já está com status ${orderStatus}. Ignorando duplicata.`);
-        return NextResponse.json({ received: true, ignored: true });
-      }
-
-      const updated = await prisma.order.update({
-        where: { id: orderId },
-        data: {
-          status: orderStatus,
-          paymentStatus: paymentInfo.status,
-          updatedAt: new Date(),
-        },
-        include: {
-          user: true,
-          items: {
-            include: {
-              product: {
-                select: { id: true, name: true, sku: true, imageUrl: true },
-              },
-            },
-          },
-        },
-      });
-
-      // 3. Só enviar para o n8n se o status do pedido mudou
-      if (statusChanged) {
-        await sendOrderStatusUpdate({
-          orderId: updated.id,
-          orderNumber: updated.orderNumber,
-          status: orderStatus as any,
-          total: updated.total,
-          user: updated.user,
-          paymentMethod: updated.paymentMethod,
-          items: updated.items,
-        });
-
-        // Criar notificação de status do pedido
-        await notifyOrderStatusChange({
-          userId: updated.userId,
-          orderId: updated.id,
-          orderNumber: updated.orderNumber,
-          status: orderStatus as OrderStatusType,
-        });
-      }
-
-      // 4. Criar notificação de pagamento (só se o status do MP mudou)
-      if (paymentStatusChanged) {
-        await notifyPaymentStatus({
-          userId: updated.userId,
-          orderId: updated.id,
-          orderNumber: updated.orderNumber,
-          status: paymentInfo.status === "approved" ? "approved" : paymentInfo.status === "rejected" ? "rejected" : paymentInfo.status === "refunded" ? "refunded" : "pending",
-          amount: updated.total,
-          paymentMethod: updated.paymentMethod,
-        });
-      }
-
-      logger.info({ orderId, orderStatus, previousStatus: currentOrder.status }, `Pedido ${orderId} atualizado para ${orderStatus} (Antes: ${currentOrder.status})`);
+    if (!orderId) {
+      return NextResponse.json({ received: true });
     }
 
-    return NextResponse.json({ received: true });
+    const currentOrder = await prisma.order.findUnique({ where: { id: orderId } });
+    if (!currentOrder) {
+      return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
+    }
+
+    let orderStatus: OrderStatus = OrderStatus.PENDING;
+    switch (paymentInfo.status) {
+      case 'approved':  orderStatus = OrderStatus.CONFIRMED;  break;
+      case 'rejected':  orderStatus = OrderStatus.CANCELLED;  break;
+      case 'cancelled': orderStatus = OrderStatus.CANCELLED;  break;
+      case 'refunded':  orderStatus = OrderStatus.REFUNDED;   break;
+      default:          orderStatus = OrderStatus.PENDING;
+    }
+
+    // Prevenir regressão de status por webhooks atrasados
+    const VALID_TRANSITIONS: Record<string, string[]> = {
+      PENDING:    ['CONFIRMED', 'CANCELLED'],
+      CONFIRMED:  ['PROCESSING', 'CANCELLED', 'REFUNDED'],
+      PROCESSING: ['SHIPPED', 'CANCELLED', 'REFUNDED'],
+      SHIPPED:    ['DELIVERED', 'CANCELLED', 'REFUNDED'],
+      DELIVERED:  ['REFUNDED'],
+    };
+
+    const allowedNext = VALID_TRANSITIONS[currentOrder.status as string];
+    if (allowedNext && !allowedNext.includes(orderStatus)) {
+      logger.warn(
+        { orderId, currentStatus: currentOrder.status, attemptedStatus: orderStatus },
+        'Transição de estado inválida via webhook — ignorado',
+      );
+      return NextResponse.json({ received: true, ignored: true });
+    }
+
+    const statusChanged = currentOrder.status !== orderStatus;
+    const paymentStatusChanged = currentOrder.paymentStatus !== paymentInfo.status;
+
+    if (!statusChanged && !paymentStatusChanged) {
+      logger.info({ orderId, orderStatus }, 'Status sem alteração — ignorando duplicata');
+      return NextResponse.json({ received: true, ignored: true });
+    }
+
+    const updated = await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        status: orderStatus,
+        paymentStatus: paymentInfo.status,
+        updatedAt: new Date(),
+      },
+      include: {
+        user: true,
+        items: {
+          include: {
+            product: { select: { id: true, name: true, sku: true, imageUrl: true } },
+          },
+        },
+      },
+    });
+
+    // ── Retornar 200 imediatamente; notificações em background ──
+    // O MP considera qualquer demora > 5s como falha e retenta.
+    const response = NextResponse.json({ received: true });
+
+    Promise.allSettled([
+      statusChanged
+        ? sendOrderStatusUpdate({
+            orderId: updated.id,
+            orderNumber: updated.orderNumber,
+            status: orderStatus as any,
+            total: toNum(updated.total),
+            user: updated.user,
+            paymentMethod: updated.paymentMethod,
+            items: serializeItems(updated.items),
+          })
+        : Promise.resolve(),
+
+      statusChanged
+        ? notifyOrderStatusChange({
+            userId: updated.userId,
+            orderId: updated.id,
+            orderNumber: updated.orderNumber,
+            status: orderStatus as OrderStatusType,
+          })
+        : Promise.resolve(),
+
+      paymentStatusChanged
+        ? notifyPaymentStatus({
+            userId: updated.userId,
+            orderId: updated.id,
+            orderNumber: updated.orderNumber,
+            status:
+              paymentInfo.status === 'approved' ? 'approved'
+              : paymentInfo.status === 'rejected' ? 'rejected'
+              : paymentInfo.status === 'refunded' ? 'refunded'
+              : 'pending',
+            amount: toNum(updated.total),
+            paymentMethod: updated.paymentMethod,
+          })
+        : Promise.resolve(),
+    ]).then((results) => {
+      results.forEach((r) => {
+        if (r.status === 'rejected') {
+          logger.error(r.reason, 'Post-webhook notification failed');
+        }
+      });
+      logger.info(
+        { orderId, orderStatus, previousStatus: currentOrder.status },
+        `Pedido ${orderId} atualizado para ${orderStatus}`,
+      );
+    });
+
+    return response;
   } catch (error) {
     logger.error(error as Error, 'Erro ao processar webhook');
-    return NextResponse.json(
-      { 
-        error: 'Erro ao processar webhook', 
-        message: error instanceof Error ? error.message : undefined 
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Erro ao processar webhook' }, { status: 500 });
   }
 }

@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import logger from "@/lib/logger";
-import { 
-  createShippingLabelForOrder, 
+import {
+  createShippingLabelForOrder,
   printMelhorEnvioLabel,
-  getMelhorEnvioOrderStatus 
+  getMelhorEnvioOrderStatus
 } from '@/lib/melhorenvio-shipping';
+import { toNum } from '@/lib/decimal-helpers';
 
 // POST - Gerar etiqueta para um pedido
 export async function POST(
@@ -52,7 +53,7 @@ export async function POST(
     }
 
     // Verificar se tem frete (não é retirada na loja)
-    if (order.shipping <= 0) {
+    if (toNum(order.shipping) <= 0) {
       return NextResponse.json({ 
         error: 'Pedido sem frete (retirada na loja)' 
       }, { status: 400 });

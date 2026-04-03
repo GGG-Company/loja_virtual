@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useId, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { X, Upload, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { useFocusTrap } from '@/hooks/use-focus-trap';
 
 interface RequestReturnModalProps {
   isOpen: boolean;
@@ -41,6 +42,16 @@ export function RequestReturnModal({
   items,
   onSuccess,
 }: RequestReturnModalProps) {
+  const titleId = useId();
+  const trapRef = useFocusTrap(isOpen);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handle = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handle);
+    return () => document.removeEventListener('keydown', handle);
+  }, [isOpen, onClose]);
+
   const [step, setStep] = useState(1);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [reason, setReason] = useState('');
@@ -169,17 +180,26 @@ export function RequestReturnModal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={onClose}
+          aria-hidden="true"
+        >
           <motion.div
+            ref={trapRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             className="bg-white rounded-lg max-w-2xl w-full max-h-96 overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white">
-              <h2 className="text-2xl font-bold">Solicitar Devolução</h2>
-              <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-                <X className="h-6 w-6" />
+              <h2 id={titleId} className="text-2xl font-bold">Solicitar Devolução</h2>
+              <button onClick={onClose} aria-label="Fechar" className="text-gray-400 hover:text-gray-600">
+                <X className="h-6 w-6" aria-hidden="true" />
               </button>
             </div>
 

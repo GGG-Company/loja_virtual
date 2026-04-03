@@ -3,13 +3,14 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { User, Package, MapPin, RotateCcw, Loader2, Check, RefreshCw, Lock } from 'lucide-react';
+import { User, Package, MapPin, RotateCcw, Loader2, Check, RefreshCw, Lock, Download, Shield } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { statusToPt, statusBadgeClass } from '@/lib/i18n';
 import { toast } from 'sonner';
@@ -491,6 +492,31 @@ export default function MyAccountPage() {
                             </div>
                           )} */}
 
+                          {/* Privacidade e Dados — LGPD */}
+                          <div className="border-t pt-8">
+                            <div className="flex items-center gap-3 mb-4">
+                              <Shield className="h-5 w-5 text-[#CC1020]" />
+                              <h3 className="font-semibold text-lg">Privacidade e Seus Dados</h3>
+                            </div>
+                            <p className="text-sm text-gray-500 mb-4">
+                              De acordo com a LGPD (Lei 13.709/18), você pode exportar todos os seus dados
+                              pessoais armazenados em nossos servidores em formato JSON.
+                            </p>
+                            <Button
+                              variant="outline"
+                              className="gap-2"
+                              onClick={() => {
+                                window.location.href = '/api/user/export';
+                              }}
+                            >
+                              <Download className="h-4 w-4" />
+                              Exportar Meus Dados
+                            </Button>
+                            <p className="text-xs text-gray-400 mt-2">
+                              O arquivo inclui perfil, pedidos, avaliações e histórico de atividade.
+                            </p>
+                          </div>
+
                           {/* Alterar Senha */}
                           <div className="border-t pt-8">
                             <button
@@ -822,17 +848,17 @@ export default function MyAccountPage() {
                       </div>
 
                       {returnsLoading ? (
-                        <div className="flex items-center justify-center py-12">
-                          <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
+                        <div role="status" aria-label="Carregando devoluções..." className="flex items-center justify-center py-12">
+                          <Loader2 className="h-8 w-8 animate-spin text-primary-600" aria-hidden="true" />
                         </div>
                       ) : returns.length === 0 ? (
                         <div className="text-center py-12">
-                          <RotateCcw className="h-16 w-16 text-metallic-300 mx-auto mb-4" />
+                          <RotateCcw className="h-16 w-16 text-metallic-300 mx-auto mb-4" aria-hidden="true" />
                           <p className="text-metallic-600 mb-4">
                             Você não possui devoluções
                           </p>
                           <Button asChild>
-                            <a href="/minha-conta/pedidos">Ver Pedidos</a>
+                            <Link href="/minha-conta/pedidos">Ver Pedidos</Link>
                           </Button>
                         </div>
                       ) : (
@@ -863,7 +889,7 @@ export default function MyAccountPage() {
                                 <div className="flex justify-between items-center mt-4">
                                   {ret.refundAmount && (
                                     <p className="text-lg font-bold text-primary-600">
-                                      Reembolso: R$ {ret.refundAmount.toFixed(2)}
+                                      Reembolso: R$ {Number(ret.refundAmount).toFixed(2)}
                                     </p>
                                   )}
                                   <Button variant="outline" size="sm" asChild>
@@ -875,20 +901,6 @@ export default function MyAccountPage() {
                           })}
                         </div>
                       )}
-                      <div className="text-center py-12">
-                        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <RotateCcw className="h-10 w-10 text-gray-400" />
-                        </div>
-                        <p className="font-display text-lg font-bold text-[#1A1A1A] uppercase mb-1">
-                          Nenhuma devolução
-                        </p>
-                        <p className="text-sm text-gray-500 mb-6">
-                          Gerencie suas solicitações de devolução aqui.
-                        </p>
-                        <Button asChild variant="outline">
-                          <a href="/minha-conta/devolucoes">Ver Devoluções</a>
-                        </Button>
-                      </div>
                     </div>
                   )}
 

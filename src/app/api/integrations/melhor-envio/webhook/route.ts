@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { sendOrderStatusUpdate } from '@/lib/webhooks';
 import { notifyOrderStatusChange } from '@/lib/notifications';
 import type { OrderStatus } from '@/lib/i18n';
+import { toNum, serializeItems } from '@/lib/decimal-helpers';
 
 /**
  * Webhook do Melhor Envio para atualizar status de entrega
@@ -156,13 +157,13 @@ export async function POST(req: NextRequest) {
         orderId: updated.id,
         orderNumber: updated.orderNumber,
         status: orderStatus as any,
-        total: updated.total,
+        total: toNum(updated.total),
         user: updated.user,
         paymentMethod: updated.paymentMethod,
         trackingCode: updated.trackingCode,
         trackingUrl: updated.trackingUrl,
         deliveredAt: updated.deliveredAt,
-        items: updated.items,
+        items: serializeItems(updated.items),
         extra: {
           source: 'melhor_envio',
           event: type,

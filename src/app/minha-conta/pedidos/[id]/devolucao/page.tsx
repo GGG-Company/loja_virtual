@@ -74,7 +74,14 @@ export default function SolicitarDevolucaoPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setOrder(data);
+        setOrder({
+          ...data,
+          total: parseFloat(String(data.total ?? 0)) || 0,
+          items: (data.items ?? []).map((i: any) => ({
+            ...i,
+            price: parseFloat(String(i.price ?? 0)) || 0,
+          })),
+        });
         // Pre-selecionar todos os itens
         const items: Record<string, number> = {};
         data.items.forEach((item: OrderItem) => {

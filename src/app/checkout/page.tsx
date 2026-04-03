@@ -86,22 +86,26 @@ export default function CheckoutPage() {
   } | null>(null);
   const [loadingShipping, setLoadingShipping] = useState(false);
 
-  // Persistência do progresso do checkout
+  // Persistência do progresso do checkout (sessionStorage — limpo ao fechar aba)
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("checkoutState");
+      const saved = sessionStorage.getItem("checkoutState");
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed) {
           if (typeof parsed.currentStep === "number") setCurrentStep(parsed.currentStep);
-          if (parsed.dadosForm) setDadosForm((prev) => ({ ...prev, ...parsed.dadosForm }));
+          if (parsed.dadosForm) {
+            // Nunca restaurar CPF do storage — preenchido apenas via perfil ou digitação
+            const { cpf: _cpf, ...dadosSemCpf } = parsed.dadosForm;
+            setDadosForm((prev) => ({ ...prev, ...dadosSemCpf }));
+          }
           if (parsed.entregaForm) setEntregaForm((prev) => ({ ...prev, ...parsed.entregaForm }));
           if (parsed.paymentMethod) setPaymentMethod(parsed.paymentMethod);
           if (Array.isArray(parsed.cartItems)) setCartItems(parsed.cartItems);
         }
       }
       // Restaurar frete salvo no carrinho (se houver) para evitar divergência
-      const savedFrete = localStorage.getItem("checkoutFrete");
+      const savedFrete = sessionStorage.getItem("checkoutFrete");
       if (savedFrete) {
         try {
           const parsedFrete = JSON.parse(savedFrete);
@@ -508,33 +512,30 @@ export default function CheckoutPage() {
       localStorage.removeItem("cart");
       window.dispatchEvent(new Event("cartUpdated"));
       // Limpa progresso do checkout
-      localStorage.removeItem("checkoutState");
+      sessionStorage.removeItem("checkoutState");
+      sessionStorage.removeItem("checkoutFrete");
 
       toast.success("Pedido criado! Finalize o pagamento para confirmar.");
-      const query = new URLSearchParams({
-        orderId: order.id,
-        method: paymentMethod,
-        total: totalWithShipping.toFixed(2),
-        number: order.orderNumber || "",
-      }).toString();
-      router.push(`/checkout/pagamento?${query}`);
+      // Passa apenas o ID — a página de pagamento busca o restante do DB
+      router.push(`/pagamento/${order.id}`);
     } catch (error) {
       toast.error("Erro ao processar pedido");
       setLoading(false);
     }
   };
 
-  // Salva o progresso quando houver mudanças relevantes
+  // Salva o progresso quando houver mudanças relevantes (sem CPF)
   useEffect(() => {
     try {
+      const { cpf: _cpf, ...dadosSemCpf } = dadosForm;
       const snapshot = {
         currentStep,
-        dadosForm,
+        dadosForm: dadosSemCpf,
         entregaForm,
         paymentMethod,
         cartItems,
       };
-      localStorage.setItem("checkoutState", JSON.stringify(snapshot));
+      sessionStorage.setItem("checkoutState", JSON.stringify(snapshot));
     } catch (e) {
       // ignore
     }
@@ -812,6 +813,26 @@ export default function CheckoutPage() {
                           <p className="text-sm text-gray-600">Parcelamento em até 12x</p>
                         </div>
                       </label>
+                    </div>
+
+                    {/* Aviso LGPD — transferência internacional de dados */}
+                    <div className="mt-5 p-4 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-500 flex items-start gap-2">
+                      <span className="flex-shrink-0 mt-0.5">🔒</span>
+                      <span>
+                        Seus dados de pagamento são processados pelo{' '}
+                        <strong>Mercado Pago</strong> (com sede na Argentina), sujeito à
+                        sua{' '}
+                        <a
+                          href="https://www.mercadopago.com.br/privacidade"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline hover:text-gray-700"
+                        >
+                          Política de Privacidade
+                        </a>
+                        . O frete é cotado via <strong>Melhor Envio</strong> (Brasil).
+                        Nenhum dado de cartão é armazenado em nossos servidores.
+                      </span>
                     </div>
 
                     {/* Cupom de Desconto */}

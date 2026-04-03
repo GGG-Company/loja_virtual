@@ -1,11 +1,12 @@
-import { NextResponse } from 'next/server';
-import type { Prisma } from '@prisma/client';
+import { NextRequest, NextResponse } from 'next/server';
 import { listProducts, isExternalEnabled } from '@/lib/products-repository';
 import logger from '@/lib/logger';
 
-export const dynamic = 'force-dynamic';
+// Buscas com query param `search` são dinâmicas; listagens simples usam ISR via
+// Cache-Control no response. `force-dynamic` é removido para permitir caching.
+export const dynamic = 'auto';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const featured = searchParams.get('featured');
@@ -22,12 +23,24 @@ export async function GET(request: Request) {
       search: search || null,
     });
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       source: isExternalEnabled() ? 'external' : 'local',
-      message: isExternalEnabled() ? undefined : 'Fonte externa não configurada; usando base local.',
       products,
     });
+
+    // Buscas não são cacheáveis (resultado depende do termo)
+    // Listagens estáticas (featured, promo, categ) podem ser cacheadas pelo CDN
+    if (!search) {
+      response.headers.set(
+        'Cache-Control',
+        'public, s-maxage=300, stale-while-revalidate=60'
+      );
+    } else {
+      response.headers.set('Cache-Control', 'no-store');
+    }
+
+    return response;
   } catch (error) {
     logger.error(error as Error, '[PRODUCTS_GET]');
     return NextResponse.json(

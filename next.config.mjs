@@ -1,4 +1,23 @@
 /** @type {import('next').NextConfig} */
+
+const isDev = process.env.NODE_ENV === 'development';
+
+const cspConnectSrc = [
+  "'self'",
+  'https://api.mercadopago.com',
+  'https://loja.azura.dev.br',
+  'https://socket.azura.dev.br',
+  'wss://socket.azura.dev.br',
+  ...(isDev
+    ? [
+        'http://localhost:*',
+        'ws://localhost:*',
+        'http://127.0.0.1:*',
+        'ws://127.0.0.1:*',
+      ]
+    : []),
+].join(' ');
+
 const nextConfig = {
   output: 'standalone',
   images: {
@@ -28,6 +47,35 @@ const nextConfig = {
   },
   async headers() {
     return [
+      // ── Static assets — cache agressivo no CDN ─────────────────────────
+      {
+        source: '/_next/static/(.*)',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      // ── Imagens públicas ───────────────────────────────────────────────
+      {
+        source: '/(.*)\\.(jpg|jpeg|png|webp|avif|svg|ico|gif)',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=3600' },
+        ],
+      },
+      // ── Páginas ISR (catálogo, produto) ────────────────────────────────
+      {
+        source: '/produtos(.*)',
+        headers: [
+          { key: 'Cache-Control', value: 'public, s-maxage=3600, stale-while-revalidate=300' },
+        ],
+      },
+      // ── Homepage ───────────────────────────────────────────────────────
+      {
+        source: '/',
+        headers: [
+          { key: 'Cache-Control', value: 'public, s-maxage=600, stale-while-revalidate=60' },
+        ],
+      },
+      // ── Segurança global ───────────────────────────────────────────────
       {
         source: '/(.*)',
         headers: [
@@ -36,7 +84,9 @@ const nextConfig = {
           { key: 'X-XSS-Protection', value: '1; mode=block' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
-          { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+          ...(!isDev
+            ? [{ key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' }]
+            : []),
           {
             key: 'Content-Security-Policy',
             value: [
@@ -45,7 +95,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.s3.amazonaws.com https://http2.mlstatic.com",
-              "connect-src 'self' https://api.mercadopago.com https://loja.azura.dev.br https://socket.azura.dev.br wss://socket.azura.dev.br",
+              `connect-src ${cspConnectSrc}`,
               "frame-src 'self' https://sdk.mercadopago.com",
               "object-src 'none'",
               "base-uri 'self'",

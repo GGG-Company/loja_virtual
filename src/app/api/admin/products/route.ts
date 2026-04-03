@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import logger from "@/lib/logger";
+import { toNum } from '@/lib/decimal-helpers';
 
 const CreateProductSchema = z.object({
   name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres'),
@@ -64,8 +65,15 @@ export async function GET(request: Request) {
       prisma.product.count({ where }),
     ]);
 
+    const normalized = products.map((p) => ({
+      ...p,
+      price: toNum(p.price),
+      promotionalPrice: p.promotionalPrice != null ? toNum(p.promotionalPrice) : null,
+      compareAtPrice: 'compareAtPrice' in p && p.compareAtPrice != null ? toNum((p as any).compareAtPrice) : null,
+    }));
+
     return NextResponse.json({
-      products,
+      products: normalized,
       pagination: {
         page,
         limit,
@@ -115,8 +123,16 @@ export async function POST(request: Request) {
       stockLocation
     } = parsed.data;
 
-    const slug = generateSlug(name) + '-' + Math.random().toString(36).substring(2, 7);
-    const sku = 'SKU-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+    const slugBase = generateSlug(name);
+
+    // SKU determinístico: slug truncado + timestamp hex para evitar colisão
+    const tsPart = Date.now().toString(16).slice(-6).toUpperCase();
+    const slugPart = slugBase.replace(/-/g, '').slice(0, 6).toUpperCase();
+    const sku = `${slugPart}-${tsPart}`;
+
+    // Sufixo numérico incremental para garantir slug único
+    const existing = await prisma.product.count({ where: { slug: { startsWith: slugBase } } });
+    const slug = existing > 0 ? `${slugBase}-${existing + 1}` : slugBase;
 
     const product = await prisma.product.create({
       data: {

@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 
-// Trigram similarity in JS (same algorithm as pg_trgm)
+// ── Trigram similarity (mirrors pg_trgm algorithm) ─────────────────────────
 function trigrams(str: string): Set<string> {
   const s = `  ${str.toLowerCase().trim()}  `;
   const set = new Set<string>();
@@ -21,7 +21,7 @@ function trigramSimilarity(a: string, b: string): number {
   return union === 0 ? 0 : intersection / union;
 }
 
-// Compare search term against each word in the text — returns best match
+// Best word-level similarity — useful for "furadira" → "furadeira"
 function bestWordSimilarity(text: string, search: string): number {
   const words = text.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
   let best = 0;
@@ -29,10 +29,12 @@ function bestWordSimilarity(text: string, search: string): number {
     const sim = trigramSimilarity(word, search.toLowerCase());
     if (sim > best) best = sim;
   }
-  // Also check the full text (for multi-word search terms)
   const fullSim = trigramSimilarity(text, search);
   return Math.max(best, fullSim);
 }
+
+// ── Fuzzy threshold — 0.18 catches multi-letter typos ("maquita"→"makita") ──
+const FUZZY_THRESHOLD = 0.18;
 
 export type ListProductsParams = {
   featured?: boolean;
@@ -99,66 +101,101 @@ export async function listProducts(params: ListProductsParams) {
       return arr.map(mapExternalProduct);
     } catch (e) {
       console.warn('[products-repository] external list failed, falling back to local:', e);
-      // fallback local
     }
   }
 
-  // Local Prisma fallback
+  // ── Local Prisma path ────────────────────────────────────────────────────
   const where: any = { isActive: true };
   if (featured) where.isFeatured = true;
   if (promo) where.isPromo = true;
   if (categorySlug) where.category = { slug: categorySlug };
 
-  // Fuzzy search: first try exact contains, then fuzzy match in JS
   if (search) {
-    // Step 1: Try exact substring match first
-    const exactWhere: any = { ...where };
-    exactWhere.OR = [
-      { name: { contains: search, mode: 'insensitive' } },
-      { description: { contains: search, mode: 'insensitive' } },
-      { sku: { contains: search, mode: 'insensitive' } },
-    ];
+    const cap = limit ?? 40;
 
-    const exactResults = await prisma.product.findMany({
-      where: exactWhere,
+    // Step 1 — Full-Text Search via tsvector GIN index (O(log n), dicionário PT)
+    const ftsResults = await prisma.$queryRaw<any[]>`
+      SELECT
+        p.*,
+        row_to_json(c.*) AS category,
+        (
+          SELECT json_agg(pi.*)
+          FROM (
+            SELECT url, alt, "order" FROM "product_images"
+            WHERE "productId" = p.id
+            ORDER BY "order" ASC
+            LIMIT 1
+          ) pi
+        ) AS images,
+        ts_rank("searchVector", plainto_tsquery('portuguese', ${search})) AS rank
+      FROM "products" p
+      LEFT JOIN "categories" c ON c.id = p."categoryId"
+      WHERE
+        p."isActive" = true
+        AND "searchVector" @@ plainto_tsquery('portuguese', ${search})
+      ORDER BY rank DESC
+      LIMIT ${cap}
+    `;
+
+    if (ftsResults.length > 0) return ftsResults;
+
+    // Step 2 — ILIKE fallback (short terms, brand names, SKUs)
+    const ilikeResults = await prisma.product.findMany({
+      where: {
+        ...where,
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { sku:  { contains: search, mode: 'insensitive' } },
+        ],
+      },
       include: {
         category: { select: { id: true, name: true, slug: true } },
         images: { take: 1, select: { url: true, alt: true, order: true } },
       },
-      take: limit ?? undefined,
+      take: cap,
       orderBy: { createdAt: 'desc' },
     });
 
-    if (exactResults.length > 0) return exactResults;
+    if (ilikeResults.length > 0) return ilikeResults;
 
-    // Step 2: No exact match — do fuzzy search in JS
-    // Fetch all active products (with filters) and rank by similarity
-    const allProducts = await prisma.product.findMany({
+    // Step 3 — Fuzzy (trigram JS) — catches typos like "furadira" → "furadeira"
+    // Fetch a broad candidate set (name + sku only) and rank in-process
+    const candidates = await prisma.product.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        name: true,
+        sku: true,
+        slug: true,
+        price: true,
+        promotionalPrice: true,
+        imageUrl: true,
+        stock: true,
+        isFeatured: true,
+        isPromo: true,
+        createdAt: true,
         category: { select: { id: true, name: true, slug: true } },
         images: { take: 1, select: { url: true, alt: true, order: true } },
       },
-      orderBy: { createdAt: 'desc' },
+      take: 300, // limit candidate pool to avoid OOM
     });
 
-    const searchLower = search.toLowerCase();
-    const scored = allProducts
-      .map(p => {
-        const nameSim = bestWordSimilarity(p.name || '', searchLower);
-        const descSim = bestWordSimilarity((p.description || '').substring(0, 300), searchLower);
-        const skuSim = bestWordSimilarity(p.sku || '', searchLower);
-        const score = Math.max(nameSim, descSim * 0.7, skuSim);
-        return { product: p, score };
-      })
-      .filter(({ score }) => score > 0.25)
-      .sort((a, b) => b.score - a.score);
+    const scored = candidates
+      .map(p => ({
+        ...p,
+        _score: Math.max(
+          bestWordSimilarity(p.name, search),
+          p.sku ? bestWordSimilarity(p.sku, search) : 0,
+        ),
+      }))
+      .filter(p => p._score >= FUZZY_THRESHOLD)
+      .sort((a, b) => b._score - a._score)
+      .slice(0, cap);
 
-    const results = scored.map(s => s.product);
-    return limit ? results.slice(0, limit) : results;
+    return scored;
   }
 
-  const products = await prisma.product.findMany({
+  return prisma.product.findMany({
     where,
     include: {
       category: { select: { id: true, name: true, slug: true } },
@@ -167,7 +204,6 @@ export async function listProducts(params: ListProductsParams) {
     take: limit ?? undefined,
     orderBy: { createdAt: 'desc' },
   });
-  return products;
 }
 
 export async function getProduct(idOrSlug: string) {
@@ -186,12 +222,10 @@ export async function getProduct(idOrSlug: string) {
       return mapExternalProduct(product);
     } catch (e) {
       console.warn('[products-repository] external get failed, falling back to local:', e);
-      // fallback local
     }
   }
 
-  // Local Prisma fallback
-  const product = await prisma.product.findFirst({
+  return prisma.product.findFirst({
     where: {
       OR: [{ slug: idOrSlug }, { id: idOrSlug }],
       isActive: true,
@@ -202,5 +236,4 @@ export async function getProduct(idOrSlug: string) {
       images: { orderBy: { order: 'asc' }, select: { url: true, alt: true } },
     },
   });
-  return product;
 }

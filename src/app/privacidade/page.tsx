@@ -229,22 +229,55 @@ export default function PrivacyPage() {
               </p>
             </motion.div>
 
+            {/* Encarregado de Dados (DPO) */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="bg-white rounded-sm shadow-md p-8 mt-8 border-l-4 border-[#CC1020]"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-1 h-6 bg-[#CC1020] rounded-full" />
+                <h2 className="font-display text-xl font-bold text-[#1A1A1A] uppercase">
+                  7. Encarregado de Dados (DPO)
+                </h2>
+              </div>
+              <p className="text-gray-600 leading-relaxed font-body mb-4">
+                Nos termos do Art. 41 da LGPD, designamos um Encarregado pelo Tratamento de Dados
+                Pessoais (Data Protection Officer — DPO), responsável por atuar como canal de
+                comunicação entre a empresa, os titulares dos dados e a Autoridade Nacional de
+                Proteção de Dados (ANPD).
+              </p>
+              <div className="bg-gray-50 border border-gray-200 rounded-sm p-4 space-y-2">
+                <p className="text-sm font-semibold text-[#1A1A1A]">Encarregado: Equipe de Privacidade — Feira das Ferramentas</p>
+                <p className="text-sm text-gray-600">E-mail: <a href="mailto:dpo@shopferramentas.com.br" className="text-[#CC1020] underline">dpo@shopferramentas.com.br</a></p>
+                <p className="text-sm text-gray-600">Telefone: (75) 3333-4444</p>
+                <p className="text-sm text-gray-500">Prazo de resposta: até 15 dias úteis (conforme Art. 18, §3º da LGPD)</p>
+              </div>
+              <p className="text-gray-600 leading-relaxed font-body mt-4 text-sm">
+                Para exercer seus direitos (acesso, correção, portabilidade, exclusão, revogação de
+                consentimento), acesse <a href="/minha-conta" className="text-[#CC1020] underline">Minha Conta</a>{' '}
+                ou envie sua solicitação ao DPO pelo e-mail acima.
+              </p>
+            </motion.div>
+
             {/* Contact */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="bg-primary-600 text-white rounded-2xl shadow-lg p-8 mt-8 text-center"
+              className="bg-[#CC1020] text-white rounded-sm shadow-lg p-8 mt-8 text-center"
             >
-              <h2 className="text-2xl font-bold mb-4">Dúvidas?</h2>
-              <p className="mb-6 text-primary-100">
+              <h2 className="font-display text-2xl font-bold uppercase mb-4">Dúvidas?</h2>
+              <p className="mb-6 text-red-100">
                 Se você tiver perguntas sobre esta Política de Privacidade,
                 entre em contato conosco:
               </p>
               <div className="space-y-2">
                 <p className="font-semibold">
-                  Email: privacidade@shopferramentas.com.br
+                  E-mail: <a href="mailto:privacidade@shopferramentas.com.br" className="underline">privacidade@shopferramentas.com.br</a>
                 </p>
+                <p className="font-semibold">DPO: <a href="mailto:dpo@shopferramentas.com.br" className="underline">dpo@shopferramentas.com.br</a></p>
                 <p className="font-semibold">Telefone: (75) 3333-4444</p>
               </div>
             </motion.div>

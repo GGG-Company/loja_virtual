@@ -35,7 +35,15 @@ export interface FinancialReportSummary {
   refundedCount: number | null;
   avgTicket: number | null;
   ordersCount: number | null;
-  monthlyRevenue: { month: string; total: number; orders: number }[];
+  productsSold: number | null;
+  // Previous period comparison
+  prevRevenue: number | null;
+  prevOrdersCount: number | null;
+  prevAvgTicket: number | null;
+  prevPendingCount: number | null;
+  prevProductsSold: number | null;
+  // Charts
+  monthlyRevenue: { month: string; total: number; orders: number; avgTicket: number }[];
   topProducts: { productId: string; name: string; qty: number; revenue: number }[];
   statusBreakdown?: StatusBreakdown;
   stockSummary?: StockSummary | null;

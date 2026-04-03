@@ -4,15 +4,29 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { authLimiter } from '@/lib/rate-limit';
+import { logActivity } from '@/lib/activity-log';
+
+function isAtLeast18(birthDate: string): boolean {
+  const dob = new Date(birthDate);
+  if (isNaN(dob.getTime())) return false;
+  const today = new Date();
+  const age18 = new Date(dob.getFullYear() + 18, dob.getMonth(), dob.getDate());
+  return today >= age18;
+}
 
 const RegisterSchema = z.object({
   name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres'),
   email: z.string().email('Email inválido'),
   password: z.string().min(8, 'Senha deve ter no mínimo 8 caracteres'),
+  birthDate: z
+    .string({ required_error: 'Data de nascimento é obrigatória' })
+    .refine(isAtLeast18, 'Você deve ter no mínimo 18 anos para se cadastrar'),
   phone: z.string().optional(),
   cpf: z.string().optional(),
   cnpj: z.string().optional(),
   stateRegistration: z.string().optional(),
+  acceptedTerms: z
+    .literal(true, { errorMap: () => ({ message: 'Você deve aceitar os Termos de Serviço' }) }),
 }).superRefine((data, ctx) => {
   if (!data.cpf && !data.cnpj) {
     ctx.addIssue({ code: 'custom', message: 'Informe CPF ou CNPJ' });
@@ -35,7 +49,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { name, email, password, phone, cpf, cnpj, stateRegistration } = parsed.data;
+    const { name, email, password, birthDate, phone, cpf, cnpj, stateRegistration } = parsed.data;
 
     // Verificar se email já existe (resposta genérica para evitar enumeração)
     const existingUser = await prisma.user.findUnique({
@@ -50,7 +64,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Hash da senha
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     // Criar usuário
     const user = await prisma.user.create({
@@ -58,6 +72,7 @@ export async function POST(request: NextRequest) {
         name,
         email,
         password: hashedPassword,
+        birthDate: birthDate ? new Date(birthDate) : null,
         phone,
         cpf: cpf || null,
         cnpj: cnpj || null,
@@ -70,6 +85,13 @@ export async function POST(request: NextRequest) {
         email: true,
         role: true,
       },
+    });
+
+    await logActivity({
+      userId: user.id,
+      action: 'ACCOUNT_CREATED',
+      entity: 'User',
+      entityId: user.id,
     });
 
     return NextResponse.json(

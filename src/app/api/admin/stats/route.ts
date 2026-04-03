@@ -29,6 +29,7 @@ export async function GET() {
           orderBy: { createdAt: 'desc' },
           select: {
             id: true,
+            orderNumber: true,
             total: true,
             status: true,
             createdAt: true,
@@ -51,8 +52,8 @@ export async function GET() {
       totalProducts,
       totalOrders,
       pendingOrders,
-      totalRevenue: totalRevenue._sum.total || 0,
-      recentOrders,
+      totalRevenue: Number(totalRevenue._sum.total ?? 0),
+      recentOrders: recentOrders.map(o => ({ ...o, total: Number(o.total) })),
       lowStockProducts,
     });
   } catch (error) {

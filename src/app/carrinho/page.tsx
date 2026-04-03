@@ -418,8 +418,8 @@ export default function CartPage() {
                         toast.warning("Você não selecionou um frete. Será possível calcular no checkout.");
                       }
 
-                      // Salvar frete selecionado (pode ser null) no localStorage
-                      localStorage.setItem("checkoutFrete", JSON.stringify(selectedShipping));
+                      // Salvar frete selecionado em sessionStorage (limpo ao fechar aba)
+                      sessionStorage.setItem("checkoutFrete", JSON.stringify(selectedShipping));
                       router.push("/checkout");
                     }}
                   >

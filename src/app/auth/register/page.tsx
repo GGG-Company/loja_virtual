@@ -8,6 +8,7 @@ import { isAxiosError } from 'axios';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { apiClient } from '@/lib/api-client';
@@ -20,12 +21,14 @@ export default function RegisterPage() {
     email: '',
     password: '',
     confirmPassword: '',
+    birthDate: '',
     phone: '',
     personType: 'CPF' as 'CPF' | 'CNPJ',
     cpf: '',
     cnpj: '',
     stateRegistration: '',
   });
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,6 +36,18 @@ export default function RegisterPage() {
 
     if (formData.password !== formData.confirmPassword) {
       toast.error('As senhas não coincidem');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!formData.birthDate) {
+      toast.error('Data de nascimento é obrigatória');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!acceptedTerms) {
+      toast.error('Você deve aceitar os Termos de Serviço para continuar');
       setIsLoading(false);
       return;
     }
@@ -53,10 +68,12 @@ export default function RegisterPage() {
         name: formData.name,
         email: formData.email,
         password: formData.password,
+        birthDate: formData.birthDate,
         phone: formData.phone,
         cpf: formData.personType === 'CPF' ? formData.cpf : undefined,
         cnpj: formData.personType === 'CNPJ' ? formData.cnpj : undefined,
         stateRegistration: formData.stateRegistration || undefined,
+        acceptedTerms: true,
       });
 
       router.push('/auth/login?welcome=1');
@@ -206,6 +223,22 @@ export default function RegisterPage() {
             )}
 
             <div className="space-y-2">
+              <Label htmlFor="birthDate">Data de Nascimento</Label>
+              <Input
+                id="birthDate"
+                type="date"
+                max={new Date(new Date().setFullYear(new Date().getFullYear() - 18))
+                  .toISOString()
+                  .split('T')[0]}
+                value={formData.birthDate}
+                onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
+                required
+                className="h-12"
+              />
+              <p className="text-xs text-gray-500">Você deve ter 18 anos ou mais para se cadastrar.</p>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
               <Input
                 id="password"
@@ -236,10 +269,29 @@ export default function RegisterPage() {
               />
             </div>
 
+            <div className="flex items-start gap-3 pt-1">
+              <Checkbox
+                id="acceptedTerms"
+                checked={acceptedTerms}
+                onCheckedChange={(checked) => setAcceptedTerms(!!checked)}
+                className="mt-0.5"
+              />
+              <Label htmlFor="acceptedTerms" className="text-sm text-gray-600 leading-relaxed cursor-pointer">
+                Li e aceito os{' '}
+                <Link href="/termos" target="_blank" className="text-[#CC1020] underline hover:text-red-700">
+                  Termos de Serviço
+                </Link>{' '}
+                e a{' '}
+                <Link href="/privacidade" target="_blank" className="text-[#CC1020] underline hover:text-red-700">
+                  Política de Privacidade
+                </Link>
+              </Label>
+            </div>
+
             <Button
               type="submit"
               className="w-full h-12 text-base"
-              disabled={isLoading}
+              disabled={isLoading || !acceptedTerms}
             >
               {isLoading ? 'Criando conta...' : 'Criar Conta'}
             </Button>

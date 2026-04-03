@@ -1,34 +1,152 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { FinancialLoadingSkeleton } from '@/components/loading/financial-loading';
 import Link from 'next/link';
 import type { FinancialReportSummary } from '@/types/financial-report';
-import { buildFinancialReportExcel } from '@/lib/export/excel';
-import { generateFinancialReportPdf } from '@/lib/export/pdf';
+import {
+  Filter, Calendar, DollarSign, Search, Package,
+  BarChart2, AlertCircle, Check, TrendingUp,
+  FileSpreadsheet, FileDown, ArrowLeft,
+} from 'lucide-react';
 
 type Summary = FinancialReportSummary;
 
-const currency = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-const percent = (v: number) => `${(v * 100).toFixed(1)}%`;
+const currency = (v: number) =>
+  v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-const statusLabel = (status: string) => {
-  const map: Record<string, string> = {
-    DELIVERED: 'Entregue',
-    SHIPPED: 'Enviado',
-    CONFIRMED: 'Confirmado',
-    PROCESSING: 'Em separação',
-    PENDING: 'Pendente',
-    REFUNDED: 'Reembolsado',
-    CANCELLED: 'Cancelado',
-  };
-  return map[status] || status;
+const STATUS_OPTIONS = [
+  { value: 'ALL',      label: 'Todos os status' },
+  { value: 'COMPLETED', label: 'Concluídos' },
+  { value: 'PENDING',   label: 'Pendentes' },
+  { value: 'REFUNDED',  label: 'Reembolsados / Cancelados' },
+];
+
+const STATUS_LABELS: Record<string, string> = {
+  DELIVERED: 'Entregue', SHIPPED: 'Enviado', CONFIRMED: 'Confirmado',
+  PROCESSING: 'Em separação', PENDING: 'Pendente', REFUNDED: 'Reembolsado',
+  CANCELLED: 'Cancelado', ALL: 'Todos', COMPLETED: 'Concluídos',
+};
+const statusLabel = (s?: string) => (s ? (STATUS_LABELS[s] ?? s) : 'Todos');
+
+const STATUS_COLOR: Record<string, string> = {
+  DELIVERED: 'bg-green-500', COMPLETED: 'bg-green-500',
+  SHIPPED: 'bg-blue-500', CONFIRMED: 'bg-cyan-500',
+  PROCESSING: 'bg-amber-400', PENDING: 'bg-orange-400',
+  REFUNDED: 'bg-purple-400', CANCELLED: 'bg-red-400',
 };
 
+const fmtDate = (s?: string) => {
+  if (!s) return '—';
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? s : d.toLocaleDateString('pt-BR');
+};
 
+const inputClass =
+  'h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200';
+
+// ── Toggle checkbox (styled as pill) ─────────────────────────────────────────
+function ToggleCheck({
+  id, checked, onChange, label,
+}: { id: string; checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <label
+      htmlFor={id}
+      className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all select-none text-sm ${
+        checked
+          ? 'bg-indigo-50 border-indigo-300 text-indigo-700 font-medium'
+          : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+      }`}
+    >
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="sr-only"
+      />
+      <span
+        aria-hidden="true"
+        className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition-colors ${
+          checked ? 'bg-indigo-500 border-indigo-500' : 'border-gray-300 bg-white'
+        }`}
+      >
+        {checked && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+      </span>
+      {label}
+    </label>
+  );
+}
+
+// ── KPI card ──────────────────────────────────────────────────────────────────
+const KPI_BORDER: Record<string, string> = {
+  green: 'border-l-green-500',
+  blue:  'border-l-blue-500',
+  amber: 'border-l-amber-500',
+  indigo: 'border-l-indigo-500',
+};
+const KPI_TEXT: Record<string, string> = {
+  green: 'text-green-700',
+  blue:  'text-blue-700',
+  amber: 'text-amber-700',
+  indigo: 'text-indigo-700',
+};
+
+function KpiCard({ label, value, color, icon }: {
+  label: string; value: string; color: string; icon: React.ReactNode;
+}) {
+  return (
+    <div className={`bg-white rounded-xl border border-gray-200 border-l-4 ${KPI_BORDER[color]} shadow-sm p-4 flex items-center gap-4`}>
+      <div className="p-2 rounded-lg bg-gray-50 flex-shrink-0">{icon}</div>
+      <div className="min-w-0">
+        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider truncate">{label}</p>
+        <p className={`text-2xl font-bold mt-0.5 ${KPI_TEXT[color]}`}>{value}</p>
+      </div>
+    </div>
+  );
+}
+
+// ── Section card wrapper ──────────────────────────────────────────────────────
+function SectionCard({ id, title, badge, children }: {
+  id: string; title: string; badge?: string; children: React.ReactNode;
+}) {
+  return (
+    <section aria-labelledby={id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+      <div className="flex items-center justify-between mb-5">
+        <h2 id={id} className="text-base font-semibold text-gray-900">{title}</h2>
+        {badge && (
+          <span className="text-xs text-gray-400 bg-gray-50 border border-gray-100 px-2 py-1 rounded-full">
+            {badge}
+          </span>
+        )}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 export default function FinancialReportsPage() {
+  // Accessibility IDs
+  const startDateId = useId();
+  const endDateId = useId();
+  const statusId = useId();
+  const minTotalId = useId();
+  const maxTotalId = useId();
+  const productQueryId = useId();
+  const includeOrdersId = useId();
+  const includeStatusBreakdownId = useId();
+  const includeStockId = useId();
+  const criticalOnlyId = useId();
+
+  const monthlyHeadingId = useId();
+  const productsHeadingId = useId();
+  const statusHeadingId = useId();
+  const stockHeadingId = useId();
+
+  // State
   const [data, setData] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,356 +203,495 @@ export default function FinancialReportsPage() {
     }
   };
 
-  const exportPdf = () => {
-    if (!data) return;
-    generateFinancialReportPdf(data).then((blob) => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'relatorio-financeiro.pdf';
-      a.click();
-      URL.revokeObjectURL(url);
-    });
-  };
-
-  const exportExcel = () => {
-    if (!data) return;
-    buildFinancialReportExcel(data).then((blob) => {
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'relatorio-financeiro.xlsx';
-      link.click();
-      URL.revokeObjectURL(url);
-    });
+  const exportFile = (format: 'xlsx' | 'pdf') => {
+    const params = new URLSearchParams(queryString);
+    params.set('format', format);
+    window.location.href = `/api/admin/financial/export?${params.toString()}`;
   };
 
   const hasOrders = includeOrders && data?.ordersCount !== null;
-  const conversion = hasOrders && data && data.ordersCount && data.ordersCount > 0 && data.pendingCount !== null && data.refundedCount !== null
-    ? (data.ordersCount - data.pendingCount - data.refundedCount) / data.ordersCount
-    : 0;
+  const conversion =
+    hasOrders && data && data.ordersCount && data.ordersCount > 0
+    && data.pendingCount !== null && data.refundedCount !== null
+      ? (data.ordersCount - data.pendingCount - data.refundedCount) / data.ordersCount
+      : 0;
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+
+      {/* ── Page header ─────────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Relatórios Financeiros</h1>
-          <p className="text-sm text-gray-600">Gere relatórios customizados por período e status.</p>
+          <div className="flex items-center gap-2 mb-1">
+            <Link
+              href="/admin/financial"
+              className="text-gray-400 hover:text-gray-600 transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              aria-label="Voltar ao resumo financeiro"
+            >
+              <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+            </Link>
+            <h1 className="text-3xl font-bold text-gray-900">Relatórios Financeiros</h1>
+          </div>
+          <p className="text-sm text-gray-500 ml-7">
+            Gere relatórios customizados por período, status e filtros avançados.
+          </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" asChild>
-            <Link href="/admin/financial">Voltar ao resumo</Link>
-          </Button>
-          <Button variant="outline" onClick={exportExcel}>Exportar Excel</Button>
-          <Button onClick={exportPdf}>Exportar PDF</Button>
-        </div>
+        {data && (
+          <div className="flex flex-wrap gap-2 ml-7 md:ml-0">
+            <Button variant="outline" onClick={() => exportFile('xlsx')} className="gap-2">
+              <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />
+              Excel
+            </Button>
+            <Button onClick={() => exportFile('pdf')} className="gap-2">
+              <FileDown className="h-4 w-4" aria-hidden="true" />
+              PDF
+            </Button>
+          </div>
+        )}
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white/90 shadow-sm px-4 py-3 md:px-6 md:py-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4 items-end">
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Início</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="h-10 rounded-lg border border-gray-300 px-3 text-sm shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Fim</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="h-10 rounded-lg border border-gray-300 px-3 text-sm shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Status</label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="h-10 rounded-lg border border-gray-300 px-3 text-sm shadow-sm bg-white font-sans focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-            >
-              <option value="ALL">Todos</option>
-              <option value="COMPLETED">Concluídos</option>
-              <option value="PENDING">Pendentes</option>
-              <option value="REFUNDED">Reembolsados/Cancelados</option>
-            </select>
+      {/* ── Filter panel ─────────────────────────────────────────────────── */}
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        {/* Panel header */}
+        <div className="flex items-center gap-2 px-5 py-3 border-b border-gray-100 bg-gray-50">
+          <Filter className="h-4 w-4 text-indigo-500" aria-hidden="true" />
+          <span className="text-sm font-semibold text-gray-700">Filtros do Relatório</span>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {/* Row 1: Period | Values | Product */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+            {/* Period */}
+            <fieldset>
+              <legend className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                <Calendar className="h-3.5 w-3.5 text-indigo-400" aria-hidden="true" />
+                Período e status
+              </legend>
+              <div className="space-y-2">
+                <div>
+                  <label htmlFor={startDateId} className="block text-sm font-medium text-gray-700 mb-1">
+                    Data inicial
+                  </label>
+                  <input
+                    id={startDateId}
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label htmlFor={endDateId} className="block text-sm font-medium text-gray-700 mb-1">
+                    Data final
+                  </label>
+                  <input
+                    id={endDateId}
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label htmlFor={statusId} className="block text-sm font-medium text-gray-700 mb-1">
+                    Status dos pedidos
+                  </label>
+                  <select
+                    id={statusId}
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value)}
+                    className={`${inputClass} font-sans`}
+                  >
+                    {STATUS_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </fieldset>
+
+            {/* Value range */}
+            <fieldset>
+              <legend className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                <DollarSign className="h-3.5 w-3.5 text-indigo-400" aria-hidden="true" />
+                Valor do pedido (R$)
+              </legend>
+              <div className="space-y-2">
+                <div>
+                  <label htmlFor={minTotalId} className="block text-sm font-medium text-gray-700 mb-1">
+                    Valor mínimo
+                  </label>
+                  <input
+                    id={minTotalId}
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={minTotal}
+                    onChange={(e) => setMinTotal(e.target.value)}
+                    className={inputClass}
+                    placeholder="0,00"
+                  />
+                </div>
+                <div>
+                  <label htmlFor={maxTotalId} className="block text-sm font-medium text-gray-700 mb-1">
+                    Valor máximo
+                  </label>
+                  <input
+                    id={maxTotalId}
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={maxTotal}
+                    onChange={(e) => setMaxTotal(e.target.value)}
+                    className={inputClass}
+                    placeholder="Sem limite"
+                  />
+                </div>
+              </div>
+            </fieldset>
+
+            {/* Product search */}
+            <fieldset>
+              <legend className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                <Search className="h-3.5 w-3.5 text-indigo-400" aria-hidden="true" />
+                Busca por produto
+              </legend>
+              <div>
+                <label htmlFor={productQueryId} className="block text-sm font-medium text-gray-700 mb-1">
+                  Nome do produto contém
+                </label>
+                <input
+                  id={productQueryId}
+                  type="search"
+                  value={productQuery}
+                  onChange={(e) => setProductQuery(e.target.value)}
+                  className={inputClass}
+                  placeholder="Ex: furadeira, makita…"
+                />
+              </div>
+            </fieldset>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Valor mín. (pedido)</label>
-            <input
-              type="number"
-              min={0}
-              value={minTotal}
-              onChange={(e) => setMinTotal(e.target.value)}
-              className="h-10 rounded-lg border border-gray-300 px-3 text-sm shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-              placeholder="0.00"
-            />
+          {/* Row 2: Content toggles */}
+          <div className="border-t border-gray-100 pt-4">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+              Incluir no relatório
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <ToggleCheck id={includeOrdersId} checked={includeOrders} onChange={setIncludeOrders} label="Pedidos e faturamento" />
+              <ToggleCheck id={includeStatusBreakdownId} checked={includeStatusBreakdown} onChange={setIncludeStatusBreakdown} label="Detalhar por status" />
+              <ToggleCheck id={includeStockId} checked={includeStock} onChange={setIncludeStock} label="Saúde do estoque" />
+              <ToggleCheck id={criticalOnlyId} checked={criticalOnly} onChange={setCriticalOnly} label="Apenas itens críticos" />
+            </div>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Valor máx. (pedido)</label>
-            <input
-              type="number"
-              min={0}
-              value={maxTotal}
-              onChange={(e) => setMaxTotal(e.target.value)}
-              className="h-10 rounded-lg border border-gray-300 px-3 text-sm shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-              placeholder="0.00"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1 md:col-span-2 lg:col-span-2">
-            <label className="text-sm font-medium text-gray-700">Filtrar top produtos (nome contém)</label>
-            <input
-              type="text"
-              value={productQuery}
-              onChange={(e) => setProductQuery(e.target.value)}
-              className="h-10 rounded-lg border border-gray-300 px-3 text-sm shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-              placeholder="Ex: furadeira"
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 md:col-span-2 lg:col-span-2">
-            <label className="flex items-center gap-2 text-sm text-gray-700 whitespace-nowrap">
-              <input
-                type="checkbox"
-                checked={includeOrders}
-                onChange={(e) => setIncludeOrders(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-              />
-              Incluir pedidos/faturamento
-            </label>
-            <label className="flex items-center gap-2 text-sm text-gray-700 whitespace-nowrap">
-              <input
-                type="checkbox"
-                checked={includeStatusBreakdown}
-                onChange={(e) => setIncludeStatusBreakdown(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-              />
-              Detalhar status dos pedidos
-            </label>
-            <label className="flex items-center gap-2 text-sm text-gray-700 whitespace-nowrap">
-              <input
-                type="checkbox"
-                checked={includeStock}
-                onChange={(e) => setIncludeStock(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-              />
-              Incluir saúde do estoque
-            </label>
-            <label className="flex items-center gap-2 text-sm text-gray-700 whitespace-nowrap">
-              <input
-                type="checkbox"
-                checked={criticalOnly}
-                onChange={(e) => setCriticalOnly(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-              />
-              Apenas itens críticos
-            </label>
-          </div>
-
-          <div className="flex md:justify-end md:col-span-1">
-            <Button onClick={fetchData} disabled={loading} className="h-10 px-4 w-full md:w-auto">
-              {loading ? 'Gerando...' : 'Aplicar filtros'}
+          {/* Row 3: Apply */}
+          <div className="border-t border-gray-100 pt-4 flex justify-end">
+            <Button onClick={fetchData} disabled={loading} className="gap-2 min-w-44">
+              {loading ? (
+                <>
+                  <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" aria-hidden="true" />
+                  Gerando…
+                </>
+              ) : (
+                <>
+                  <BarChart2 className="h-4 w-4" aria-hidden="true" />
+                  Gerar relatório
+                </>
+              )}
             </Button>
           </div>
         </div>
       </div>
 
+      {/* ── Active filter pills ──────────────────────────────────────────── */}
       {data && (
-        <div className="flex flex-wrap gap-2 text-xs text-gray-700">
-          {(() => {
-            const fmtDate = (s?: string) => {
-              if (!s) return '---';
-              const d = new Date(s);
-              return isNaN(d.getTime()) ? s : d.toLocaleDateString('pt-BR');
-            };
-            const map: Record<string, string> = { ALL: 'Todos', COMPLETED: 'Concluídos', PENDING: 'Pendentes', REFUNDED: 'Reembolsados/Cancelados' };
-            const statusLabel = (s?: string) => (s ? (map[s] ?? s) : 'Todos');
-            return (
-              <>
-                <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1">Período: {fmtDate(data.filters?.startDate)} a {fmtDate(data.filters?.endDate)}</span>
-                <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1">Status: {statusLabel(data.filters?.status)}</span>
-              </>
-            );
-          })()}
-          {data.filters?.minTotal !== undefined && data.filters?.minTotal !== null && data.filters?.minTotal !== '' && (
-            <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1">Mín: {Number(data.filters?.minTotal).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+        <div role="status" aria-label="Filtros aplicados" className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-gray-400">Filtros ativos:</span>
+          <span className="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs text-indigo-700">
+            <Calendar className="h-3 w-3" aria-hidden="true" />
+            {fmtDate(data.filters?.startDate)} → {fmtDate(data.filters?.endDate)}
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-600">
+            Status: {statusLabel(data.filters?.status)}
+          </span>
+          {data.filters?.minTotal && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-600">
+              Min: {currency(Number(data.filters.minTotal))}
+            </span>
           )}
-          {data.filters?.maxTotal !== undefined && data.filters?.maxTotal !== null && data.filters?.maxTotal !== '' && (
-            <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1">Máx: {Number(data.filters?.maxTotal).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+          {data.filters?.maxTotal && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-600">
+              Máx: {currency(Number(data.filters.maxTotal))}
+            </span>
           )}
           {data.filters?.productQuery && (
-            <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1">Produto contém: {data.filters?.productQuery}</span>
+            <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-600">
+              Produto: &ldquo;{data.filters.productQuery}&rdquo;
+            </span>
           )}
-          <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1">Pedidos: {includeOrders ? 'incluídos' : 'ocultos'}</span>
-          {includeStatusBreakdown && <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1">Detalhe de status</span>}
-          {includeStock && <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1">Saúde do estoque</span>}
-          {criticalOnly && <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1">Apenas críticos</span>}
+          {includeStock && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs text-emerald-700">
+              Estoque incluído
+            </span>
+          )}
+          {criticalOnly && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs text-red-700">
+              Apenas críticos
+            </span>
+          )}
         </div>
       )}
 
+      {/* ── Loading ──────────────────────────────────────────────────────── */}
       {loading && (
-        <div className="rounded-lg border border-indigo-100 bg-indigo-50 p-4 text-indigo-700 space-y-4">
-          <div className="font-semibold">Gerando relatório...</div>
+        <div
+          role="status"
+          aria-live="polite"
+          aria-label="Gerando relatório"
+          className="rounded-xl border border-indigo-100 bg-indigo-50 p-5 space-y-4"
+        >
+          <div className="flex items-center gap-2 text-indigo-700 font-semibold">
+            <span className="h-4 w-4 rounded-full border-2 border-indigo-200 border-t-indigo-600 animate-spin" aria-hidden="true" />
+            Gerando relatório…
+          </div>
           <FinancialLoadingSkeleton showFilters compact />
         </div>
       )}
 
+      {/* ── Empty initial state ──────────────────────────────────────────── */}
       {!loading && !data && !error && (
-        <div className="rounded-lg border border-dashed border-gray-300 bg-white p-6 text-gray-600">
-          <p className="font-semibold text-gray-800">Nenhum relatório gerado ainda.</p>
-          <p className="text-sm">Ajuste os filtros acima e clique em "Aplicar filtros" para montar o relatório.</p>
+        <div className="rounded-xl border-2 border-dashed border-gray-200 bg-white p-12 flex flex-col items-center text-center gap-4">
+          <div className="p-4 bg-indigo-50 rounded-2xl">
+            <BarChart2 className="h-10 w-10 text-indigo-400" aria-hidden="true" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-800 mb-1">Nenhum relatório gerado ainda</h2>
+            <p className="text-sm text-gray-500 max-w-sm">
+              Ajuste os filtros acima e clique em <strong>Gerar relatório</strong> para visualizar os dados financeiros.
+            </p>
+          </div>
+          <Button onClick={fetchData} className="gap-2">
+            <BarChart2 className="h-4 w-4" aria-hidden="true" />
+            Gerar com filtros atuais
+          </Button>
         </div>
       )}
 
-      {error && (
-        <div className="text-red-600">{error}</div>
+      {/* ── Error ───────────────────────────────────────────────────────── */}
+      {error && !loading && (
+        <div role="alert" className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
+          <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" aria-hidden="true" />
+          <div>
+            <p className="font-semibold">Erro ao gerar relatório</p>
+            <p className="text-sm mt-0.5">{error}</p>
+          </div>
+        </div>
       )}
 
-      {data && (
-        <>
+      {/* ── Results ─────────────────────────────────────────────────────── */}
+      {data && !loading && (
+        <div className="space-y-6">
+
+          {/* Nothing selected warning */}
           {!hasOrders && !includeStock && (
-            <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-4">
-              Selecione pelo menos uma seção: marque "Incluir pedidos/faturamento" e/ou "Incluir saúde do estoque" e aplique os filtros novamente.
+            <div role="alert" className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800">
+              <AlertCircle className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
+              <p>
+                Selecione pelo menos uma seção:{' '}
+                <strong>Pedidos e faturamento</strong> e/ou <strong>Saúde do estoque</strong>.
+              </p>
             </div>
           )}
 
+          {/* KPI cards */}
           {hasOrders && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-white rounded-lg shadow p-4">
-                <h3 className="text-sm text-gray-500">Receita</h3>
-                <p className="text-2xl font-bold text-green-600">{currency(data.totalRevenue || 0)}</p>
-              </div>
-              <div className="bg-white rounded-lg shadow p-4">
-                <h3 className="text-sm text-gray-500">Ticket médio</h3>
-                <p className="text-2xl font-bold text-blue-600">{currency(data.avgTicket || 0)}</p>
-              </div>
-              <div className="bg-white rounded-lg shadow p-4">
-                <h3 className="text-sm text-gray-500">Pedidos pendentes</h3>
-                <p className="text-2xl font-bold text-yellow-600">{data.pendingCount ?? 0}</p>
-              </div>
-              <div className="bg-white rounded-lg shadow p-4">
-                <h3 className="text-sm text-gray-500">Conversão</h3>
-                <p className="text-2xl font-bold text-indigo-600">{percent(conversion || 0)}</p>
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+              <KpiCard
+                label="Receita total"
+                value={currency(data.totalRevenue || 0)}
+                color="green"
+                icon={<TrendingUp className="h-5 w-5 text-green-600" aria-hidden="true" />}
+              />
+              <KpiCard
+                label="Ticket médio"
+                value={currency(data.avgTicket || 0)}
+                color="blue"
+                icon={<DollarSign className="h-5 w-5 text-blue-600" aria-hidden="true" />}
+              />
+              <KpiCard
+                label="Pedidos pendentes"
+                value={String(data.pendingCount ?? 0)}
+                color="amber"
+                icon={<Package className="h-5 w-5 text-amber-600" aria-hidden="true" />}
+              />
+              <KpiCard
+                label="Taxa de conversão"
+                value={`${((conversion || 0) * 100).toFixed(1)}%`}
+                color="indigo"
+                icon={<BarChart2 className="h-5 w-5 text-indigo-600" aria-hidden="true" />}
+              />
             </div>
           )}
 
+          {/* Monthly + Top Products */}
           {hasOrders && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold">Faturamento mensal</h2>
-                  <span className="text-xs text-gray-500">Período filtrado</span>
-                </div>
-                <div className="space-y-3">
-                  {data.monthlyRevenue.length === 0 ? (
-                    <p className="text-gray-500 text-sm">Sem dados no período.</p>
-                  ) : (
-                    data.monthlyRevenue.map((m) => (
-                      <div key={m.month} className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">{m.month}</p>
-                          <p className="text-xs text-gray-500">{m.orders} pedidos</p>
+              <SectionCard id={monthlyHeadingId} title="Faturamento mensal" badge="Período filtrado">
+                {data.monthlyRevenue.length === 0 ? (
+                  <p className="text-sm text-gray-400 py-4 text-center">Sem dados no período.</p>
+                ) : (() => {
+                  const max = Math.max(0, ...data.monthlyRevenue.map((r) => r.total));
+                  return (
+                    <div className="space-y-4">
+                      {data.monthlyRevenue.map((m) => (
+                        <div key={m.month}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-medium text-gray-700">{m.month}</span>
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs text-gray-400">{m.orders} pedidos</span>
+                              <span className="text-sm font-semibold text-gray-900">{currency(m.total)}</span>
+                            </div>
+                          </div>
+                          <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+                            <div
+                              className="h-2 rounded-full bg-indigo-500 transition-all duration-700"
+                              style={{ width: `${max ? (m.total / max) * 100 : 0}%` }}
+                              role="presentation"
+                            />
+                          </div>
                         </div>
-                        <p className="font-semibold">{currency(m.total)}</p>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </SectionCard>
 
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold">Top produtos por receita</h2>
-                  <span className="text-xs text-gray-500">Período filtrado</span>
-                </div>
-                <div className="space-y-3">
-                  {data.topProducts.length === 0 ? (
-                    <p className="text-gray-500 text-sm">Sem vendas no período.</p>
-                  ) : (
-                    data.topProducts.map((p) => (
-                      <div key={p.productId} className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">{p.name}</p>
-                          <p className="text-xs text-gray-500">{p.qty} unidades</p>
+              <SectionCard id={productsHeadingId} title="Top produtos por receita" badge="Período filtrado">
+                {data.topProducts.length === 0 ? (
+                  <p className="text-sm text-gray-400 py-4 text-center">Sem vendas no período.</p>
+                ) : (
+                  <div className="space-y-1">
+                    {data.topProducts.map((p, i) => (
+                      <div key={p.productId} className="flex items-center justify-between gap-3 py-2.5 border-b border-gray-50 last:border-0">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 text-xs font-bold flex items-center justify-center">
+                            {i + 1}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{p.name}</p>
+                            <p className="text-xs text-gray-400">{p.qty} unidades</p>
+                          </div>
                         </div>
-                        <p className="font-semibold">{currency(p.revenue)}</p>
+                        <p className="text-sm font-semibold text-gray-900 flex-shrink-0">{currency(p.revenue)}</p>
                       </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {includeStatusBreakdown && hasOrders && data.statusBreakdown && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">Status dos pedidos</h2>
-                <span className="text-xs text-gray-500">Período filtrado</span>
-              </div>
-              <div className="space-y-2">
-                {Object.entries(data.statusBreakdown).map(([s, v]) => (
-                  <div key={s} className="flex items-center justify-between">
-                    <span className="font-medium">{statusLabel(s)}</span>
-                    <span className="text-sm text-gray-700">{v}</span>
+                    ))}
                   </div>
-                ))}
-              </div>
+                )}
+              </SectionCard>
             </div>
           )}
 
-          {includeStock && data.stockSummary && (
-            <div className="bg-white rounded-lg shadow p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Saúde do estoque</h2>
-                <span className="text-xs text-gray-500">Instantâneo</span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Itens cadastrados</p>
-                  <p className="text-xl font-bold">{data.stockSummary.totalItems}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Baixo estoque / Zerados</p>
-                  <p className="text-xl font-bold">{data.stockSummary.lowStockCount} / {data.stockSummary.zeroStockCount}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Valor potencial</p>
-                  <p className="text-xl font-bold">{currency(data.stockSummary.totalStockValue)}</p>
-                </div>
-              </div>
-              <div className="border-t pt-4">
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">Itens críticos (top 20)</h3>
-                {data.lowStockItems && data.lowStockItems.length ? (
-                  <div className="space-y-2">
-                    {data.lowStockItems.map((p) => (
-                      <div key={p.id} className="flex items-center justify-between text-sm">
-                        <div>
-                          <p className="font-medium">{p.name}</p>
-                          <p className="text-gray-500">SKU: {p.sku || '—'}</p>
+          {/* Status breakdown */}
+          {includeStatusBreakdown && hasOrders && data.statusBreakdown && Object.keys(data.statusBreakdown).length > 0 && (
+            <SectionCard id={statusHeadingId} title="Status dos pedidos" badge="Período filtrado">
+              {(() => {
+                const entries = Object.entries(data.statusBreakdown!);
+                const total = entries.reduce((s, [, v]) => s + v, 0);
+                const max = Math.max(1, ...entries.map(([, v]) => v));
+                return (
+                  <div className="space-y-3">
+                    {entries.map(([s, v]) => (
+                      <div key={s}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm text-gray-700">{statusLabel(s)}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-gray-900">{v}</span>
+                            <span className="text-xs text-gray-400 w-9 text-right">
+                              {total > 0 ? `${((v / total) * 100).toFixed(0)}%` : '—'}
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-semibold">{p.stock} un</p>
-                          <p className="text-gray-500">Min: {p.minStock}</p>
+                        <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+                          <div
+                            className={`h-2 rounded-full transition-all duration-700 ${STATUS_COLOR[s] || 'bg-gray-400'}`}
+                            style={{ width: `${(v / max) * 100}%` }}
+                            role="presentation"
+                          />
                         </div>
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <p className="text-gray-500 text-sm">Nenhum item crítico.</p>
-                )}
-              </div>
-            </div>
+                );
+              })()}
+            </SectionCard>
           )}
-        </>
+
+          {/* Stock health */}
+          {includeStock && data.stockSummary && (
+            <section aria-labelledby={stockHeadingId} className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 space-y-5">
+              <div className="flex items-center justify-between">
+                <h2 id={stockHeadingId} className="text-base font-semibold text-gray-900">Saúde do estoque</h2>
+                <span className="text-xs text-gray-400 bg-gray-50 border border-gray-100 px-2 py-1 rounded-full">Instantâneo atual</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="rounded-lg bg-gray-50 border border-gray-200 p-4">
+                  <p className="text-xs text-gray-500 mb-1">Itens cadastrados</p>
+                  <p className="text-2xl font-bold text-gray-900">{data.stockSummary.totalItems}</p>
+                </div>
+                <div className="rounded-lg bg-amber-50 border border-amber-200 p-4">
+                  <p className="text-xs text-amber-600 mb-1">Baixo estoque / Zerados</p>
+                  <p className="text-2xl font-bold text-amber-700">
+                    {data.stockSummary.lowStockCount}
+                    <span className="text-lg text-amber-300 mx-1">/</span>
+                    {data.stockSummary.zeroStockCount}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-green-50 border border-green-200 p-4">
+                  <p className="text-xs text-green-600 mb-1">Valor potencial</p>
+                  <p className="text-2xl font-bold text-green-700">{currency(data.stockSummary.totalStockValue)}</p>
+                </div>
+              </div>
+
+              {data.lowStockItems && data.lowStockItems.length > 0 && (
+                <div className="border-t border-gray-100 pt-4">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    Itens críticos
+                    <span className="inline-flex items-center justify-center rounded-full bg-red-100 text-red-600 text-xs font-bold w-5 h-5">
+                      {data.lowStockItems.length}
+                    </span>
+                  </h3>
+                  <div className="overflow-x-auto rounded-lg border border-gray-200">
+                    <table className="min-w-full text-sm">
+                      <thead>
+                        <tr className="bg-gray-50 border-b border-gray-200">
+                          <th scope="col" className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Produto</th>
+                          <th scope="col" className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">SKU</th>
+                          <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Estoque</th>
+                          <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Mínimo</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 bg-white">
+                        {data.lowStockItems.map((p) => (
+                          <tr key={p.id} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-4 py-2.5 font-medium text-gray-900">{p.name}</td>
+                            <td className="px-4 py-2.5 text-gray-500">{p.sku || '—'}</td>
+                            <td className={`px-4 py-2.5 text-right font-semibold tabular-nums ${p.stock === 0 ? 'text-red-600' : 'text-amber-600'}`}>
+                              {p.stock}
+                            </td>
+                            <td className="px-4 py-2.5 text-right text-gray-500 tabular-nums">{p.minStock}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+        </div>
       )}
     </div>
   );

@@ -4,6 +4,7 @@ import { getMercadoPagoKeys } from '@/lib/mercadopago-config';
 import { prisma } from '@/lib/prisma';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
 import { paymentLimiter } from '@/lib/rate-limit';
+import { toNum } from '@/lib/decimal-helpers';
 
 export async function POST(req: NextRequest) {
   try {
@@ -31,12 +32,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Nunca confiar no amount do client
-    if (Math.abs(Number(amount) - order.total) > 0.01) {
-      logger.warn({ clientAmount: amount, serverAmount: order.total, orderId }, 'Tentativa de manipulação de preço detectada (boleto)');
+    if (Math.abs(Number(amount) - toNum(order.total)) > 0.01) {
+      logger.warn({ clientAmount: amount, serverAmount: toNum(order.total), orderId }, 'Tentativa de manipulação de preço detectada (boleto)');
       return NextResponse.json({ error: 'Valor do pagamento não confere com o pedido' }, { status: 400 });
     }
 
-    const serverAmount = order.total;
+    const serverAmount = toNum(order.total);
 
     // Extrair endereço do JSON
     const address = order.shippingAddress as any;

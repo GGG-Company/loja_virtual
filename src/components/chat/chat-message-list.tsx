@@ -13,7 +13,7 @@ interface ChatMessageListProps {
   onProductClick: (product: any) => void;
   onConfirmHumanRequest: () => void;
   onCancelHumanRequest: () => void;
-  messagesEndRef: React.RefObject<HTMLDivElement>;
+  messagesEndRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export const ChatMessageList = forwardRef<HTMLDivElement, ChatMessageListProps>(

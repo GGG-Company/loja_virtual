@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { sendOrderStatusUpdate } from '@/lib/webhooks';
+import { toNum, serializeItems } from '@/lib/decimal-helpers';
 
 export async function GET(
   request: NextRequest,
@@ -83,15 +84,29 @@ export async function GET(
           orderId: cancelled.id,
           orderNumber: cancelled.orderNumber,
           status: 'CANCELLED',
-          total: cancelled.total,
+          total: toNum(cancelled.total),
           user: cancelled.user,
-          items: cancelled.items,
+          items: serializeItems(cancelled.items),
         });
 
-        return NextResponse.json(cancelled);
+        return NextResponse.json({
+          ...cancelled,
+          total: toNum(cancelled.total),
+          subtotal: toNum(cancelled.subtotal),
+          shipping: toNum(cancelled.shipping),
+          discount: toNum(cancelled.discount),
+          items: serializeItems(cancelled.items),
+        });
       }
 
-    return NextResponse.json(order);
+    return NextResponse.json({
+      ...order,
+      total: toNum(order.total),
+      subtotal: toNum(order.subtotal),
+      shipping: toNum(order.shipping),
+      discount: toNum(order.discount),
+      items: serializeItems(order.items),
+    });
   } catch (error) {
     logger.error(error as Error, '[USER_ORDER_GET]');
     return NextResponse.json({ error: 'Erro ao buscar pedido' }, { status: 500 });
@@ -159,12 +174,19 @@ export async function PATCH(
       orderId: cancelled.id,
       orderNumber: cancelled.orderNumber,
       status: 'CANCELLED',
-      total: cancelled.total,
+      total: toNum(cancelled.total),
       user: cancelled.user,
-      items: cancelled.items,
+      items: serializeItems(cancelled.items),
     });
 
-    return NextResponse.json(cancelled);
+    return NextResponse.json({
+      ...cancelled,
+      total: toNum(cancelled.total),
+      subtotal: toNum(cancelled.subtotal),
+      shipping: toNum(cancelled.shipping),
+      discount: toNum(cancelled.discount),
+      items: serializeItems(cancelled.items),
+    });
   } catch (error) {
     logger.error(error as Error, '[USER_ORDER_CANCEL]');
     return NextResponse.json({ error: 'Erro ao cancelar pedido' }, { status: 500 });

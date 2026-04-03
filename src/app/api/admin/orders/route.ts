@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import logger from "@/lib/logger";
+import { toNum } from '@/lib/decimal-helpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,16 +18,6 @@ export async function GET(req: NextRequest) {
     if (userRole !== 'ADMIN' && userRole !== 'OWNER') {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
-
-    // Cancelar automaticamente pedidos pendentes com mais de 30 segundos
-    const thirtySecondsAgo = new Date(Date.now() - 30 * 1000);
-    await prisma.order.updateMany({
-      where: {
-        status: 'PENDING',
-        createdAt: { lt: thirtySecondsAgo },
-      },
-      data: { status: 'CANCELLED' },
-    });
 
     const { searchParams } = new URL(req.url);
     const page = Math.max(1, Math.min(parseInt(searchParams.get('page') || '1'), 1000));
@@ -71,7 +62,7 @@ export async function GET(req: NextRequest) {
     ]);
 
     return NextResponse.json({
-      orders,
+      orders: orders.map(o => ({ ...o, total: toNum(o.total) })),
       pagination: {
         page,
         limit,

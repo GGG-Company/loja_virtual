@@ -28,8 +28,8 @@ interface AtendimentoChatPanelProps {
   message: string;
   isSending: boolean;
   copiedProtocol: boolean;
-  messagesContainerRef: React.RefObject<HTMLDivElement>;
-  inputRef: React.RefObject<HTMLInputElement>;
+  messagesContainerRef: React.RefObject<HTMLDivElement | null>;
+  inputRef: React.RefObject<HTMLInputElement | null>;
   getStatusBadge: (chat: SelectedSupportChat) => ReactNode;
   onMessageChange: (value: string) => void;
   onSend: () => void;

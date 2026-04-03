@@ -5,6 +5,7 @@ import { sendOrderStatusUpdate } from '@/lib/webhooks';
 import logger from '@/lib/logger';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
 import { paymentLimiter } from '@/lib/rate-limit';
+import { toNum, serializeItems } from '@/lib/decimal-helpers';
 
 export async function POST(req: NextRequest) {
   try {
@@ -34,12 +35,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
     }
 
-    if (Math.abs(Number(amount) - order.total) > 0.01) {
-      logger.warn({ clientAmount: amount, serverAmount: order.total, orderId }, 'Tentativa de manipulação de preço detectada');
+    if (Math.abs(Number(amount) - toNum(order.total)) > 0.01) {
+      logger.warn({ clientAmount: amount, serverAmount: toNum(order.total), orderId }, 'Tentativa de manipulação de preço detectada');
       return NextResponse.json({ error: 'Valor do pagamento não confere com o pedido' }, { status: 400 });
     }
 
-    const serverAmount = order.total;
+    const serverAmount = toNum(order.total);
 
     // Buscar credenciais
     const { accessToken } = getMercadoPagoKeys();
@@ -120,11 +121,11 @@ export async function POST(req: NextRequest) {
         orderId: updated.id,
         orderNumber: updated.orderNumber,
         status: updated.status as any,
-        total: updated.total,
+        total: toNum(updated.total),
         user: updated.user,
         paymentMethod: updated.paymentMethod,
         paidAt: updated.paidAt,
-        items: updated.items,
+        items: serializeItems(updated.items),
       });
     }
 

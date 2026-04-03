@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { sendOrderStatusUpdate } from '@/lib/webhooks';
+import { serializeItems } from '@/lib/decimal-helpers';
 
 const customerSchema = z.object({
   name: z.string().min(3),
@@ -112,7 +113,7 @@ export async function POST(req: Request) {
       total,
       user: { id: session.user.id, name: customer.name, email: customer.email, phone: customer.phone ?? null },
       shippingAddress: order.shippingAddress,
-      items: order.items,
+      items: serializeItems(order.items),
       extra: { validityDays },
     });
 

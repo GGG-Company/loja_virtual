@@ -277,7 +277,7 @@ export default function AdminDevolucoesPage() {
                       <td className="px-4 py-4">
                         <div className="text-sm">{reasonLabels[ret.reason] || ret.reason}</div>
                       </td>
-                      <td className="px-4 py-4">{ret.refundAmount ? <div className="font-medium text-green-600">R$ {ret.refundAmount.toFixed(2)}</div> : <span className="text-gray-400">-</span>}</td>
+                      <td className="px-4 py-4">{ret.refundAmount ? <div className="font-medium text-green-600">R$ {Number(ret.refundAmount).toFixed(2)}</div> : <span className="text-gray-400">-</span>}</td>
                       <td className="px-4 py-4">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 w-fit ${statusInfo.color}`}>
                           <StatusIcon className="h-3 w-3" />

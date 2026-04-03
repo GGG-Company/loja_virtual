@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import logger from "@/lib/logger";
 import { getAccessToken, commonHeaders } from '@/lib/melhorenvio-oauth';
+import { withCircuitBreaker } from '@/lib/circuit-breaker';
 
 export type ShippingDimension = {
   height: number;
@@ -372,7 +373,12 @@ export async function getShippingOptions(params: { items: ShippingItem[]; destin
     notes: 'Sem custo, confirmar disponibilidade no balcão',
   };
 
-  const melhorEnvio = await quoteWithMelhorEnvio({ items: normalized, destinationZip: normalizeZip(params.destinationZip), originZip });
+  const melhorEnvio = await withCircuitBreaker(
+    'melhor-envio',
+    () => quoteWithMelhorEnvio({ items: normalized, destinationZip: normalizeZip(params.destinationZip), originZip }),
+    null,
+    { failThreshold: 5, cooldownSec: 60 },
+  );
   
   if (melhorEnvio && melhorEnvio.length) {
     logger.info({ count: melhorEnvio.length }, '[shipping] Opções do Melhor Envio recebidas');

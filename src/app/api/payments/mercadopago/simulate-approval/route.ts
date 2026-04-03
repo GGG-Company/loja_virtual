@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { OrderStatus } from '@prisma/client';
 import { sendOrderStatusUpdate } from '@/lib/webhooks';
+import { toNum, serializeItems } from '@/lib/decimal-helpers';
 
 export async function POST(req: NextRequest) {
   try {
@@ -58,10 +59,10 @@ export async function POST(req: NextRequest) {
       orderId: updated.id,
       orderNumber: updated.orderNumber,
       status: 'CONFIRMED',
-      total: updated.total,
+      total: toNum(updated.total),
       user: updated.user,
       paidAt: updated.paidAt,
-      items: updated.items,
+      items: serializeItems(updated.items),
     });
 
     return NextResponse.json({

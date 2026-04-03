@@ -26,7 +26,12 @@ export default function AdminProductsPage() {
     fetch('/api/admin/products')
       .then((res) => res.json())
       .then((data) => {
-        const items = Array.isArray(data?.products) ? data.products : (Array.isArray(data) ? data : []);
+        const raw = Array.isArray(data?.products) ? data.products : (Array.isArray(data) ? data : []);
+        const items = raw.map((p: any) => ({
+          ...p,
+          price: parseFloat(String(p.price ?? 0)),
+          promotionalPrice: p.promotionalPrice != null ? parseFloat(String(p.promotionalPrice)) : null,
+        }));
         setProducts(items);
         setLoading(false);
       })
@@ -108,10 +113,10 @@ export default function AdminProductsPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div className="flex flex-col">
-                      <span>R$ {product.price.toFixed(2)}</span>
+                      <span>R$ {Number(product.price).toFixed(2)}</span>
                       {product.promotionalPrice && (
                         <span className="text-xs text-green-600 font-medium">
-                          Promo: R$ {product.promotionalPrice.toFixed(2)}
+                          Promo: R$ {Number(product.promotionalPrice).toFixed(2)}
                         </span>
                       )}
                     </div>

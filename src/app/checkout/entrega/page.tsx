@@ -132,8 +132,8 @@ export default function CheckoutEntregaPage() {
       toast.error('Selecione uma opção de frete para continuar');
       return;
     }
-    localStorage.setItem('checkoutEntrega', JSON.stringify(formData));
-    localStorage.setItem('checkoutFrete', JSON.stringify(selectedShipping));
+    sessionStorage.setItem('checkoutEntrega', JSON.stringify(formData));
+    sessionStorage.setItem('checkoutFrete', JSON.stringify(selectedShipping));
     toast.success('Endereço e frete salvos!');
     router.push('/checkout/pagamento');
   };

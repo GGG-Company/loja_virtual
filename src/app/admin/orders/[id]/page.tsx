@@ -72,7 +72,18 @@ export default function OrderDetailPage() {
     fetch(`/api/admin/orders/${orderId}`)
       .then((res) => res.json())
       .then((data) => {
-        setOrder(data);
+        setOrder({
+          ...data,
+          total: parseFloat(String(data.total ?? 0)) || 0,
+          subtotal: parseFloat(String(data.subtotal ?? 0)) || 0,
+          shipping: parseFloat(String(data.shipping ?? 0)) || 0,
+          discount: parseFloat(String(data.discount ?? 0)) || 0,
+          items: (data.items ?? []).map((i: any) => ({
+            ...i,
+            price: parseFloat(String(i.price ?? 0)) || 0,
+            subtotal: parseFloat(String(i.subtotal ?? 0)) || 0,
+          })),
+        });
         // Verificar info da etiqueta
         checkLabelStatus();
       })
@@ -148,8 +159,8 @@ export default function OrderDetailPage() {
                     <p className="text-sm text-gray-500">Qtd: {item.quantity}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-gray-500">Preço: R$ {item.price.toFixed(2)}</p>
-                    <p className="font-semibold">Subtotal: R$ {item.subtotal.toFixed(2)}</p>
+                    <p className="text-sm text-gray-500">Preço: R$ {Number(item.price).toFixed(2)}</p>
+                    <p className="font-semibold">Subtotal: R$ {Number(item.subtotal).toFixed(2)}</p>
                   </div>
                 </div>
               ))}
@@ -261,7 +272,7 @@ export default function OrderDetailPage() {
             </div>
             <div className="border-t pt-2 flex justify-between text-base font-bold">
               <span>Total</span>
-              <span>R$ {order.total.toFixed(2)}</span>
+              <span>R$ {Number(order.total).toFixed(2)}</span>
             </div>
           </div>
         </div>

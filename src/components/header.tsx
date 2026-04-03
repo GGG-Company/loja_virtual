@@ -11,12 +11,45 @@ import { useSession, signOut } from 'next-auth/react';
 import { io, Socket } from 'socket.io-client';
 import { useCart } from '@/contexts/cart-context';
 
+// ── Search result cache — module-level so it persists across renders ────────
+type CachedResult = { products: SearchProduct[]; ts: number };
+const SEARCH_CACHE = new Map<string, CachedResult>();
+const CACHE_TTL_MS = 60_000; // 60 s
+
+function getCached(key: string): SearchProduct[] | null {
+  const entry = SEARCH_CACHE.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > CACHE_TTL_MS) {
+    SEARCH_CACHE.delete(key);
+    return null;
+  }
+  return entry.products;
+}
+
+function setCache(key: string, products: SearchProduct[]) {
+  // Evict oldest entry if cache exceeds 50 unique queries
+  if (SEARCH_CACHE.size >= 50) {
+    const oldest = [...SEARCH_CACHE.entries()].sort((a, b) => a[1].ts - b[1].ts)[0];
+    if (oldest) SEARCH_CACHE.delete(oldest[0]);
+  }
+  SEARCH_CACHE.set(key, { products, ts: Date.now() });
+}
+
+type SearchProduct = {
+  id: string;
+  name: string;
+  price: number;
+  promotionalPrice?: number | null;
+  imageUrl?: string | null;
+  images?: Array<{ url: string }>;
+};
+
 export function Header() {
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [cartCount, setCartCount] = useState(0);
+  const { count: cartCount } = useCart();
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Array<{ id: string; name: string; price: number; promotionalPrice?: number | null; imageUrl?: string | null; images?: Array<{ url: string }> }>>([]);
+  const [searchResults, setSearchResults] = useState<SearchProduct[]>([]);
   const [showResults, setShowResults] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -25,7 +58,6 @@ export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const { data: session } = useSession();
   const searchInputRef = useRef<HTMLInputElement>(null);
-  // const { count: cartCount } = useCart();
   type UserRole = "CUSTOMER" | "ADMIN" | "OWNER";
   const role = (session?.user as { role?: UserRole } | undefined)?.role;
 
@@ -43,23 +75,11 @@ export function Header() {
     };
   }, []);
 
-  const updateCartCount = () => {
-    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-    const total = cart.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
-    setCartCount(total);
-  };
-
   const handleSearch = () => {
     const q = searchQuery.trim();
     if (!q) return;
     router.push(`/produtos?busca=${encodeURIComponent(q)}`);
   };
-
-  useEffect(() => {
-    updateCartCount();
-    window.addEventListener("cartUpdated", updateCartCount);
-    return () => window.removeEventListener("cartUpdated", updateCartCount);
-  }, []);
 
   // Keyboard shortcut "/" to focus search
   useEffect(() => {
@@ -90,30 +110,44 @@ export function Header() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Busca via Socket.io com debounce
+  // Busca via Socket.io com debounce + cache local
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
 
-    if (value.trim().length < 2) {
+    const trimmed = value.trim();
+    if (trimmed.length < 2) {
       setSearchResults([]);
       setShowResults(false);
+      return;
+    }
+
+    // Servir do cache imediatamente se disponível (sem delay)
+    const cached = getCached(trimmed.toLowerCase());
+    if (cached) {
+      setSearchResults(cached);
+      setShowResults(cached.length > 0);
       return;
     }
 
     searchTimerRef.current = setTimeout(() => {
       const socket = socketRef.current;
       if (!socket?.connected) {
-        // Fallback para fetch se socket não estiver conectado
-        fetchSearchFallback(value.trim());
+        fetchSearchFallback(trimmed);
         return;
       }
 
       setIsSearching(true);
-      socket.emit('product_search', { query: value.trim() }, (response: { products: Array<{ id: string; name: string; price: number; promotionalPrice?: number | null; imageUrl?: string | null }> }) => {
+      socket.emit('product_search', { query: trimmed }, (response: { products: SearchProduct[] }) => {
         const results = (response?.products || []).slice(0, 6);
+        if (results.length === 0) {
+          // Socket não encontrou nada — tenta REST que tem fuzzy/trigram
+          fetchSearchFallback(trimmed);
+          return;
+        }
+        setCache(trimmed.toLowerCase(), results);
         setSearchResults(results);
-        setShowResults(results.length > 0);
+        setShowResults(true);
         setIsSearching(false);
       });
     }, 300);
@@ -125,7 +159,8 @@ export function Header() {
     try {
       const res = await fetch(`/api/products?search=${encodeURIComponent(query)}`);
       const data = await res.json();
-      const results = (data.products || []).slice(0, 6);
+      const results: SearchProduct[] = (data.products || []).slice(0, 6);
+      setCache(query.toLowerCase(), results);
       setSearchResults(results);
       setShowResults(results.length > 0);
     } catch {

@@ -118,7 +118,20 @@ export default function AdminDevolucaoDetalhePage() {
       const data = await response.json();
 
       if (response.ok) {
-        setReturnData(data.return);
+        const r = data.return;
+        setReturnData({
+          ...r,
+          refundAmount: r.refundAmount != null ? parseFloat(String(r.refundAmount)) : null,
+          shippingRefund: r.shippingRefund != null ? parseFloat(String(r.shippingRefund)) : null,
+          order: r.order ? {
+            ...r.order,
+            total: parseFloat(String(r.order.total ?? 0)) || 0,
+            items: (r.order.items ?? []).map((i: any) => ({
+              ...i,
+              price: parseFloat(String(i.price ?? 0)) || 0,
+            })),
+          } : r.order,
+        });
         setAdminNotes(data.return.adminNotes || "");
         setRefundAmount(data.return.refundAmount?.toString() || "");
       } else {
@@ -226,7 +239,7 @@ export default function AdminDevolucaoDetalhePage() {
                     <div className="flex-1">
                       <p className="font-medium">{product?.name || "Produto"}</p>
                       <p className="text-sm text-gray-600">
-                        Quantidade: {item.quantity} | Valor unitário: R$ {orderItem?.price.toFixed(2) || "0.00"}
+                        Quantidade: {item.quantity} | Valor unitário: R$ {orderItem ? Number(orderItem.price).toFixed(2) : "0.00"}
                       </p>
                       {item.reason && <p className="text-sm text-orange-600 mt-1">Motivo específico: {item.reason}</p>}
                     </div>
@@ -440,7 +453,7 @@ export default function AdminDevolucaoDetalhePage() {
                 </Link>
               </p>
               <p>
-                <span className="text-gray-600">Total:</span> <span className="font-medium">R$ {returnData.order.total.toFixed(2)}</span>
+                <span className="text-gray-600">Total:</span> <span className="font-medium">R$ {Number(returnData.order.total).toFixed(2)}</span>
               </p>
               <p>
                 <span className="text-gray-600">Valor devolução:</span> <span className="font-medium text-green-600">R$ {returnData.refundAmount?.toFixed(2) || "0.00"}</span>

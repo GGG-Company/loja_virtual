@@ -179,7 +179,7 @@ export default function MeusPedidosPage() {
                           <div>
                             <p className="text-sm text-gray-600">Total</p>
                             <p className="font-bold text-xl text-primary-600">
-                              R$ {order.total.toFixed(2)}
+                              R$ {Number(order.total).toFixed(2)}
                             </p>
                           </div>
                         </div>
@@ -189,7 +189,7 @@ export default function MeusPedidosPage() {
                           <div className="space-y-1">
                             {order.items.slice(0, 3).map((item, idx) => (
                               <p key={idx} className="text-sm">
-                                {item.quantity}x {item.productName} - R$ {(item.price * item.quantity).toFixed(2)}
+                                {item.quantity}x {item.productName} - R$ {(Number(item.price) * item.quantity).toFixed(2)}
                               </p>
                             ))}
                             {order.items.length > 3 && (
@@ -210,7 +210,7 @@ export default function MeusPedidosPage() {
                         </Link>
                         {(order.status === 'PENDING' && order.paymentMethod !== 'quote') && (
                           <Link 
-                            href={`/checkout/pagamento?orderId=${order.id}&method=${order.paymentMethod}&total=${order.total.toFixed(2)}&number=${order.orderNumber}`}
+                            href={`/checkout/pagamento?orderId=${order.id}&method=${order.paymentMethod}&total=${Number(order.total).toFixed(2)}&number=${order.orderNumber}`}
                             className="flex-1 min-w-[150px]"
                           >
                             <Button className="w-full">

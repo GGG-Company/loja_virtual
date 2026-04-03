@@ -6,6 +6,7 @@ import { getShippingOptions } from "@/lib/shipping-calculator";
 import { sendOrderStatusUpdate } from "@/lib/webhooks";
 import { notifyOrderStatusChange } from "@/lib/notifications";
 import { orderLimiter } from '@/lib/rate-limit';
+import { toNum, serializeItems } from '@/lib/decimal-helpers';
 
 function formatOrderNumber(seq: number) {
   const year = new Date().getFullYear();
@@ -14,11 +15,12 @@ function formatOrderNumber(seq: number) {
 
 export async function POST(req: NextRequest) {
   try {
-    // Rate limiting para evitar spam de pedidos
-    const blocked = await orderLimiter.check(req);
+    // Rate limiting por IP e por usuário autenticado
+    const sessionForLimit = await auth();
+    const blocked = await orderLimiter.check(req, sessionForLimit?.user?.id);
     if (blocked) return blocked;
 
-    const session = await auth();
+    const session = sessionForLimit;
     logger.info({
       userId: session?.user?.id,
       userEmail: session?.user?.email,
@@ -148,8 +150,16 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      // Verificar estoque e preços dentro da transação para evitar race conditions
       const productIds = items.map((item) => item.id);
+
+      // Pessimistic lock: bloqueia as linhas dos produtos para evitar
+      // race condition de estoque com pedidos simultâneos
+      await tx.$executeRaw`
+        SELECT id FROM "products"
+        WHERE id = ANY(${productIds}::text[])
+        FOR UPDATE
+      `;
+
       const products = await tx.product.findMany({
         where: { id: { in: productIds } },
         select: { id: true, name: true, price: true, promotionalPrice: true, stock: true },
@@ -184,8 +194,11 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      const count = await tx.order.count();
-      const orderNumber = formatOrderNumber(count + 1);
+      // Número de pedido via SEQUENCE — atômico, sem race condition
+      const [seqRow] = await tx.$queryRaw<[{ nextval: bigint }]>`
+        SELECT nextval('order_number_seq')
+      `;
+      const orderNumber = formatOrderNumber(Number(seqRow.nextval));
 
       const order = await tx.order.create({
         data: {
@@ -232,11 +245,11 @@ export async function POST(req: NextRequest) {
       orderId: result.id,
       orderNumber: result.orderNumber,
       status: "PENDING",
-      total: result.total,
+      total: toNum(result.total),
       user: result.user,
       paymentMethod: result.paymentMethod,
       shippingAddress: result.shippingAddress,
-      items: result.items,
+      items: serializeItems(result.items),
     });
 
     // Criar notificação para o usuário

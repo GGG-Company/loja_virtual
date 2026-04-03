@@ -227,7 +227,7 @@ export default function PagamentoPage() {
             <div className="bg-gray-50 p-4 rounded-lg">
               <div className="flex justify-between items-center">
                 <span className="text-lg font-semibold text-metallic-900">Total a Pagar:</span>
-                <span className="text-2xl font-bold text-primary-600">R$ {order.total.toFixed(2)}</span>
+                <span className="text-2xl font-bold text-primary-600">R$ {Number(order.total).toFixed(2)}</span>
               </div>
             </div>
 

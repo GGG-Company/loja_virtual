@@ -235,7 +235,7 @@ export default function MinhaContaDevolucoesPage() {
                           <p>Solicitado em: {new Date(ret.createdAt).toLocaleDateString('pt-BR')}</p>
                           {ret.refundAmount && (
                             <p>Valor do reembolso: <span className="font-semibold text-green-600">
-                              R$ {ret.refundAmount.toFixed(2)}
+                              R$ {Number(ret.refundAmount).toFixed(2)}
                             </span></p>
                           )}
                         </div>

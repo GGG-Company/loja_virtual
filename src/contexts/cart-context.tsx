@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 
 const CART_KEY = 'cart';
 
@@ -48,16 +48,19 @@ function writeToStorage(items: CartItem[]) {
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [hydrated, setHydrated] = useState(false);
 
   // Hydrate from localStorage once on mount
   useEffect(() => {
     setItems(readFromStorage());
+    setHydrated(true);
   }, []);
 
-  // Persist to localStorage whenever items change (after initial hydration)
+  // Persist to localStorage only after initial hydration to avoid overwriting with empty array
   useEffect(() => {
+    if (!hydrated) return;
     writeToStorage(items);
-  }, [items]);
+  }, [items, hydrated]);
 
   const addItem = useCallback((incoming: Omit<CartItem, 'quantity'> & { quantity?: number }) => {
     const qty = incoming.quantity ?? 1;
@@ -88,11 +91,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems([]);
   }, []);
 
-  const count = items.reduce((sum, i) => sum + i.quantity, 0);
-  const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const count = useMemo(() => items.reduce((sum, i) => sum + i.quantity, 0), [items]);
+  const total = useMemo(() => items.reduce((sum, i) => sum + i.price * i.quantity, 0), [items]);
+
+  const value = useMemo(
+    () => ({ items, count, total, addItem, removeItem, updateQuantity, clearCart }),
+    [items, count, total, addItem, removeItem, updateQuantity, clearCart]
+  );
 
   return (
-    <CartContext.Provider value={{ items, count, total, addItem, removeItem, updateQuantity, clearCart }}>
+    <CartContext.Provider value={value}>
       {children}
     </CartContext.Provider>
   );

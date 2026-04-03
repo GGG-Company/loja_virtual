@@ -2,6 +2,7 @@ import logger from '@/lib/logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { toNum } from '@/lib/decimal-helpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,10 +52,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ valid: false, reason: 'Cupom atingiu o limite de uso' });
     }
 
-    if (coupon.minPurchase !== null && cartTotal < coupon.minPurchase) {
+    if (coupon.minPurchase !== null && cartTotal < toNum(coupon.minPurchase)) {
       return NextResponse.json({
         valid: false,
-        reason: `Valor mínimo de compra para este cupom é R$ ${coupon.minPurchase.toFixed(2).replace('.', ',')}`,
+        reason: `Valor mínimo de compra para este cupom é R$ ${toNum(coupon.minPurchase).toFixed(2).replace('.', ',')}`,
       });
     }
 
@@ -79,15 +80,15 @@ export async function POST(req: NextRequest) {
     let discount = 0;
 
     if (coupon.discountType === 'PERCENTAGE') {
-      discount = (cartTotal * coupon.value) / 100;
+      discount = (cartTotal * toNum(coupon.value)) / 100;
     } else {
       // FIXED
-      discount = coupon.value;
+      discount = toNum(coupon.value);
     }
 
     // Aplicar teto de desconto se definido
-    if (coupon.maxDiscount !== null && discount > coupon.maxDiscount) {
-      discount = coupon.maxDiscount;
+    if (coupon.maxDiscount !== null && discount > toNum(coupon.maxDiscount)) {
+      discount = toNum(coupon.maxDiscount);
     }
 
     // O desconto não pode ser maior que o total do carrinho
@@ -100,7 +101,7 @@ export async function POST(req: NextRequest) {
       couponId: coupon.id,
       code: coupon.code,
       discountType: coupon.discountType,
-      discountValue: coupon.value,
+      discountValue: toNum(coupon.value),
       discount: parseFloat(discount.toFixed(2)),
       description: coupon.description ?? null,
     });

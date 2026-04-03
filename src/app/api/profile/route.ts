@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { logActivity } from '@/lib/activity-log';
 
 const profileSelect = {
   id: true,
@@ -32,9 +33,11 @@ export async function GET() {
     return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
   }
 
-  const { password, ...safeUser } = user;
+  const { password, cpf, ...safeUser } = user;
   return NextResponse.json({
     ...safeUser,
+    // CPF mascarado na resposta — apenas os 2 últimos dígitos visíveis (LGPD Art. 46)
+    cpf: cpf ? `***.***.***-${cpf.replace(/\D/g, '').slice(-2)}` : null,
     hasPassword: !!password,
   });
 }
@@ -74,6 +77,14 @@ export async function PUT(request: Request) {
     where: { id: session.user.id },
     data,
     select: profileSelect,
+  });
+
+  await logActivity({
+    userId: session.user.id,
+    action: 'ACCOUNT_UPDATED',
+    entity: 'User',
+    entityId: session.user.id,
+    changes: { updatedFields: Object.keys(data) },
   });
 
   return NextResponse.json(updated);

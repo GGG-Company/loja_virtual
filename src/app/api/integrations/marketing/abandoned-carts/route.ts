@@ -1,6 +1,7 @@
 import logger from "@/lib/logger";
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { toNum } from '@/lib/decimal-helpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
     // Calcular valor total de cada carrinho
     const enrichedCarts = abandonedCarts.map((cart) => {
       const total = cart.items.reduce(
-        (sum, item) => sum + item.product.price * item.quantity,
+        (sum, item) => sum + toNum(item.product.price) * item.quantity,
         0
       );
 
@@ -75,7 +76,7 @@ export async function GET(request: NextRequest) {
         items: cart.items.map((item) => ({
           productName: item.product.name,
           quantity: item.quantity,
-          price: item.product.price,
+          price: toNum(item.product.price),
           image: item.product.images[0]?.url,
         })),
         total,

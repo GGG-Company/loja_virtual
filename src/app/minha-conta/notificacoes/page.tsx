@@ -45,7 +45,20 @@ export default function NotificacoesPage() {
       if (!response.ok) throw new Error('Erro ao buscar notificações');
       
       const data = await response.json();
-      setNotifications(data.notifications || []);
+      setNotifications((data.notifications || []).map((n: any) => ({
+        ...n,
+        data: n.data
+          ? {
+              ...n.data,
+              refundAmount: n.data.refundAmount != null
+                ? parseFloat(String(n.data.refundAmount))
+                : undefined,
+              amount: n.data.amount != null
+                ? parseFloat(String(n.data.amount))
+                : undefined,
+            }
+          : n.data,
+      })));
       setTotal(data.pagination?.total || 0);
       setTotalPages(Math.ceil((data.pagination?.total || 0) / limit));
     } catch (error) {

@@ -40,7 +40,19 @@ export async function GET(
       return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
     }
 
-    return NextResponse.json(order);
+    return NextResponse.json({
+      ...order,
+      total: Number(order.total),
+      subtotal: Number(order.subtotal),
+      shipping: Number(order.shipping),
+      discount: Number(order.discount),
+      items: order.items.map(i => ({
+        ...i,
+        price: Number(i.price),
+        subtotal: Number(i.subtotal),
+        product: i.product ? { ...i.product, price: Number(i.product.price) } : i.product,
+      })),
+    });
   } catch (error) {
     logger.error(error as Error, '[ADMIN_ORDER_DETAIL]');
     return NextResponse.json({ error: 'Erro ao buscar pedido' }, { status: 500 });

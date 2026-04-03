@@ -38,7 +38,15 @@ export default function AdminDashboard() {
   const fetchStats = useCallback(async () => {
     try {
       const response = await apiClient.get<DashboardStats>('/api/admin/stats');
-      setStats(response.data);
+      const raw = response.data;
+      setStats({
+        ...raw,
+        totalRevenue: parseFloat(String(raw.totalRevenue ?? 0)),
+        recentOrders: (raw.recentOrders ?? []).map(o => ({
+          ...o,
+          total: parseFloat(String(o.total ?? 0)),
+        })),
+      });
     } catch (error) {
       console.error('Erro ao carregar estatísticas:', error);
     } finally {
@@ -173,12 +181,12 @@ export default function AdminDashboard() {
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-primary-600">
-                      R$ {order.total.toFixed(2)}
+                      R$ {Number(order.total).toFixed(2)}
                     </p>
                     <span className={`text-xs px-2 py-1 rounded-full ${statusBadgeClass(order.status)}`}>
                       {statusToPt(order.status)}
                     </span>
-                  </div>
+                  </div> 
                 </div>
               ))
             ) : (

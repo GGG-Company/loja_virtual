@@ -10,12 +10,13 @@ export function getRedisPublisher() {
   if (!url) return null;
   
   publisher = new Redis(url, {
-    maxRetriesPerRequest: null, // ioredis default for pub/sub
+    maxRetriesPerRequest: 3,
+    commandTimeout: 5000, // 5 s — evita hang em comandos individuais
     enableReadyCheck: true,
     retryStrategy(times) {
-      const delay = Math.min(times * 50, 2000);
-      return delay;
-    }
+      if (times > 10) return null; // desiste após 10 tentativas
+      return Math.min(times * 100, 3000);
+    },
   });
 
   // log the first connection/error once to avoid flooding logs in local dev

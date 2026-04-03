@@ -1,8 +1,10 @@
 'use client';
 
+import { useEffect, useId } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useFocusTrap } from '@/hooks/use-focus-trap';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -25,10 +27,26 @@ export function ConfirmDialog({
   onCancel,
   variant = 'danger',
 }: ConfirmDialogProps) {
+  const titleId = useId();
+  const descId = useId();
+  const trapRef = useFocusTrap(open);
+
+  // Fechar com Escape
+  useEffect(() => {
+    if (!open) return;
+    const handle = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
+    document.addEventListener('keydown', handle);
+    return () => document.removeEventListener('keydown', handle);
+  }, [open, onCancel]);
+
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          // Bloqueia leitores de tela fora do modal
+          aria-hidden={!open}
+        >
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -36,10 +54,16 @@ export function ConfirmDialog({
             exit={{ opacity: 0 }}
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={onCancel}
+            aria-hidden="true"
           />
 
           {/* Dialog */}
           <motion.div
+            ref={trapRef}
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            aria-describedby={descId}
             initial={{ opacity: 0, scale: 0.92, y: 16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.92, y: 16 }}
@@ -51,6 +75,7 @@ export function ConfirmDialog({
                 className={`flex-shrink-0 w-10 h-10 rounded-sm flex items-center justify-center ${
                   variant === 'danger' ? 'bg-red-50' : 'bg-amber-50'
                 }`}
+                aria-hidden="true"
               >
                 <AlertTriangle
                   className={`h-5 w-5 ${
@@ -59,10 +84,16 @@ export function ConfirmDialog({
                 />
               </div>
               <div>
-                <h3 className="font-display text-base font-bold text-[#1A1A1A] uppercase">
+                <h3
+                  id={titleId}
+                  className="font-display text-base font-bold text-[#1A1A1A] uppercase"
+                >
                   {title}
                 </h3>
-                <p className="text-sm text-gray-600 mt-1 leading-relaxed">
+                <p
+                  id={descId}
+                  className="text-sm text-gray-600 mt-1 leading-relaxed"
+                >
                   {description}
                 </p>
               </div>
