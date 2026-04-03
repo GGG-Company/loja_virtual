@@ -2,8 +2,6 @@
 
 import logger from "@/lib/logger";
 import { useEffect, useState } from 'react';
-import { Bot, Sparkles } from "lucide-react";
-
 type MelhorEnvioStatus = {
   connected: boolean;
   environment?: "sandbox" | "production";
@@ -17,23 +15,15 @@ type MercadoPagoStatus = {
   updatedAt?: string | null;
 };
 
-type SiteConfig = {
-  assistantMode: "smart" | "ai";
-};
-
 export default function AdminSettingsPage() {
   const [meStatus, setMeStatus] = useState<MelhorEnvioStatus | null>(null);
   const [mpStatus, setMpStatus] = useState<MercadoPagoStatus | null>(null);
-  const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
   const [loading, setLoading] = useState(false);
   const [mpConfigLoading, setMpConfigLoading] = useState(false);
-  const [configLoading, setConfigLoading] = useState(false);
   const [showMpForm, setShowMpForm] = useState(false);
   const [mpForm, setMpForm] = useState({ publicKey: "", accessToken: "" });
   const [webhookSending, setWebhookSending] = useState(false);
   const [webhookFeedback, setWebhookFeedback] = useState<string | null>(null);
-  const [socketStatus, setSocketStatus] = useState<"checking" | "connected" | "disconnected" | "error">("checking");
-  const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "";
 
   // Carregar status das integrações
   useEffect(() => {
@@ -57,56 +47,14 @@ export default function AdminSettingsPage() {
           setMpStatus({ connected: false });
         }
 
-        // Site Config
-        const configRes = await fetch("/api/admin/site-config", { cache: "no-store" });
-        if (configRes.ok) {
-          setSiteConfig(await configRes.json());
-        } else {
-          setSiteConfig({ assistantMode: "smart" });
-        }
       } catch {
         setMeStatus({ connected: false });
         setMpStatus({ connected: false });
-        setSiteConfig({ assistantMode: "smart" });
       } finally {
         setLoading(false);
       }
     };
     run();
-    // quick socket status check
-    (async () => {
-      if (!socketUrl) {
-        setSocketStatus("disconnected");
-        return;
-      }
-      setSocketStatus("checking");
-      try {
-        const mod = await import("socket.io-client");
-        const { io } = mod;
-        const sock = io(socketUrl, { transports: ["websocket"], reconnection: false, timeout: 3000 });
-        const onConnect = () => {
-          setSocketStatus("connected");
-          sock.close();
-        };
-        const onError = () => {
-          setSocketStatus("error");
-          sock.close();
-        };
-        sock.once("connect", onConnect);
-        sock.once("connect_error", onError);
-        // safety timeout
-        setTimeout(() => {
-          if (socketStatus === "checking") {
-            setSocketStatus("disconnected");
-            try {
-              sock.close();
-            } catch {}
-          }
-        }, 3500);
-      } catch (e) {
-        setSocketStatus("error");
-      }
-    })();
   }, []);
 
   // Salvar configuração do Mercado Pago
@@ -161,82 +109,11 @@ export default function AdminSettingsPage() {
     }
   };
 
-  const handleUpdateAssistantMode = async (mode: "smart" | "ai") => {
-    try {
-      setConfigLoading(true);
-      const res = await fetch("/api/admin/site-config", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assistantMode: mode }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setSiteConfig(data);
-        alert("Modo do assistente atualizado com sucesso!");
-      } else {
-        alert("Erro ao atualizar configuração");
-      }
-    } catch (error) {
-      alert("Erro ao atualizar configuração");
-      console.error(error);
-    } finally {
-      setConfigLoading(false);
-    }
-  };
-
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6">Configurações</h1>
 
       <div className="space-y-6">
-        {/* Configuração do Assistente Virtual */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Assistente Virtual</h2>
-          <p className="text-sm text-gray-600 mb-4">Escolha qual modo do assistente virtual será usado pelos clientes no chat.</p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <button onClick={() => handleUpdateAssistantMode("smart")} disabled={configLoading || siteConfig?.assistantMode === "smart"} className={`p-4 border-2 rounded-lg text-left transition-all ${siteConfig?.assistantMode === "smart" ? "border-blue-600 bg-blue-50" : "border-gray-200 hover:border-blue-300"} disabled:opacity-50`}>
-              <div className="flex items-start gap-3">
-                <Bot className="h-6 w-6 text-blue-600 mt-1" />
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg mb-1">Smart Assistant</h3>
-                  <p className="text-sm text-gray-600 mb-2">Respostas rápidas e estruturadas baseadas em regras</p>
-                  <div className="flex flex-wrap gap-2 text-xs">
-                    <span className="px-2 py-1 bg-green-100 text-green-800 rounded">Grátis</span>
-                    <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded">Rápido</span>
-                    <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded">Offline</span>
-                  </div>
-                </div>
-                {siteConfig?.assistantMode === "smart" && <div className="text-blue-600 font-semibold">✓ Ativo</div>}
-              </div>
-            </button>
-
-            <button onClick={() => handleUpdateAssistantMode("ai")} disabled={configLoading || siteConfig?.assistantMode === "ai"} className={`p-4 border-2 rounded-lg text-left transition-all ${siteConfig?.assistantMode === "ai" ? "border-purple-600 bg-purple-50" : "border-gray-200 hover:border-purple-300"} disabled:opacity-50`}>
-              <div className="flex items-start gap-3">
-                <Sparkles className="h-6 w-6 text-purple-600 mt-1" />
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg mb-1">AI Assistant</h3>
-                  <p className="text-sm text-gray-600 mb-2">Respostas naturais e contextuais powered by OpenAI</p>
-                  <div className="flex flex-wrap gap-2 text-xs">
-                    <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded">Pago</span>
-                    <span className="px-2 py-1 bg-green-100 text-green-800 rounded">Natural</span>
-                    <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded">Requer API</span>
-                  </div>
-                </div>
-                {siteConfig?.assistantMode === "ai" && <div className="text-purple-600 font-semibold">✓ Ativo</div>}
-              </div>
-            </button>
-          </div>
-
-          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm">
-            <p className="font-medium text-yellow-900">ℹ️ Importante:</p>
-            <p className="text-yellow-800 mt-1">
-              Para usar o <strong>AI Assistant</strong>, configure a variável <code className="bg-yellow-100 px-1 rounded">OPENAI_API_KEY</code> no arquivo .env
-            </p>
-          </div>
-        </div>
-
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold mb-4">Informações da Loja</h2>
           <div className="space-y-4">
@@ -356,57 +233,6 @@ export default function AdminSettingsPage() {
           <p className="text-xs text-gray-500 mt-3">O payload contém um pedido fictício; personalize pelo corpo da requisição, se necessário.</p>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Realtime / Socket</h2>
-          <p className="text-sm text-gray-600 mb-3">
-            Verifica se o serviço Socket.IO público está disponível em <strong>{socketUrl || "—"}</strong>
-          </p>
-          <div className="flex items-center gap-4">
-            <div>
-              <p className="text-sm text-gray-600">Status</p>
-              <p className="text-base font-medium">
-                {socketStatus === "checking" && "Verificando…"}
-                {socketStatus === "connected" && "Conectado"}
-                {socketStatus === "disconnected" && "Desconectado"}
-                {socketStatus === "error" && "Erro ao conectar"}
-              </p>
-            </div>
-            <button
-              onClick={async () => {
-                setSocketStatus("checking");
-                try {
-                  const mod = await import("socket.io-client");
-                  const { io } = mod;
-                  const sock = io(socketUrl, { transports: ["websocket"], reconnection: false, timeout: 3000 });
-                  sock.once("connect", () => {
-                    setSocketStatus("connected");
-                    sock.close();
-                  });
-                  sock.once("connect_error", () => {
-                    setSocketStatus("error");
-                    try {
-                      sock.close();
-                    } catch {}
-                  });
-                  setTimeout(() => {
-                    if (socketStatus === "checking") setSocketStatus("disconnected");
-                    try {
-                      sock.close();
-                    } catch {}
-                  }, 3500);
-                } catch (e) {
-                  setSocketStatus("error");
-                }
-              }}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              Verificar Agora
-            </button>
-          </div>
-          <p className="text-xs text-gray-500 mt-3">
-            Observação: esta checagem tenta abrir uma conexão WebSocket curta com o servidor Socket.IO público configurado em <code className="bg-gray-100 px-1 rounded">NEXT_PUBLIC_SOCKET_URL</code>.
-          </p>
-        </div>
       </div>
     </div>
   );

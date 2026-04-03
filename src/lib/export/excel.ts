@@ -40,7 +40,7 @@ function headerStyle(cell: ExcelJS.Cell) {
 
 function thinBorder(): ExcelJS.Borders {
   const s = { style: 'thin' as const, color: { argb: COLOR.border } };
-  return { top: s, left: s, bottom: s, right: s };
+  return { top: s, left: s, bottom: s, right: s, diagonal: {} } as ExcelJS.Borders;
 }
 
 function totalStyle(cell: ExcelJS.Cell, isCurrency = false) {
@@ -68,6 +68,7 @@ function dataStyle(cell: ExcelJS.Cell, isCurrency = false, rowIndex = 0) {
 /** Calcula a largura ideal de cada coluna com base no conteúdo inserido. */
 function autoWidth(sheet: ExcelJS.Worksheet, minWidth = 10, maxWidth = 60) {
   sheet.columns.forEach(col => {
+    if (!col?.eachCell) return;
     let max = minWidth;
     col.eachCell({ includeEmpty: false }, cell => {
       const len = cell.value != null ? String(cell.value).length : 0;

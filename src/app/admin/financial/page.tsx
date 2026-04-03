@@ -59,10 +59,10 @@ function DeltaBadge({ delta }: { delta: number | null }) {
     <span
       className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-semibold ${
         zero
-          ? 'bg-gray-100 text-gray-500'
+          ? 'bg-metallic-100 text-metallic-500'
           : up
           ? 'bg-green-100 text-green-700'
-          : 'bg-red-100 text-red-700'
+          : 'bg-primary-100 text-primary-700'
       }`}
       aria-label={`${up ? 'Aumento' : 'Queda'} de ${Math.abs(delta).toFixed(2)}%`}
     >
@@ -121,15 +121,15 @@ function ChartTooltip({ active, payload, label, isCurrency }: any) {
 // ── Status color map ──────────────────────────────────────────────────────────
 const STATUS_COLOR: Record<string, string> = {
   DELIVERED: 'bg-green-500', COMPLETED: 'bg-green-500',
-  SHIPPED: 'bg-blue-500', CONFIRMED: 'bg-cyan-500',
+  SHIPPED: 'bg-metallic-500', CONFIRMED: 'bg-metallic-700',
   PROCESSING: 'bg-amber-400', PENDING: 'bg-orange-400',
-  REFUNDED: 'bg-purple-400', CANCELLED: 'bg-red-400',
+  REFUNDED: 'bg-primary-300', CANCELLED: 'bg-primary-500',
 };
 const STATUS_TEXT: Record<string, string> = {
   DELIVERED: 'text-green-700', COMPLETED: 'text-green-700',
-  SHIPPED: 'text-blue-700', CONFIRMED: 'text-cyan-700',
+  SHIPPED: 'text-metallic-600', CONFIRMED: 'text-metallic-700',
   PROCESSING: 'text-amber-700', PENDING: 'text-orange-700',
-  REFUNDED: 'text-purple-700', CANCELLED: 'text-red-700',
+  REFUNDED: 'text-primary-400', CANCELLED: 'text-primary-600',
 };
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -337,7 +337,7 @@ export default function AdminFinancialPage() {
                     yAxisId="left"
                     dataKey="total"
                     name="Receita"
-                    fill="#22C55E"
+                    fill="#CC1020"
                     radius={[4, 4, 0, 0]}
                     maxBarSize={40}
                   />
@@ -345,7 +345,7 @@ export default function AdminFinancialPage() {
                     yAxisId="right"
                     dataKey="avgTicket"
                     name="Ticket Médio"
-                    fill="#3B82F6"
+                    fill="#334155"
                     radius={[4, 4, 0, 0]}
                     maxBarSize={40}
                   />
@@ -392,7 +392,7 @@ export default function AdminFinancialPage() {
                   <Bar
                     dataKey="orders"
                     name="Pedidos"
-                    fill="#22C55E"
+                    fill="#CC1020"
                     radius={[4, 4, 0, 0]}
                     maxBarSize={40}
                   />
@@ -431,7 +431,7 @@ export default function AdminFinancialPage() {
                       <tr key={p.productId} className="hover:bg-gray-50 transition-colors">
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
-                            <span className="flex-shrink-0 w-6 h-6 rounded-full bg-green-100 text-green-700 text-xs font-bold flex items-center justify-center">
+                            <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-100 text-primary-700 text-xs font-bold flex items-center justify-center">
                               {i + 1}
                             </span>
                             <span className="font-medium text-gray-900">{p.name}</span>
@@ -443,7 +443,7 @@ export default function AdminFinancialPage() {
                           <div className="flex items-center justify-end gap-2">
                             <div className="w-20 h-1.5 rounded-full bg-gray-100 overflow-hidden">
                               <div
-                                className="h-1.5 rounded-full bg-green-500"
+                                className="h-1.5 rounded-full bg-primary-500"
                                 style={{ width: `${Math.min(100, share)}%` }}
                                 role="presentation"
                               />

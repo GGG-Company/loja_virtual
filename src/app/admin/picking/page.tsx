@@ -305,7 +305,7 @@ export default function AdminPickingPage() {
               id={sortId}
               value={sortOrder}
               onChange={(e) => { setSortOrder(e.target.value as 'desc' | 'asc'); setPage(1); }}
-              className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
               aria-label="Ordenar pedidos"
             >
               <option value="desc">Mais recentes primeiro</option>
@@ -346,7 +346,7 @@ export default function AdminPickingPage() {
             className="absolute inset-0 bg-white/70 backdrop-blur-sm flex items-center justify-center z-10 rounded-xl"
           >
             <div className="flex items-center gap-2 text-gray-600">
-              <span className="h-6 w-6 rounded-full border-2 border-gray-200 border-t-indigo-600 animate-spin" aria-hidden="true" />
+              <span className="h-6 w-6 rounded-full border-2 border-gray-200 border-t-primary-600 animate-spin" aria-hidden="true" />
               <span className="text-sm font-medium">Carregando…</span>
             </div>
           </div>
@@ -411,7 +411,7 @@ export default function AdminPickingPage() {
                     {/* Contact + Address */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="flex items-start gap-2.5 p-3 rounded-lg bg-gray-50 border border-gray-100 text-sm">
-                        <Phone className="h-4 w-4 text-indigo-500 mt-0.5 flex-shrink-0" aria-hidden="true" />
+                        <Phone className="h-4 w-4 text-primary-500 mt-0.5 flex-shrink-0" aria-hidden="true" />
                         <div>
                           <p className="font-semibold text-gray-800 mb-0.5">Contato</p>
                           <p className="text-gray-600">{order.user?.phone || 'Sem telefone'}</p>
@@ -422,7 +422,7 @@ export default function AdminPickingPage() {
                         </div>
                       </div>
                       <div className="flex items-start gap-2.5 p-3 rounded-lg bg-gray-50 border border-gray-100 text-sm">
-                        <MapPinned className="h-4 w-4 text-indigo-500 mt-0.5 flex-shrink-0" aria-hidden="true" />
+                        <MapPinned className="h-4 w-4 text-primary-500 mt-0.5 flex-shrink-0" aria-hidden="true" />
                         <div>
                           <p className="font-semibold text-gray-800 mb-0.5">Endereço de entrega</p>
                           <p className="text-gray-600">{formatAddress(order.shippingAddress)}</p>
@@ -459,12 +459,12 @@ export default function AdminPickingPage() {
                                     SKU: {item.product.sku}
                                   </span>
                                 )}
-                                <span className="ml-auto text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">
+                                <span className="ml-auto text-xs font-bold bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">
                                   Qtd: {item.quantity}
                                 </span>
                               </div>
                               <div className="flex items-center gap-1.5 mt-1.5 text-xs text-gray-600">
-                                <MapPin className="h-3.5 w-3.5 text-indigo-400 flex-shrink-0" aria-hidden="true" />
+                                <MapPin className="h-3.5 w-3.5 text-primary-400 flex-shrink-0" aria-hidden="true" />
                                 <span>{item.product.stockLocation || 'Sem localização cadastrada'}</span>
                               </div>
                             </div>
@@ -478,7 +478,7 @@ export default function AdminPickingPage() {
                       <div className="border-t border-gray-100 pt-4">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                           <div className="flex items-center gap-2 text-sm">
-                            <FileText className="h-4 w-4 text-indigo-500" aria-hidden="true" />
+                            <FileText className="h-4 w-4 text-primary-500" aria-hidden="true" />
                             <span className="font-medium text-gray-800">Etiqueta de envio</span>
                             {order.trackingCode && (
                               <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
@@ -589,7 +589,7 @@ export default function AdminPickingPage() {
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
               aria-label="Página anterior"
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
             >
               <ChevronLeft className="h-4 w-4" aria-hidden="true" />
               Anterior
@@ -598,7 +598,7 @@ export default function AdminPickingPage() {
               onClick={() => setPage((p) => (p < totalPages ? p + 1 : p))}
               disabled={page >= totalPages}
               aria-label="Próxima página"
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
             >
               Próxima
               <ChevronRight className="h-4 w-4" aria-hidden="true" />

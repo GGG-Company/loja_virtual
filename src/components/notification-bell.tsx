@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useSession } from "next-auth/react";
-import { io, Socket } from "socket.io-client";
 import { Bell, X, Check, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
@@ -24,8 +22,6 @@ export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const socketRef = useRef<Socket | null>(null);
-  const { data: session } = useSession();
 
   // Buscar notificações
   const fetchNotifications = async () => {
@@ -41,26 +37,6 @@ export function NotificationBell() {
       // Contar não lidas
       const unread = (data.notifications || []).filter((n: Notification) => !n.isRead).length;
       setUnreadCount(unread);
-      // after fetching, ensure websocket connection exists to receive realtime
-      try {
-        const userId = (session && (session as any).user && (session as any).user.id) || null;
-        if (userId && typeof window !== "undefined" && !socketRef.current) {
-          const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || window.location.protocol + "//" + window.location.hostname + ":4000";
-          const socket = io(SOCKET_URL, { transports: ["websocket"], autoConnect: true });
-          socketRef.current = socket;
-          socket.on("connect", () => {
-            try {
-              socket.emit("join", userId);
-            } catch (e) {}
-          });
-          socket.on("notification", (payload: Notification) => {
-            setNotifications((prev) => [payload, ...prev].slice(0, 20));
-            setUnreadCount((c) => c + 1);
-          });
-        }
-      } catch (e) {
-        // ignore websocket setup errors
-      }
     } catch (error) {
       logger.error(error, '[NOTIFICATIONS_FETCH]');
     } finally {
@@ -69,20 +45,7 @@ export function NotificationBell() {
   };
 
   useEffect(() => {
-    // Fetch initial notifications and then rely on websocket for realtime updates
     fetchNotifications();
-  }, []);
-
-  // Cleanup socket on unmount
-  useEffect(() => {
-    return () => {
-      try {
-        if (socketRef.current) {
-          socketRef.current.disconnect();
-          socketRef.current = null;
-        }
-      } catch (e) {}
-    };
   }, []);
 
   // Fechar dropdown ao clicar fora

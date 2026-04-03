@@ -8,7 +8,6 @@ import { Button } from './ui/button';
 import { NotificationBell } from './notification-bell';
 import { useState, useEffect, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
-import { io, Socket } from 'socket.io-client';
 import { useCart } from '@/contexts/cart-context';
 
 // ── Search result cache — module-level so it persists across renders ────────
@@ -54,26 +53,11 @@ export function Header() {
   const [isSearching, setIsSearching] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const socketRef = useRef<Socket | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const { data: session } = useSession();
   const searchInputRef = useRef<HTMLInputElement>(null);
   type UserRole = "CUSTOMER" | "ADMIN" | "OWNER";
   const role = (session?.user as { role?: UserRole } | undefined)?.role;
-
-  // Conectar ao Socket.io para buscas
-  useEffect(() => {
-    const url = process.env.NEXT_PUBLIC_SOCKET_URL;
-    if (!url) return;
-
-    const socket = io(url, { transports: ['websocket'], reconnectionAttempts: 3 });
-    socketRef.current = socket;
-
-    return () => {
-      socket.disconnect();
-      socketRef.current = null;
-    };
-  }, []);
 
   const handleSearch = () => {
     const q = searchQuery.trim();
@@ -131,29 +115,10 @@ export function Header() {
     }
 
     searchTimerRef.current = setTimeout(() => {
-      const socket = socketRef.current;
-      if (!socket?.connected) {
-        fetchSearchFallback(trimmed);
-        return;
-      }
-
-      setIsSearching(true);
-      socket.emit('product_search', { query: trimmed }, (response: { products: SearchProduct[] }) => {
-        const results = (response?.products || []).slice(0, 6);
-        if (results.length === 0) {
-          // Socket não encontrou nada — tenta REST que tem fuzzy/trigram
-          fetchSearchFallback(trimmed);
-          return;
-        }
-        setCache(trimmed.toLowerCase(), results);
-        setSearchResults(results);
-        setShowResults(true);
-        setIsSearching(false);
-      });
+      fetchSearchFallback(trimmed);
     }, 300);
   };
 
-  // Fallback caso socket não esteja disponível
   const fetchSearchFallback = async (query: string) => {
     setIsSearching(true);
     try {

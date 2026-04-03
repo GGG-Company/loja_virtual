@@ -37,48 +37,15 @@ export default function AtendimentoPage() {
     loadChats();
   }, [session, status, router, filterStatus]);
 
-  // ─── Real-time: poll + socket for selected chat ───────────────────────────
+  // ─── Polling para atualizar chat selecionado ─────────────────────────────
   useEffect(() => {
     if (!selectedChat?.id) return;
-    let mounted = true;
-    let socket: any = null;
-
-    const connectSocket = async () => {
-      try {
-        const response = await fetch("/api/support/chats");
-        if (response.ok) {
-          const data = await response.json();
-          const all = (Array.isArray(data) ? data : data.chats || []) as SupportChat[];
-          if (mounted) setChats(all);
-        }
-
-        if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_SOCKET_URL) {
-          try {
-            const io = (await import("socket.io-client")).default;
-            socket = io(process.env.NEXT_PUBLIC_SOCKET_URL as string);
-            if (selectedChat?.id) socket.emit("join", `support:chat:${selectedChat.id}`);
-            socket.on("support:message", (msg: any) => {
-              if (msg?.chatId === selectedChat?.id) {
-                loadChatMessages(selectedChat.id);
-                loadChats();
-              } else {
-                loadChats();
-              }
-            });
-          } catch (e) {
-            console.warn("Socket connect failed", e);
-          }
-        }
-      } catch (e) {
-        console.error("Erro no connectSocket", e);
-      }
-    };
-
-    connectSocket();
-    return () => {
-      mounted = false;
-      try { socket?.disconnect?.(); } catch { /* ignore */ }
-    };
+    const id = selectedChat.id;
+    const timer = setInterval(() => {
+      loadChatMessages(id);
+      loadChats();
+    }, 5000);
+    return () => clearInterval(timer);
   }, [selectedChat?.id]);
 
   // ─── Auto-scroll ──────────────────────────────────────────────────────────
@@ -182,7 +149,7 @@ export default function AtendimentoPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: `Antes de iniciar gostaria de informar que o número do protocolo de atendimento é ${chatId}.`,
+          message: `Olá! Seu número de protocolo é **ATD-${chatId.slice(-8).toUpperCase()}**. Guarde-o para consultas futuras. Como posso te ajudar?`,
           asAttendant: true,
         }),
       });

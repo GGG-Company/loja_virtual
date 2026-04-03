@@ -6,7 +6,7 @@ export async function proxy(request: NextRequest) {
   const session = await auth();
   const { pathname } = request.nextUrl;
   const originHeader = request.headers.get("origin") || "";
-  const allowedOrigins = ["http://localhost:3000", "https://loja.azura.dev.br", "https://socket.azura.dev.br"];
+  const allowedOrigins = ["http://localhost:3000", "https://loja.azura.dev.br"];
   const isAllowedOrigin = allowedOrigins.includes(originHeader);
   
   const corsHeaders: Record<string, string> = {

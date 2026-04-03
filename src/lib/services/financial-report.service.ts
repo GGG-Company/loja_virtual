@@ -15,11 +15,6 @@ function monthKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
-function monthLabel(key: string): string {
-  const [year, month] = key.split('-');
-  const date = new Date(Number(year), Number(month) - 1, 1);
-  return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-}
 
 export async function fetchFinancialReport(
   filters: FinancialReportFilters,
@@ -119,7 +114,7 @@ export async function fetchFinancialReport(
 
   const monthlyRevenue = Object.entries(monthlyMap)
     .sort(([a], [b]) => (a > b ? 1 : -1))
-    .map(([key, data]) => ({ month: monthLabel(key), total: data.total, orders: data.orders }));
+    .map(([key, data]) => ({ month: key, total: data.total, orders: data.orders, avgTicket: data.orders > 0 ? data.total / data.orders : 0 }));
 
   // ── Top products ──────────────────────────────────────────────────────────
   const productMap: Record<string, { name: string; qty: number; revenue: number }> = {};
@@ -180,14 +175,20 @@ export async function fetchFinancialReport(
     refundedCount:   includeOrders ? refundedCount : null,
     avgTicket:       includeOrders ? avgTicket     : null,
     ordersCount:     includeOrders ? orders.length : null,
+    productsSold:    null,
+    prevRevenue:     null,
+    prevOrdersCount: null,
+    prevAvgTicket:   null,
+    prevPendingCount: null,
+    prevProductsSold: null,
     monthlyRevenue:  includeOrders ? monthlyRevenue : [],
     topProducts:     includeOrders ? topProducts    : [],
     statusBreakdown: includeOrders && includeStatusBreakdown ? statusBreakdown : undefined,
     stockSummary:    includeStock ? stockSummary   : undefined,
     lowStockItems:   includeStock ? lowStockItems  : undefined,
     filters: {
-      startDate: startDate.toISOString(),
-      endDate:   endDate.toISOString(),
+      startDate: startDate.toLocaleDateString('pt-BR'),
+      endDate:   endDate.toLocaleDateString('pt-BR'),
       status,
       minTotal,
       maxTotal,

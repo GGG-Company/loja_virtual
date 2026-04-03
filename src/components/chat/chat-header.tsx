@@ -40,8 +40,8 @@ export function ChatHeader({
           </p>
           {supportChatId && (
             <div className="mt-1 flex items-center gap-2">
-              <span className="text-xs bg-white/10 px-2 py-1 rounded text-white">
-                Protocolo: {supportChatId}
+              <span className="text-xs bg-white/10 px-2 py-1 rounded text-white font-mono">
+                {`ATD-${supportChatId.slice(-8).toUpperCase()}`}
               </span>
               <button
                 onClick={onCopyProtocol}

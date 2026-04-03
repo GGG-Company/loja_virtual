@@ -77,8 +77,8 @@ export function AtendimentoChatPanel({
             </CardDescription>
             <div className="mt-2 flex items-center gap-2">
               <span className="text-sm font-medium">Protocolo:</span>
-              <span className="text-sm bg-gray-100 px-2 py-1 rounded">{chat.id}</span>
-              <button className="text-sm text-blue-600 underline" onClick={() => onCopyProtocol(chat.id)}>
+              <span className="text-sm bg-gray-100 px-2 py-1 rounded font-mono">{`ATD-${chat.id.slice(-8).toUpperCase()}`}</span>
+              <button className="text-sm text-blue-600 underline" onClick={() => onCopyProtocol(`ATD-${chat.id.slice(-8).toUpperCase()}`)}>
                 {copiedProtocol ? 'Copiado!' : 'Copiar'}
               </button>
             </div>

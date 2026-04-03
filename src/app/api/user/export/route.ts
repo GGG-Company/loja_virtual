@@ -20,7 +20,7 @@ export async function GET() {
 
     const userId = session.user.id;
 
-    const [user, orders, reviews, activityLogs] = await Promise.all([
+    const [user, orders, reviews, returns, activityLogs] = await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
         select: {
@@ -30,6 +30,7 @@ export async function GET() {
           phone: true,
           cpf: true,
           cnpj: true,
+          birthDate: true,
           addressZip: true,
           addressStreet: true,
           addressNumber: true,
@@ -74,6 +75,26 @@ export async function GET() {
           product: { select: { name: true } },
         },
       }),
+      prisma.return.findMany({
+        where: { userId },
+        select: {
+          id: true,
+          returnNumber: true,
+          status: true,
+          reason: true,
+          reasonDetails: true,
+          refundAmount: true,
+          refundMethod: true,
+          createdAt: true,
+          items: {
+            select: {
+              quantity: true,
+              productId: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
       prisma.activityLog.findMany({
         where: { userId },
         select: {
@@ -111,6 +132,10 @@ export async function GET() {
         })),
       })),
       reviews,
+      returns: returns.map((r) => ({
+        ...r,
+        refundAmount: r.refundAmount ? Number(r.refundAmount) : null,
+      })),
       activityLog: activityLogs,
     };
 

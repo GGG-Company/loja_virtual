@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
     if (format === 'xlsx') {
       const buffer = await buildFinancialReportExcel(summary);
 
-      return new Response(buffer, {
+      return new Response(new Uint8Array(buffer), {
         headers: {
           'Content-Type':        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           'Content-Disposition': `attachment; filename="${filename}"`,
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
     // ── PDF ──────────────────────────────────────────────────────────────
     const buffer = await generateFinancialReportPdf(summary);
 
-    return new Response(buffer, {
+    return new Response(new Uint8Array(buffer), {
       headers: {
         'Content-Type':        'application/pdf',
         'Content-Disposition': `attachment; filename="${filename}"`,

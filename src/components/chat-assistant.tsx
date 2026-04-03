@@ -10,8 +10,6 @@ import { useRouter } from 'next/navigation';
 
 import type { Message, AssistantMode, AssistantResponse } from './chat/types';
 import { loadChatStorage, useChatStoragePersistence } from './chat/use-chat-storage';
-import { useSupportSocket } from './chat/use-support-socket';
-import { useConversationSocket } from './chat/use-conversation-socket';
 import { detectHumanRequest } from './chat/human-request-utils';
 import { ChatHeader } from './chat/chat-header';
 import { ChatSettingsPanel } from './chat/chat-settings-panel';
@@ -111,20 +109,38 @@ export function ChatAssistant() {
     loadConversations();
   }, [loadConversations]);
 
+  // ─── Recover active support chat from server (e.g. after page reload) ──────
+  useEffect(() => {
+    if (!session?.user || supportChatId) return;
+    let mounted = true;
+    const recover = async () => {
+      try {
+        const res = await fetch('/api/support/my-chat');
+        if (!res.ok) return;
+        const { chat } = await res.json();
+        if (!mounted || !chat?.id) return;
+        setSupportChatId(chat.id);
+        // Restore messages from this chat without re-showing already-seen ones
+        const msgs: Message[] = (chat.messages ?? []).map((m: any) => ({
+          id: m.id,
+          type: m.sender === 'attendant' ? 'assistant' : 'user',
+          content: m.sender === 'attendant'
+            ? `${m.senderName || 'Atendente'}:\n${m.message}`
+            : m.message,
+          timestamp: new Date(m.createdAt),
+        }));
+        setMessages(msgs);
+        for (const m of msgs) supportSeenRef.current.add(m.id);
+      } catch { /* ignore */ }
+    };
+    recover();
+    return () => { mounted = false; };
+  }, [session, supportChatId]);
+
   // ─── Sockets ──────────────────────────────────────────────────────────────
   const handleSupportMessage = useCallback((msg: Message) => {
     setMessages((prev) => [...prev, msg]);
   }, []);
-
-  useSupportSocket({ supportChatId, onNewMessage: handleSupportMessage });
-
-  useConversationSocket({
-    session,
-    conversationId,
-    onNewConversation: (convo) => setConversations((prev) => [convo, ...prev].slice(0, 3)),
-    onConversationMessage: (msg) => setMessages((prev) => [...prev, msg]),
-    onRefreshConversations: loadConversations,
-  });
 
   // ─── Restore from server if localStorage is empty ────────────────────────
   useEffect(() => {
@@ -310,9 +326,9 @@ export function ChatAssistant() {
         setMessages((prev) => [
           ...prev,
           { id: `${Date.now() + 2}`, type: 'assistant', content: 'Te agradeço pelas informações fornecidas, agora estarei te transferindo para a nossa equipe técnica. 🔧', timestamp: new Date() },
-          { id: `${Date.now() + 3}`, type: 'assistant', content: `Seu protocolo de atendimento é: ${id}\n\nEm breve um de nossos atendentes irá te responder.`, timestamp: new Date() },
+          { id: `${Date.now() + 3}`, type: 'assistant', content: `Seu protocolo de atendimento é: **ATD-${id.slice(-8).toUpperCase()}**\n\nGuarde este número para acompanhar seu atendimento. Em breve um de nossos atendentes irá te responder.`, timestamp: new Date() },
         ]);
-        toast.success(`Atendimento iniciado. Protocolo: ${id}`);
+        toast.success(`Atendimento iniciado. Protocolo: ATD-${id.slice(-8).toUpperCase()}`);
         setPendingHumanRequest(null);
       }
     } catch (e) {
@@ -335,9 +351,9 @@ export function ChatAssistant() {
         setMessages((prev) => [
           ...prev,
           { id: `${Date.now() + 2}`, type: 'assistant', content: 'Te agradeço pelas informações fornecidas, agora estarei te transferindo para a nossa equipe técnica. 🔧', timestamp: new Date() },
-          { id: `${Date.now() + 3}`, type: 'assistant', content: `Seu protocolo de atendimento é: ${id}\n\nEm breve um de nossos atendentes irá te responder.`, timestamp: new Date() },
+          { id: `${Date.now() + 3}`, type: 'assistant', content: `Seu protocolo de atendimento é: **ATD-${id.slice(-8).toUpperCase()}**\n\nGuarde este número para acompanhar seu atendimento. Em breve um de nossos atendentes irá te responder.`, timestamp: new Date() },
         ]);
-        toast.success(`Atendimento iniciado. Protocolo: ${id}`);
+        toast.success(`Atendimento iniciado. Protocolo: ATD-${id.slice(-8).toUpperCase()}`);
         setPendingHumanRequest(null);
       } else {
         setMessages((prev) => [
@@ -376,9 +392,9 @@ export function ChatAssistant() {
           supportSeenRef.current.clear();
           setMessages((prev) => [
             ...prev,
-            { id: `${Date.now() + 3}`, type: 'assistant', content: `Seu protocolo de atendimento é: ${id}\n\nEm breve um de nossos atendentes irá te responder.`, timestamp: new Date() },
+            { id: `${Date.now() + 3}`, type: 'assistant', content: `Seu protocolo de atendimento é: **ATD-${id.slice(-8).toUpperCase()}**\n\nGuarde este número para acompanhar seu atendimento. Em breve um de nossos atendentes irá te responder.`, timestamp: new Date() },
           ]);
-          toast.success(`Atendimento iniciado. Protocolo: ${id}`);
+          toast.success(`Atendimento iniciado. Protocolo: ATD-${id.slice(-8).toUpperCase()}`);
         }
         setIsLoading(false);
         return;
@@ -562,13 +578,15 @@ export function ChatAssistant() {
   const copyProtocol = async () => {
     if (!supportChatId) return;
     try {
-      await navigator.clipboard.writeText(supportChatId);
+      await navigator.clipboard.writeText(`ATD-${supportChatId.slice(-8).toUpperCase()}`);
       setCopiedProtocol(true);
       setTimeout(() => setCopiedProtocol(false), 2000);
     } catch { /* ignore */ }
   };
 
   // ─── Render ───────────────────────────────────────────────────────────────
+  if (!session?.user) return null;
+
   return (
     <>
       {/* Floating button */}

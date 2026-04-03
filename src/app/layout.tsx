@@ -3,7 +3,6 @@ import { Barlow, Barlow_Condensed } from 'next/font/google';
 import './globals.css';
 import { Toaster } from 'sonner';
 import { Providers } from '@/components/providers';
-import { ChatAssistantLoader } from '@/components/chat-assistant-loader';
 import { CookieConsent } from '@/components/cookie-consent';
 
 const barlow = Barlow({
@@ -46,7 +45,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${barlow.variable} ${barlowCondensed.variable} font-body`}>
         <Providers>
           {children}
-          <ChatAssistantLoader />
           <CookieConsent />
           <Toaster position="top-right" richColors />
         </Providers>

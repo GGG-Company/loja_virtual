@@ -10,7 +10,8 @@ import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { User, Package, MapPin, RotateCcw, Loader2, Check, RefreshCw, Lock, Download, Shield } from 'lucide-react';
+import { User, Package, MapPin, RotateCcw, Loader2, Check, RefreshCw, Lock, Download, Shield, MessageCircle, Trash2 } from 'lucide-react';
+import { SupportChatTab } from '@/components/support-chat-tab';
 import { apiClient } from '@/lib/api-client';
 import { statusToPt, statusBadgeClass } from '@/lib/i18n';
 import { toast } from 'sonner';
@@ -108,7 +109,7 @@ type ProfileForm = {
 export default function MyAccountPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'perfil' | 'pedidos' | 'devolucoes' | 'enderecos'>('perfil');
+  const [activeTab, setActiveTab] = useState<'perfil' | 'pedidos' | 'devolucoes' | 'enderecos' | 'suporte'>('perfil');
 
   // Profile state
   const [profile, setProfile] = useState<ProfileData>({
@@ -143,6 +144,8 @@ export default function MyAccountPage() {
 
   // Address CEP lookup
   const [cepLoading, setCepLoading] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [confirmDeleteInput, setConfirmDeleteInput] = useState('');
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/login');
@@ -261,6 +264,28 @@ export default function MyAccountPage() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (confirmDeleteInput !== 'EXCLUIR') {
+      toast.error('Digite EXCLUIR para confirmar');
+      return;
+    }
+    setDeletingAccount(true);
+    try {
+      const res = await fetch('/api/user/account', { method: 'DELETE' });
+      if (res.ok) {
+        toast.success('Conta removida. Redirecionando…');
+        setTimeout(() => { window.location.href = '/'; }, 2000);
+      } else {
+        const data = await res.json();
+        toast.error(data?.error || 'Erro ao excluir conta');
+      }
+    } catch {
+      toast.error('Erro ao excluir conta');
+    } finally {
+      setDeletingAccount(false);
+    }
+  };
+
   const fetchReturns = async () => {
     try {
       setReturnsLoading(true);
@@ -365,6 +390,7 @@ export default function MyAccountPage() {
     { id: 'pedidos' as const, label: 'Meus Pedidos', icon: Package },
     { id: 'devolucoes' as const, label: 'Devoluções', icon: RotateCcw },
     { id: 'enderecos' as const, label: 'Endereços', icon: MapPin },
+    { id: 'suporte' as const, label: 'Suporte', icon: MessageCircle },
   ];
 
   return (
@@ -513,8 +539,42 @@ export default function MyAccountPage() {
                               Exportar Meus Dados
                             </Button>
                             <p className="text-xs text-gray-400 mt-2">
-                              O arquivo inclui perfil, pedidos, avaliações e histórico de atividade.
+                              O arquivo inclui perfil, pedidos, devoluções, avaliações e histórico de atividade.
                             </p>
+                          </div>
+
+                          {/* Excluir Conta — LGPD Art. 18 */}
+                          <div className="border-t pt-8">
+                            <div className="flex items-center gap-3 mb-3">
+                              <Trash2 className="h-5 w-5 text-red-600" />
+                              <h3 className="font-semibold text-lg text-red-600">Excluir Minha Conta</h3>
+                            </div>
+                            <p className="text-sm text-gray-500 mb-4">
+                              Ao excluir sua conta, seus dados pessoais serão anonimizados (LGPD Art. 18).
+                              Pedidos e histórico financeiro são preservados sem identificação pessoal.
+                              <strong className="text-red-600"> Esta ação é irreversível.</strong>
+                            </p>
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3 max-w-md">
+                              <p className="text-sm font-medium text-red-800">
+                                Digite <span className="font-mono font-bold">EXCLUIR</span> para confirmar:
+                              </p>
+                              <input
+                                type="text"
+                                value={confirmDeleteInput}
+                                onChange={(e) => setConfirmDeleteInput(e.target.value)}
+                                placeholder="EXCLUIR"
+                                className="w-full rounded-md border border-red-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+                              />
+                              <Button
+                                variant="outline"
+                                className="gap-2 border-red-500 text-red-600 hover:bg-red-50 w-full"
+                                disabled={deletingAccount || confirmDeleteInput !== 'EXCLUIR'}
+                                onClick={handleDeleteAccount}
+                              >
+                                {deletingAccount ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                {deletingAccount ? 'Excluindo…' : 'Excluir minha conta permanentemente'}
+                              </Button>
+                            </div>
                           </div>
 
                           {/* Alterar Senha */}
@@ -903,6 +963,9 @@ export default function MyAccountPage() {
                       )}
                     </div>
                   )}
+
+                  {/* ── SUPORTE ─────────────────────────────────────────── */}
+                  {activeTab === 'suporte' && <SupportChatTab />}
 
                 </div>
               </div>

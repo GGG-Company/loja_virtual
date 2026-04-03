@@ -33,9 +33,9 @@ const statusLabel = (s?: string) => (s ? (STATUS_LABELS[s] ?? s) : 'Todos');
 
 const STATUS_COLOR: Record<string, string> = {
   DELIVERED: 'bg-green-500', COMPLETED: 'bg-green-500',
-  SHIPPED: 'bg-blue-500', CONFIRMED: 'bg-cyan-500',
+  SHIPPED: 'bg-metallic-500', CONFIRMED: 'bg-metallic-700',
   PROCESSING: 'bg-amber-400', PENDING: 'bg-orange-400',
-  REFUNDED: 'bg-purple-400', CANCELLED: 'bg-red-400',
+  REFUNDED: 'bg-primary-300', CANCELLED: 'bg-primary-500',
 };
 
 const fmtDate = (s?: string) => {
@@ -45,7 +45,7 @@ const fmtDate = (s?: string) => {
 };
 
 const inputClass =
-  'h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200';
+  'h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200';
 
 // ── Toggle checkbox (styled as pill) ─────────────────────────────────────────
 function ToggleCheck({
@@ -56,7 +56,7 @@ function ToggleCheck({
       htmlFor={id}
       className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all select-none text-sm ${
         checked
-          ? 'bg-indigo-50 border-indigo-300 text-indigo-700 font-medium'
+          ? 'bg-primary-50 border-primary-300 text-primary-700 font-medium'
           : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
       }`}
     >
@@ -70,7 +70,7 @@ function ToggleCheck({
       <span
         aria-hidden="true"
         className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition-colors ${
-          checked ? 'bg-indigo-500 border-indigo-500' : 'border-gray-300 bg-white'
+          checked ? 'bg-primary-500 border-primary-500' : 'border-gray-300 bg-white'
         }`}
       >
         {checked && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
@@ -82,16 +82,16 @@ function ToggleCheck({
 
 // ── KPI card ──────────────────────────────────────────────────────────────────
 const KPI_BORDER: Record<string, string> = {
-  green: 'border-l-green-500',
-  blue:  'border-l-blue-500',
-  amber: 'border-l-amber-500',
-  indigo: 'border-l-indigo-500',
+  green:   'border-l-green-500',
+  amber:   'border-l-amber-500',
+  primary: 'border-l-primary-500',
+  dark:    'border-l-metallic-700',
 };
 const KPI_TEXT: Record<string, string> = {
-  green: 'text-green-700',
-  blue:  'text-blue-700',
-  amber: 'text-amber-700',
-  indigo: 'text-indigo-700',
+  green:   'text-green-700',
+  amber:   'text-amber-700',
+  primary: 'text-primary-700',
+  dark:    'text-metallic-700',
 };
 
 function KpiCard({ label, value, color, icon }: {
@@ -225,7 +225,7 @@ export default function FinancialReportsPage() {
           <div className="flex items-center gap-2 mb-1">
             <Link
               href="/admin/financial"
-              className="text-gray-400 hover:text-gray-600 transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              className="text-gray-400 hover:text-gray-600 transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
               aria-label="Voltar ao resumo financeiro"
             >
               <ArrowLeft className="h-5 w-5" aria-hidden="true" />
@@ -254,7 +254,7 @@ export default function FinancialReportsPage() {
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
         {/* Panel header */}
         <div className="flex items-center gap-2 px-5 py-3 border-b border-gray-100 bg-gray-50">
-          <Filter className="h-4 w-4 text-indigo-500" aria-hidden="true" />
+          <Filter className="h-4 w-4 text-primary-500" aria-hidden="true" />
           <span className="text-sm font-semibold text-gray-700">Filtros do Relatório</span>
         </div>
 
@@ -265,7 +265,7 @@ export default function FinancialReportsPage() {
             {/* Period */}
             <fieldset>
               <legend className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                <Calendar className="h-3.5 w-3.5 text-indigo-400" aria-hidden="true" />
+                <Calendar className="h-3.5 w-3.5 text-primary-400" aria-hidden="true" />
                 Período e status
               </legend>
               <div className="space-y-2">
@@ -314,7 +314,7 @@ export default function FinancialReportsPage() {
             {/* Value range */}
             <fieldset>
               <legend className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                <DollarSign className="h-3.5 w-3.5 text-indigo-400" aria-hidden="true" />
+                <DollarSign className="h-3.5 w-3.5 text-primary-400" aria-hidden="true" />
                 Valor do pedido (R$)
               </legend>
               <div className="space-y-2">
@@ -354,7 +354,7 @@ export default function FinancialReportsPage() {
             {/* Product search */}
             <fieldset>
               <legend className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                <Search className="h-3.5 w-3.5 text-indigo-400" aria-hidden="true" />
+                <Search className="h-3.5 w-3.5 text-primary-400" aria-hidden="true" />
                 Busca por produto
               </legend>
               <div>
@@ -409,7 +409,7 @@ export default function FinancialReportsPage() {
       {data && (
         <div role="status" aria-label="Filtros aplicados" className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-gray-400">Filtros ativos:</span>
-          <span className="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs text-indigo-700">
+          <span className="inline-flex items-center gap-1 rounded-full border border-primary-200 bg-primary-50 px-3 py-1 text-xs text-primary-700">
             <Calendar className="h-3 w-3" aria-hidden="true" />
             {fmtDate(data.filters?.startDate)} → {fmtDate(data.filters?.endDate)}
           </span>
@@ -450,10 +450,10 @@ export default function FinancialReportsPage() {
           role="status"
           aria-live="polite"
           aria-label="Gerando relatório"
-          className="rounded-xl border border-indigo-100 bg-indigo-50 p-5 space-y-4"
+          className="rounded-xl border border-primary-100 bg-primary-50 p-5 space-y-4"
         >
-          <div className="flex items-center gap-2 text-indigo-700 font-semibold">
-            <span className="h-4 w-4 rounded-full border-2 border-indigo-200 border-t-indigo-600 animate-spin" aria-hidden="true" />
+          <div className="flex items-center gap-2 text-primary-700 font-semibold">
+            <span className="h-4 w-4 rounded-full border-2 border-primary-200 border-t-primary-600 animate-spin" aria-hidden="true" />
             Gerando relatório…
           </div>
           <FinancialLoadingSkeleton showFilters compact />
@@ -463,8 +463,8 @@ export default function FinancialReportsPage() {
       {/* ── Empty initial state ──────────────────────────────────────────── */}
       {!loading && !data && !error && (
         <div className="rounded-xl border-2 border-dashed border-gray-200 bg-white p-12 flex flex-col items-center text-center gap-4">
-          <div className="p-4 bg-indigo-50 rounded-2xl">
-            <BarChart2 className="h-10 w-10 text-indigo-400" aria-hidden="true" />
+          <div className="p-4 bg-primary-50 rounded-2xl">
+            <BarChart2 className="h-10 w-10 text-primary-400" aria-hidden="true" />
           </div>
           <div>
             <h2 className="text-lg font-semibold text-gray-800 mb-1">Nenhum relatório gerado ainda</h2>
@@ -529,8 +529,8 @@ export default function FinancialReportsPage() {
               <KpiCard
                 label="Taxa de conversão"
                 value={`${((conversion || 0) * 100).toFixed(1)}%`}
-                color="indigo"
-                icon={<BarChart2 className="h-5 w-5 text-indigo-600" aria-hidden="true" />}
+                color="primary"
+                icon={<BarChart2 className="h-5 w-5 text-primary-600" aria-hidden="true" />}
               />
             </div>
           )}
@@ -556,7 +556,7 @@ export default function FinancialReportsPage() {
                           </div>
                           <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
                             <div
-                              className="h-2 rounded-full bg-indigo-500 transition-all duration-700"
+                              className="h-2 rounded-full bg-primary-500 transition-all duration-700"
                               style={{ width: `${max ? (m.total / max) * 100 : 0}%` }}
                               role="presentation"
                             />
@@ -576,7 +576,7 @@ export default function FinancialReportsPage() {
                     {data.topProducts.map((p, i) => (
                       <div key={p.productId} className="flex items-center justify-between gap-3 py-2.5 border-b border-gray-50 last:border-0">
                         <div className="flex items-center gap-3 min-w-0">
-                          <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 text-xs font-bold flex items-center justify-center">
+                          <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-100 text-primary-600 text-xs font-bold flex items-center justify-center">
                             {i + 1}
                           </span>
                           <div className="min-w-0">

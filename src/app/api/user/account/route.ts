@@ -3,6 +3,7 @@ import { auth, signOut } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
 import { logActivity } from '@/lib/activity-log';
+import { appendDeletionRegistry } from '@/lib/deletion-registry';
 
 /**
  * DELETE /api/user/account
@@ -42,6 +43,7 @@ export async function DELETE(req: NextRequest) {
         addressNeighborhood: null,
         addressCity: null,
         addressState: null,
+        birthDate: null,
         deletedAt: new Date(),
         // Incrementar tokenVersion invalida todos os JWTs ativos imediatamente
         tokenVersion: { increment: 1 },
@@ -57,6 +59,9 @@ export async function DELETE(req: NextRequest) {
       entity: 'User',
       entityId: userId,
     });
+
+    // Registrar no log externo de exclusões para reconciliação pós-restauração de backup
+    await appendDeletionRegistry(userId);
 
     logger.info({ userId }, '[ACCOUNT_DELETE] Conta anonimizada por solicitação do usuário');
 

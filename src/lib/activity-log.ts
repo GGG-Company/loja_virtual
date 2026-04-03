@@ -38,7 +38,8 @@ export async function logActivity({
         action,
         entity,
         entityId,
-        changes: changes ?? undefined,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        changes: changes as any,
       },
     });
   } catch (err) {

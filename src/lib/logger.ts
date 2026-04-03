@@ -15,6 +15,13 @@ const logger = pino({
       'shippingAddress.name', 'shippingAddress.zip', 'shippingAddress.street',
       'shippingAddress.phone', 'shippingAddress.cpf',
       'to.postal_code', 'from.postal_code',
+      // Dados de pagamento (pino só redact 1 nível — defesa em profundidade)
+      'token', '*.token',
+      'userCpf', '*.userCpf',
+      'identificationNumber', '*.identificationNumber',
+      '*.payer.email',
+      '*.payer.identification.number',
+      '*.identification.number',
     ],
     censor: '[REDACTED]',
   },

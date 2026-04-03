@@ -5,17 +5,9 @@ import { useSession } from 'next-auth/react';
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { RotateCcw, ChevronRight, Settings, Package, FileText, Tag, MessageSquare } from "lucide-react";
+import { RotateCcw, ChevronRight, Settings, Package, FileText, Tag } from "lucide-react";
 
 const modules = [
-  {
-    id: "atendimento",
-    title: "Atendimento",
-    description: "Gerenciar tickets de suporte e atendimento ao cliente",
-    icon: MessageSquare,
-    href: "/admin/gerenciamento/atendimento",
-    color: "bg-purple-500",
-  },
   {
     id: "devolucoes",
     title: "Devoluções",
@@ -93,7 +85,7 @@ export default function GerenciamentoPage() {
       </div>
 
       {/* Módulos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
         {modules.map((module, index) => {
           const Icon = module.icon;
           return (
@@ -102,9 +94,10 @@ export default function GerenciamentoPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
+              className="h-full"
             >
-              <Link href={module.href}>
-                <div className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 cursor-pointer group">
+              <Link href={module.href} className="h-full block">
+                <div className="h-full bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 cursor-pointer group">
                   <div className="flex items-start justify-between">
                     <div className={`p-3 rounded-lg ${module.color} text-white`}>
                       <Icon className="h-6 w-6" />

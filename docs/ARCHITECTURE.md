@@ -1,368 +1,138 @@
-# 📐 ARQUITETURA DO SISTEMA
+# Arquitetura
 
-## Visão Geral da Arquitetura
+## Visão geral
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    CAMADA DE APRESENTAÇÃO                        │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │   CUSTOMER   │  │    ADMIN     │  │    OWNER     │          │
-│  │   (Loja)     │  │  (Gestão)    │  │ (Financeiro) │          │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘          │
-└─────────┼──────────────────┼──────────────────┼──────────────────┘
-          │                  │                  │
-          └──────────────────┴──────────────────┘
-                             │
-┌─────────────────────────────┴────────────────────────────────────┐
-│                    CAMADA DE ROTEAMENTO                           │
-│  ┌─────────────────────────────────────────────────────┐         │
-│  │  Next.js App Router (Server Components)            │         │
-│  │  - (shop) → Rotas públicas                         │         │
-│  │  - (auth) → Login/Registro                         │         │
-│  │  - admin → Protegido ADMIN/OWNER                   │         │
-│  │  - admin/financial → Protegido OWNER               │         │
-│  └─────────────────────────────────────────────────────┘         │
-└──────────────────────────┬───────────────────────────────────────┘
-                           │
-┌──────────────────────────┴────────────────────────────────────────┐
-│                 CAMADA DE SEGURANÇA                                │
-│  ┌──────────────────┐         ┌──────────────────┐               │
-│  │  Middleware.ts   │         │  NextAuth v5     │               │
-│  │  - RBAC Guards   │◄────────┤  - JWT Session   │               │
-│  │  - API Key Check │         │  - Google OAuth  │               │
-│  │                  │         │  - Credentials   │               │
-│  └──────────────────┘         └──────────────────┘               │
-└──────────────────────────┬───────────────────────────────────────┘
-                           │
-┌──────────────────────────┴────────────────────────────────────────┐
-│                   CAMADA DE APLICAÇÃO                              │
-│  ┌─────────────────────┐       ┌─────────────────────┐           │
-│  │  Server Actions     │       │  API Routes         │           │
-│  │  - createProduct()  │       │  /api/admin/*       │           │
-│  │  - updateOrder()    │       │  /api/integrations/*│           │
-│  │  - applyCoupon()    │       │                     │           │
-│  └─────────────────────┘       └─────────────────────┘           │
-└──────────────────────────┬───────────────────────────────────────┘
-                           │
-┌──────────────────────────┴────────────────────────────────────────┐
-│                    CAMADA DE DADOS                                 │
-│  ┌─────────────────────────────────────────────────────┐          │
-│  │  Prisma ORM                                         │          │
-│  │  - Type-safe queries                                │          │
-│  │  - Migrations                                       │          │
-│  │  - Relations                                        │          │
-│  └─────────────────┬───────────────────────────────────┘          │
-└────────────────────┼──────────────────────────────────────────────┘
-                     │
-┌────────────────────┴──────────────────────────────────────────────┐
-│                 CAMADA DE PERSISTÊNCIA                             │
-│  ┌─────────────────────────────────────────────────────┐          │
-│  │  PostgreSQL 16                                      │          │
-│  │  - JSONB (specs, shippingAddress)                  │          │
-│  │  - Full-text search                                │          │
-│  │  - Indexes (sku, slug, email)                      │          │
-│  └─────────────────────────────────────────────────────┘          │
-└───────────────────────────────────────────────────────────────────┘
+Browser
+  │
+  └── HTTPS :443 ──► Nginx ──► Next.js (standalone, porta 3000)
+                                  ├── App Router (SSR / SSG / ISR)
+                                  ├── API Routes (/api/*)
+                                  └── Prisma ──► PostgreSQL
+                                                    │
+                                              Redis (pub/sub, rate limiting)
 ```
 
 ---
 
-## Fluxos Principais
-
-### 1. Fluxo de Autenticação (OAuth + Credentials)
+## Estrutura de pastas
 
 ```
-┌─────────┐
-│ Cliente │
-└────┬────┘
-     │
-     │ 1. Clica "Login com Google"
-     ▼
-┌──────────────┐
-│ NextAuth     │
-│ Redirect     │
-└──────┬───────┘
-       │ 2. Redireciona para Google
-       ▼
-┌──────────────┐
-│ Google OAuth │
-└──────┬───────┘
-       │ 3. Usuário autoriza
-       ▼
-┌──────────────┐
-│ NextAuth     │
-│ Callback     │◄────── 4. Google retorna code
-└──────┬───────┘
-       │ 5. Troca code por tokens
-       │ 6. Busca/cria usuário no DB
-       ▼
-┌──────────────┐
-│ Cria Session │
-│ JWT (Cookie) │
-└──────┬───────┘
-       │ 7. Redireciona para app
-       ▼
-┌─────────────┐
-│ Dashboard   │
-└─────────────┘
-```
-
-### 2. Fluxo de Integração (Estoque ML → Loja)
-
-```
-┌────────────────┐
-│ Mercado Livre  │ (Venda realizada)
-└───────┬────────┘
-        │
-        │ 1. Webhook ou Zapier
-        ▼
-┌────────────────────┐
-│ POST /api/         │
-│ integrations/      │
-│ stock/sync         │
-│ Headers:           │
-│ X-INTERNAL-API-KEY │
-└───────┬────────────┘
-        │ 2. Validação Middleware
-        ▼
-┌────────────────────┐
-│ Zod Validation     │
-│ { sku, quantity,   │
-│   source }         │
-└───────┬────────────┘
-        │ 3. Busca Product por SKU
-        ▼
-┌────────────────────┐
-│ Prisma Update      │
-│ product.stock      │
-│ = newQuantity      │
-└───────┬────────────┘
-        │ 4. Cria StockLog
-        ▼
-┌────────────────────┐
-│ StockLog.create()  │
-│ { source: ML,      │
-│   previousQty,     │
-│   newQty }         │
-└───────┬────────────┘
-        │ 5. Cria IntegrationLog
-        ▼
-┌────────────────────┐
-│ IntegrationLog     │
-│ (auditoria)        │
-└───────┬────────────┘
-        │ 6. Retorna 200 OK
-        ▼
-┌────────────────────┐
-│ { success: true,   │
-│   product: {...} } │
-└────────────────────┘
-```
-
-### 3. Fluxo de Compra (Cliente)
-
-```
-┌─────────┐
-│ Cliente │
-└────┬────┘
-     │ 1. Adiciona produtos ao carrinho
-     ▼
-┌──────────────┐
-│ Cart Session │ (localStorage + DB se autenticado)
-└──────┬───────┘
-     │ 2. Preenche dados de entrega
-     ▼
-┌──────────────┐
-│ Checkout     │
-│ - Frete calc │
-│ - Cupom      │
-└──────┬───────┘
-     │ 3. Finaliza pedido
-     ▼
-┌──────────────┐
-│ Server Action│
-│ createOrder()│
-└──────┬───────┘
-     │ 4. Valida estoque
-     │ 5. Aplica cupom
-     │ 6. Calcula total
-     ▼
-┌──────────────┐
-│ Order.create │
-│ OrderItem[]  │
-└──────┬───────┘
-     │ 7. Atualiza estoque (decremento)
-     ▼
-┌──────────────┐
-│ StockLog[]   │
-└──────┬───────┘
-     │ 8. Envia email confirmação
-     ▼
-┌──────────────┐
-│ SMTP (Mail)  │
-└──────┬───────┘
-     │ 9. Retorna orderNumber
-     ▼
-┌──────────────┐
-│ Página       │
-│ Confirmação  │
-└──────────────┘
+loja_virtual/
+├── src/
+│   ├── app/                    # Next.js App Router
+│   │   ├── (public)/           # Páginas públicas
+│   │   ├── admin/              # Painel administrativo (ADMIN/OWNER)
+│   │   ├── auth/               # Login e cadastro
+│   │   ├── checkout/           # Fluxo de compra (dados → entrega → pagamento → confirmação)
+│   │   ├── minha-conta/        # Área do cliente autenticado
+│   │   └── api/                # API Routes (Next.js Route Handlers)
+│   ├── components/
+│   │   ├── ui/                 # Primitivos shadcn/ui (Button, Input, Dialog...)
+│   │   ├── chat/               # Componentes e utilitários do assistente virtual
+│   │   └── *.tsx               # Componentes de domínio (cart, checkout, produto...)
+│   ├── lib/
+│   │   ├── prisma.ts           # Singleton do Prisma Client
+│   │   ├── redis.ts            # Cliente Redis com fallback in-memory
+│   │   ├── mercadopago-config.ts  # Config dinâmica do Mercado Pago (db-driven)
+│   │   ├── melhorenvio-oauth.ts   # OAuth 2.0 e gestão de tokens ME
+│   │   └── melhorenvio-shipping.ts # Geração de etiquetas
+│   └── hooks/                  # Custom React hooks de negócio
+├── prisma/
+│   ├── schema.prisma           # 29 modelos
+│   └── migrations/             # Histórico SQL versionado
+├── redis/
+│   └── docker-compose.yml      # Redis 7 (cache, pub/sub, rate limiting)
+├── auth.ts                     # Configuração NextAuth v5
+├── next.config.mjs             # CSP, headers, env, ISR, remote images
+└── prisma/setup-raw.sql        # SQL bruto para setup inicial
 ```
 
 ---
 
-## Padrões de Design Utilizados
+## Banco de dados
 
-### 1. **Singleton Pattern**
-- **Prisma Client**: única instância global
-- **Axios Instance**: configuração centralizada com interceptors
-- **FinancialConfig**: tabela com 1 única linha
+**Provider**: PostgreSQL 15+, via Prisma ORM.
 
-### 2. **Repository Pattern**
-- Abstração de acesso ao banco via Prisma
-- Facilita testes e manutenção
+### Modelos principais
 
-### 3. **Middleware Chain**
-- NextAuth → Middleware RBAC → Route Handler
-- Validação em camadas
-
-### 4. **Observer Pattern (Logs)**
-- Eventos de estoque/integração disparam logs automáticos
-- Auditoria completa
-
-### 5. **Factory Pattern (Seed)**
-- Geração de dados de teste de forma programática
-
----
-
-## Segurança em Profundidade
-
-### Camadas de Proteção
-
-1. **Frontend (UI)**
-   - Validação de formulários com React Hook Form + Zod
-   - Disable de botões durante loading (prevent double submit)
-
-2. **Routing (Middleware)**
-   - Verificação de sessão antes de acessar rotas admin
-   - Redirect se não autorizado
-
-3. **API Routes**
-   - Revalidação de sessão
-   - Zod schema validation no body
-   - Try/catch com logs de erro
-
-4. **Database**
-   - Unique constraints (email, sku, orderNumber)
-   - Foreign keys (onDelete: Cascade)
-   - Indexes para performance
-
-5. **Environment Variables**
-   - Secrets nunca commitados (.gitignore)
-   - Validação de env vars obrigatórias no startup
+| Modelo | Descrição |
+|--------|-----------|
+| `User` | Clientes e admins. Role: `CUSTOMER`, `ADMIN`, `OWNER`. Campos: nome, email, senha (bcrypt), CPF/CNPJ, endereço, birthDate, tokenVersion (para revogação), deletedAt (soft delete) |
+| `Product` | SKU, EAN, slug, preço, preço promocional, custo, estoque, dimensões/peso, IDs externos (ML, Hiper), specs JSON, flags featured/promo |
+| `ProductVariant` | Variantes de produto com SKU, preço e estoque próprios |
+| `ProductImage` | Imagens ordenadas por posição |
+| `Category` | Hierárquica via `parentId` auto-relacional |
+| `Order` | Pedido completo: status (9 estados), método de pagamento (5 tipos), subtotal/desconto/frete/total, paymentId (MP), endereço de entrega (JSON), tracking, campos Melhor Envio |
+| `OrderItem` | Linha de pedido (produto, quantidade, preço no momento da compra) |
+| `Cart` / `CartItem` | Carrinho persistido para usuários autenticados e guests (sessionId) |
+| `Coupon` | Cupons: PERCENTAGE ou FIXED, escopo GLOBAL/CATEGORY/PRODUCT/STATE, limite de uso |
+| `Return` / `ReturnItem` | Devoluções com workflow de status e integração Melhor Envio |
+| `Review` | Avaliações com nota, compra verificada e resposta do vendedor |
+| `SupportChat` / `SupportMessage` | Chat de suporte com status OPEN/IN_PROGRESS/CLOSED. sender: "customer" ou "attendant" |
+| `Conversation` / `ConversationMessage` | Histórico de conversas com assistente IA |
+| `FinancialConfig` | Singleton: taxas de juros, máx. parcelas, frete grátis a partir de |
+| `ShippingRule` | Regras de frete por estado (ou all) com preço fixo ou grátis |
+| `MercadoPagoConfig` | Singleton: chaves MP, ambiente, webhook secret |
+| `MelhorEnvioToken` | Singleton: token OAuth ME com refresh automático |
+| `StockLog` | Auditoria de mudanças de estoque por fonte (ADMIN, MERCADO_LIVRE, HIPER...) |
+| `ActivityLog` | Auditoria de ações de usuários |
+| `IntegrationLog` | Log de requests/responses das integrações externas |
+| `Banner` | Banners de marketing com datas de ativação |
+| `SiteConfig` | Singleton: modo do assistente (`smart` ou `ai`) |
 
 ---
 
-## Escalabilidade
+## Integrações externas
 
-### Horizontal Scaling
+### Mercado Pago
 
-- **Next.js**: pode rodar em múltiplas instâncias (Vercel, AWS Lambda)
-- **PostgreSQL**: suporta read replicas
-- **Prisma**: connection pooling nativo
+- **Configuração**: Chaves e ambiente armazenados em `MercadoPagoConfig` (banco), não apenas em env. Permite troca sem redeploy via painel admin (`/admin/settings`).
+- **Métodos aceitos**: Payment Brick (cartão crédito/débito), PIX, Boleto.
+- **Webhook**: `POST /api/payments/mercadopago/webhook` — recebe notificações de pagamento, atualiza status do pedido.
+- **Parcelamento**: Regras dinâmicas via `FinancialConfig` (juros, máx. parcelas).
+- **Sandbox**: Controlado por `MERCADO_PAGO_SANDBOX=true`.
 
-### Caching Strategy
+### Melhor Envio
 
-- **Server Components**: cache automático do Next.js
-- **Static Generation**: páginas de categoria podem ser ISR
-- **API Responses**: adicionar Redis para cache de produtos (futuro)
+- **Auth**: OAuth 2.0. Fluxo: `/api/integrations/melhor-envio/authorize` → callback → token salvo em `MelhorEnvioToken`. Refresh automático antes da expiração.
+- **Cotação**: `POST /api/shipping/quote` — calcula frete PAC/SEDEX/etc. com dimensões e peso do produto.
+- **Etiquetas**: `POST /api/admin/orders/[id]/label` — gera etiqueta no ME e salva URL no pedido.
+- **Rastreio**: `POST /api/shipping/track` — status de rastreamento.
+- **Webhook**: `POST /api/integrations/melhor-envio/webhook` — atualizações de status de envio.
 
-### Database Optimization
+### Redis
 
-- **Indexes**: criados em colunas frequentemente buscadas
-  ```prisma
-  @@index([sku])
-  @@index([slug])
-  @@index([email])
-  ```
+- **Rate limiting**: Proteção contra brute-force no login (5 tentativas / 15 min) via `src/lib/redis.ts`.
+- **Pub/sub**: Publica eventos de notificação (`notifications:user:${userId}`) e suporte (`support:chat:${chatId}`) para eventual integração futura.
+- **Fallback**: Se `REDIS_URL` não estiver configurado, usa Map in-memory automaticamente.
 
-- **Pagination**: todas as listagens usam `skip` e `take`
+### OpenAI
 
-- **Select apenas campos necessários**: reduz payload
-
----
-
-## Monitoramento e Observabilidade
-
-### Logs Estruturados
-
-```typescript
-console.error('[STOCK SYNC ERROR]', {
-  sku: data.sku,
-  source: data.source,
-  error: error.message,
-  timestamp: new Date().toISOString(),
-});
-```
-
-### Tabelas de Auditoria
-
-- **IntegrationLog**: todas as chamadas API
-- **ActivityLog**: ações de usuários (CRUD)
-- **StockLog**: mudanças de estoque
-
-### Métricas (Futuro)
-
-- Integração com Sentry para error tracking
-- Dashboard de Analytics (Metabase ou similar)
-- Alerts via Webhook (Discord/Slack)
+- **Modo**: Alternativo ao assistente "smart" (regras). Controlado por `SiteConfig.assistantMode` no banco.
+- **Modelo**: GPT-4o-mini.
+- **Rota**: `POST /api/assistant-ai`.
+- **Opcional**: Se `OPENAI_API_KEY` não estiver configurado, apenas o modo smart fica disponível.
 
 ---
 
-## Diagramas de Sequência
+## Segurança
 
-### Sincronização de Estoque (ML)
-
-```mermaid
-sequenceDiagram
-    participant ML as Mercado Livre
-    participant Zap as Zapier
-    participant API as Next.js API
-    participant DB as PostgreSQL
-    
-    ML->>Zap: Venda realizada (webhook)
-    Zap->>API: POST /api/integrations/stock/sync
-    API->>API: Valida X-INTERNAL-API-KEY
-    API->>DB: Busca Product por SKU
-    DB-->>API: Retorna produto
-    API->>DB: UPDATE stock - quantity
-    API->>DB: INSERT StockLog
-    API->>DB: INSERT IntegrationLog
-    API-->>Zap: 200 OK { success: true }
-    Zap-->>ML: Confirma processamento
-```
+- **CSP** configurado no `next.config.mjs`: restringe `script-src`, `connect-src`, `frame-src` por domínio.
+- **HSTS** habilitado em produção via header `Strict-Transport-Security`.
+- **Rate limiting** no login via Redis (brute-force protection).
+- **RBAC**: Verificação de role em cada handler admin — `session?.user?.role === 'ADMIN' || 'OWNER'`.
+- **Token versioning**: Incrementar `User.tokenVersion` invalida todos os JWTs ativos do usuário.
+- **API key interna**: `X_INTERNAL_API_KEY` protege webhooks e rotas de integração.
+- **Bcrypt**: Senhas com salt rounds 10.
 
 ---
 
-## Considerações de Performance
+## Cache e performance (Next.js)
 
-### Frontend
-- **Code Splitting**: Next.js divide JS por rota
-- **Image Optimization**: Next.js Image component (WebP, lazy load)
-- **Lazy Loading**: Componentes pesados carregam sob demanda
-
-### Backend
-- **Prepared Statements**: Prisma usa por padrão (SQL injection safe)
-- **Connection Pooling**: configurado no DATABASE_URL
-- **Parallel Queries**: `Promise.all()` quando queries são independentes
-
-### Database
-- **JSONB Indexes**: para buscar em campos `specs`
-  ```sql
-  CREATE INDEX product_specs_voltagem 
-  ON products USING gin ((specs->'voltagem'));
-  ```
-
----
-
-**Documentação técnica completa**. Para guia de uso, veja [README.md](README.md).
+| Rota | Estratégia |
+|------|-----------|
+| Imagens de produtos | `Cache-Control: public, max-age=86400, stale-while-revalidate=3600` |
+| Catálogo de produtos | ISR — revalidação a cada 1 hora |
+| Homepage | ISR — revalidação a cada 10 minutos |
+| Assets estáticos | `max-age=31536000, immutable` |

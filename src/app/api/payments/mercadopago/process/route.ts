@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     logger.info({ orderId, amount }, 'Processando novo pagamento');
 
     if (!orderId || !amount) {
-      logger.warn({ body }, 'Tentativa de pagamento com dados ausentes');
+      logger.warn({ orderId, amount }, 'Tentativa de pagamento com dados ausentes');
       return NextResponse.json(
         { error: 'orderId e amount são obrigatórios' },
         { status: 400 }

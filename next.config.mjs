@@ -6,16 +6,6 @@ const cspConnectSrc = [
   "'self'",
   'https://api.mercadopago.com',
   'https://loja.azura.dev.br',
-  'https://socket.azura.dev.br',
-  'wss://socket.azura.dev.br',
-  ...(isDev
-    ? [
-        'http://localhost:*',
-        'ws://localhost:*',
-        'http://127.0.0.1:*',
-        'ws://127.0.0.1:*',
-      ]
-    : []),
 ].join(' ');
 
 const nextConfig = {
