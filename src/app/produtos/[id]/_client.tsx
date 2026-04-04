@@ -170,7 +170,7 @@ function ProductDetailContent() {
     gtin13: product.ean,
     productID: product.id,
     category: product.category?.name,
-    brand: "Shopping das Ferramentas",
+    brand: "Feira das Ferramentas",
     offers: {
       "@type": "Offer",
       priceCurrency: "BRL",

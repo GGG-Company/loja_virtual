@@ -96,7 +96,7 @@ function buildResumoSheet(wb: ExcelJS.Workbook, summary: FinancialReportSummary)
   // Título
   ws.mergeCells('A1:D1');
   const titleCell = ws.getCell('A1');
-  titleCell.value     = 'Relatório Financeiro — Shopping das Ferramentas';
+  titleCell.value     = 'Relatório Financeiro — Feira das Ferramentas';
   titleCell.font      = { bold: true, size: 16, color: { argb: COLOR.titleFont } };
   titleCell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR.titleBg } };
   titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -209,7 +209,7 @@ function buildDataSheet(
 // ── Entry point público ───────────────────────────────────────────────────
 export async function buildFinancialReportExcel(summary: FinancialReportSummary): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
-  wb.creator  = 'Shopping das Ferramentas';
+  wb.creator  = 'Feira das Ferramentas';
   wb.created  = new Date();
   wb.modified = new Date();
 

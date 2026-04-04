@@ -1,5 +1,5 @@
 /**
- * PDF Report — Shopping das Ferramentas
+ * PDF Report — Feira das Ferramentas
  * Gerado server-side com @react-pdf/renderer.
  * Retorna Buffer consumido pelo API route.
  */
@@ -420,7 +420,7 @@ export function FinancialReportDocument({ summary }: { summary: FinancialReportS
   const statusTotal = statusRows.reduce((sum, r) => sum + (Number(r[1]) || 0), 0);
 
   return (
-    <Document title="Relatório Financeiro" author="Shopping das Ferramentas">
+    <Document title="Relatório Financeiro" author="Feira das Ferramentas">
       <Page size="A4" style={S.page}>
 
         {/* ── Header fixo ─────────────────────────────────────────────── */}
@@ -429,7 +429,7 @@ export function FinancialReportDocument({ summary }: { summary: FinancialReportS
           <View style={S.headerLogoWrap}>
             {logoSrc && <Image src={logoSrc} style={S.headerLogo} />}
             <View>
-              <Text style={S.headerCompany}>Shopping das Ferramentas</Text>
+              <Text style={S.headerCompany}>Feira das Ferramentas</Text>
               <Text style={S.headerSub}>Relatório Financeiro  ·  Status: {statusPt}</Text>
             </View>
           </View>
@@ -441,7 +441,7 @@ export function FinancialReportDocument({ summary }: { summary: FinancialReportS
 
         {/* ── Footer fixo ─────────────────────────────────────────────── */}
         <View style={S.footer} fixed>
-          <Text style={S.footerText}>Shopping das Ferramentas — Confidencial</Text>
+          <Text style={S.footerText}>Feira das Ferramentas — Confidencial</Text>
           <Text
             style={S.footerPage}
             render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`}

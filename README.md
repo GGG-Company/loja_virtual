@@ -1,4 +1,4 @@
-# Shopping das Ferramentas
+# Feira das Ferramentas
 
 E-commerce full-stack de ferramentas, construído com Next.js 16, PostgreSQL e integrações nativas com Mercado Pago e Melhor Envio.
 

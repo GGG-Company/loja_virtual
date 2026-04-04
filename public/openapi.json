@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Shopping das Ferramentas API",
+    "title": "Feira das Ferramentas API",
     "version": "1.0.0",
     "description": "API REST completa para e-commerce de ferramentas com integração Mercado Livre e Mercado Pago",
     "contact": {
