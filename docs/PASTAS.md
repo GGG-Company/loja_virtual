@@ -1,6 +1,6 @@
 # File Tree: loja_virtual
 
-**Generated:** 03/04/2026, 19:45:56
+**Generated:** 04/04/2026, 13:09:36
 **Root Path:** `c:\Users\lopee\OneDrive\Desktop\loja_virtual`
 
 ```
@@ -94,7 +94,9 @@
 ├── 📁 docs
 │   ├── 📝 ARCHITECTURE.md
 │   ├── 📝 BACKEND.md
-│   └── 📝 FRONTEND.md
+│   ├── 📝 FRONTEND.md
+│   ├── 📝 LGPD.md
+│   └── 📝 PASTAS.md
 ├── 📁 prisma
 │   ├── 📁 migrations
 │   │   ├── 📁 20251213004146_init
@@ -161,7 +163,8 @@
 │   └── 🖼️ placeholder.svg
 ├── 📁 scripts
 │   ├── 📄 check-prisma.js
-│   └── 📄 kill-idle-connections.mjs
+│   ├── 📄 kill-idle-connections.mjs
+│   └── 📄 reconcile-deletions.mjs
 ├── 📁 skills
 │   ├── 📁 find-skills
 │   │   └── 📝 SKILL.md
@@ -511,6 +514,7 @@
 │   │   │   ├── 📄 badge.tsx
 │   │   │   ├── 📄 button.tsx
 │   │   │   ├── 📄 card.tsx
+│   │   │   ├── 📄 checkbox.tsx
 │   │   │   ├── 📄 input.tsx
 │   │   │   ├── 📄 label.tsx
 │   │   │   ├── 📄 slider.tsx
@@ -555,6 +559,7 @@
 │   │   ├── 📄 api-client.ts
 │   │   ├── 📄 circuit-breaker.ts
 │   │   ├── 📄 decimal-helpers.ts
+│   │   ├── 📄 deletion-registry.ts
 │   │   ├── 📄 i18n.ts
 │   │   ├── 📄 logger.ts
 │   │   ├── 📄 melhorenvio-oauth.ts
@@ -582,7 +587,7 @@
 ├── ⚙️ .eslintrc.json
 ├── ⚙️ .gitignore
 ├── 🐳 Dockerfile
-├── 📕 Identidade visual - Feira das Ferramentas (1).pdf
+├── 📕 Identidade visual - Shopping das Ferramentas (1).pdf
 ├── 📝 README.md
 ├── 📄 auth.ts
 ├── ⚙️ docker-compose.yml
