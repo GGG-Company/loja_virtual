@@ -23,7 +23,7 @@ export function SupportChatTab() {
               rel="noopener noreferrer"
               className="text-[#CC1020] font-mono text-lg hover:underline"
             >
-              (11) 99999-9999
+              (75) 98159-8195
             </a>
           </div>
         </div>

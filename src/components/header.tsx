@@ -163,7 +163,7 @@ export function Header() {
               📍 Feira de Santana, BA &nbsp;|&nbsp; DESDE 2004
             </span>
             <div className="flex items-center gap-4">
-              <span>☎ (75) 3333-4444</span>
+              <span>☎ (75) 98159-8195</span>
               <span className="hidden sm:block">✉ contato@feiradeferramentas.com.br</span>
             </div>
           </div>

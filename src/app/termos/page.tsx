@@ -202,7 +202,7 @@ export default function TermsPage() {
               </p>
               <div className="space-y-2">
                 <p className="font-semibold">E-mail: juridico@shopferramentas.com.br</p>
-                <p className="font-semibold">Telefone: (75) 3333-4444</p>
+                <p className="font-semibold">Telefone: (75) 98159-8195</p>
                 <p className="text-sm text-red-200 mt-4">
                   Seg–Sex: 08h–18h | Sáb: 08h–12h
                 </p>

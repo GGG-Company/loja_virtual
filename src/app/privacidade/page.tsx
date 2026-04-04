@@ -251,7 +251,7 @@ export default function PrivacyPage() {
               <div className="bg-gray-50 border border-gray-200 rounded-sm p-4 space-y-2">
                 <p className="text-sm font-semibold text-[#1A1A1A]">Encarregado: Equipe de Privacidade — Feira das Ferramentas</p>
                 <p className="text-sm text-gray-600">E-mail: <a href="mailto:dpo@shopferramentas.com.br" className="text-[#CC1020] underline">dpo@shopferramentas.com.br</a></p>
-                <p className="text-sm text-gray-600">Telefone: (75) 3333-4444</p>
+                <p className="text-sm text-gray-600">Telefone: (75) 98159-8195</p>
                 <p className="text-sm text-gray-500">Prazo de resposta: até 15 dias úteis (conforme Art. 18, §3º da LGPD)</p>
               </div>
               <p className="text-gray-600 leading-relaxed font-body mt-4 text-sm">
@@ -278,7 +278,7 @@ export default function PrivacyPage() {
                   E-mail: <a href="mailto:privacidade@shopferramentas.com.br" className="underline">privacidade@shopferramentas.com.br</a>
                 </p>
                 <p className="font-semibold">DPO: <a href="mailto:dpo@shopferramentas.com.br" className="underline">dpo@shopferramentas.com.br</a></p>
-                <p className="font-semibold">Telefone: (75) 3333-4444</p>
+                <p className="font-semibold">Telefone: (75) 98159-8195</p>
               </div>
             </motion.div>
           </div>

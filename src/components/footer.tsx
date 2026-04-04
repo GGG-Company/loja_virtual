@@ -119,7 +119,7 @@ export function Footer() {
                 <div className="w-8 h-8 bg-[#CC1020]/15 rounded flex items-center justify-center shrink-0">
                   <Phone className="h-4 w-4 text-[#CC1020]" />
                 </div>
-                (75) 3333-4444
+                (75) 98159-8195
               </li>
               <li className="flex items-center gap-3 text-gray-400 text-sm">
                 <div className="w-8 h-8 bg-[#CC1020]/15 rounded flex items-center justify-center shrink-0">

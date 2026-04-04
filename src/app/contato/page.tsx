@@ -85,7 +85,7 @@ export default function ContactPage() {
                   {
                     icon: Phone,
                     title: 'Telefone',
-                    content: '(75) 3333-4444',
+                    content: '(75) 98159-8195',
                     subcontent: 'Seg - Sex, 8h às 18h',
                   },
                   {
