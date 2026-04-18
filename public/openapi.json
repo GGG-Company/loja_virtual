@@ -3,71 +3,47 @@
   "info": {
     "title": "Feira das Ferramentas API",
     "version": "1.0.0",
-    "description": "API REST completa para e-commerce de ferramentas com integração Mercado Livre e Mercado Pago",
+    "description": "API REST completa para e-commerce de ferramentas com integração Mercado Pago e Melhor Envio.\n\n## Autenticação\nA maioria dos endpoints utiliza autenticação via cookie de sessão NextAuth. Endpoints de integração aceitam `X-INTERNAL-API-KEY` no header.",
     "contact": {
       "name": "Suporte API",
-      "email": "suporte@shoppingdasferramentas.com"
+      "email": "suporte@feiradeferramentas.com.br"
     }
   },
   "servers": [
     {
       "url": "http://localhost:3000",
-      "description": "Ambiente de Desenvolvimento"
+      "description": "Desenvolvimento"
     },
     {
-      "url": "https://loja.azura.dev.br",
-      "description": "Ambiente de Produção"
+      "url": "https://feiradeferramentas.com.br",
+      "description": "Produção"
     }
   ],
   "tags": [
-    {
-      "name": "Autenticação",
-      "description": "Endpoints de autenticação e registro de usuários"
-    },
-    {
-      "name": "Produtos",
-      "description": "Operações com produtos"
-    },
-    {
-      "name": "Categorias",
-      "description": "Gerenciamento de categorias"
-    },
-    {
-      "name": "Pedidos",
-      "description": "Gestão de pedidos"
-    },
-    {
-      "name": "Pagamentos",
-      "description": "Processamento de pagamentos via Mercado Pago"
-    },
-    {
-      "name": "Envio",
-      "description": "Cálculo e rastreamento de envios"
-    },
-    {
-      "name": "Avaliações",
-      "description": "Sistema de avaliações de produtos"
-    },
-    {
-      "name": "Devoluções",
-      "description": "Gestão de devoluções e trocas"
-    },
-    {
-      "name": "Admin",
-      "description": "Endpoints administrativos"
-    },
-    {
-      "name": "Integrações",
-      "description": "Webhooks e integrações externas"
-    },
-    {
-      "name": "Webhooks N8N",
-      "description": "Webhooks enviados automaticamente para n8n"
-    },
-    {
-      "name": "Perfil",
-      "description": "Gerenciamento de perfil do usuário"
-    }
+    { "name": "Autenticação", "description": "Registro, login e troca de senha" },
+    { "name": "Produtos", "description": "Listagem e detalhes de produtos" },
+    { "name": "Categorias", "description": "Categorias de produtos" },
+    { "name": "Pedidos", "description": "Criação e consulta de pedidos" },
+    { "name": "Pagamentos", "description": "Mercado Pago — PIX, boleto e cartão" },
+    { "name": "Envio", "description": "Cotação, rastreamento e pontos de retirada" },
+    { "name": "Avaliações", "description": "Avaliações de produtos" },
+    { "name": "Devoluções", "description": "Abertura e acompanhamento de devoluções" },
+    { "name": "Cupons", "description": "Validação de cupons de desconto" },
+    { "name": "Perfil", "description": "Dados e endereço do usuário autenticado" },
+    { "name": "Notificações", "description": "Notificações do usuário" },
+    { "name": "LGPD", "description": "Direitos do titular — portabilidade, exclusão e consentimento" },
+    { "name": "Suporte", "description": "Chat de suporte ao cliente" },
+    { "name": "Admin — Pedidos", "description": "Gestão de pedidos pelo painel admin" },
+    { "name": "Admin — Produtos", "description": "Cadastro e edição de produtos" },
+    { "name": "Admin — Categorias", "description": "Gestão de categorias" },
+    { "name": "Admin — Cupons", "description": "Gestão de cupons" },
+    { "name": "Admin — Devoluções", "description": "Gestão de devoluções" },
+    { "name": "Admin — Avaliações", "description": "Moderação de avaliações" },
+    { "name": "Admin — Picking", "description": "Separação de pedidos" },
+    { "name": "Admin — Financeiro", "description": "Resumo financeiro e exportações" },
+    { "name": "Admin — Integrações", "description": "Configuração de Melhor Envio, Mercado Pago e webhooks" },
+    { "name": "Admin — Configurações", "description": "Configurações do site e do assistente" },
+    { "name": "Integrações", "description": "Endpoints consumidos por sistemas externos (n8n, cron, etc.)" }
   ],
   "components": {
     "securitySchemes": {
@@ -75,352 +51,153 @@
         "type": "apiKey",
         "in": "cookie",
         "name": "next-auth.session-token",
-        "description": "Autenticação via cookie de sessão NextAuth"
+        "description": "Cookie de sessão gerado pelo NextAuth"
       },
       "ApiKeyAuth": {
         "type": "apiKey",
         "in": "header",
         "name": "X-INTERNAL-API-KEY",
-        "description": "Chave de API para integrações externas"
+        "description": "Chave de API para integrações externas (env X_INTERNAL_API_KEY)"
       }
     },
     "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string", "example": "Não autorizado" }
+        }
+      },
       "Product": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string",
-            "example": "clx123abc456"
-          },
-          "name": {
-            "type": "string",
-            "example": "Furadeira de Impacto Bosch 650W"
-          },
-          "description": {
-            "type": "string"
-          },
-          "price": {
-            "type": "number",
-            "format": "float",
-            "example": 299.99
-          },
-          "promotionalPrice": {
-            "type": "number",
-            "format": "float",
-            "example": 249.99,
-            "nullable": true
-          },
-          "stock": {
-            "type": "integer",
-            "example": 50
-          },
-          "sku": {
-            "type": "string",
-            "example": "BOSCH-GSB-650"
-          },
-          "imageUrl": {
-            "type": "string",
-            "example": "/products/furadeira-bosch.jpg"
-          },
-          "category": {
-            "$ref": "#/components/schemas/Category"
-          },
-          "reviews": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Review"
-            }
-          }
+          "id": { "type": "string", "example": "clx123abc456" },
+          "name": { "type": "string", "example": "Furadeira de Impacto Bosch 650W" },
+          "description": { "type": "string" },
+          "price": { "type": "number", "format": "float", "example": 299.99 },
+          "promotionalPrice": { "type": "number", "format": "float", "example": 249.99, "nullable": true },
+          "stock": { "type": "integer", "example": 50 },
+          "sku": { "type": "string", "example": "BOSCH-GSB-650" },
+          "imageUrl": { "type": "string" },
+          "category": { "$ref": "#/components/schemas/Category" }
         }
       },
       "Category": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string",
-            "example": "Ferramentas Elétricas"
-          },
-          "slug": {
-            "type": "string",
-            "example": "ferramentas-eletricas"
-          }
+          "id": { "type": "string" },
+          "name": { "type": "string", "example": "Ferramentas Elétricas" },
+          "slug": { "type": "string", "example": "ferramentas-eletricas" }
         }
       },
       "Order": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string"
-          },
-          "orderNumber": {
-            "type": "string",
-            "example": "ORD-2026-000001"
-          },
+          "id": { "type": "string" },
+          "orderNumber": { "type": "string", "example": "ORD-2026-000001" },
           "status": {
             "type": "string",
-            "enum": ["PENDING", "PAID", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"]
+            "enum": ["PENDING", "CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED", "REFUNDED", "QUOTE"]
           },
-          "total": {
-            "type": "number",
-            "format": "float",
-            "example": 599.99
-          },
-          "paymentMethod": {
-            "type": "string",
-            "enum": ["PIX", "CREDIT_CARD", "BOLETO"]
-          },
-          "trackingCode": {
-            "type": "string",
-            "nullable": true
-          },
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/OrderItem"
-            }
-          }
+          "total": { "type": "number", "format": "float", "example": 599.99 },
+          "paymentMethod": { "type": "string", "enum": ["PIX", "CREDIT_CARD", "BOLETO"] },
+          "trackingCode": { "type": "string", "nullable": true },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/OrderItem" } }
         }
       },
       "OrderItem": {
         "type": "object",
         "properties": {
-          "productId": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "quantity": {
-            "type": "integer",
-            "example": 2
-          },
-          "price": {
-            "type": "number",
-            "format": "float"
-          }
+          "productId": { "type": "string" },
+          "name": { "type": "string" },
+          "quantity": { "type": "integer", "example": 2 },
+          "price": { "type": "number", "format": "float" }
         }
       },
       "Review": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string"
-          },
-          "rating": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 5,
-            "example": 5
-          },
-          "comment": {
-            "type": "string",
-            "example": "Produto excelente, superou minhas expectativas!"
-          },
-          "verified": {
-            "type": "boolean"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "ShippingQuote": {
-        "type": "object",
-        "properties": {
-          "service": {
-            "type": "string",
-            "example": "SEDEX"
-          },
-          "price": {
-            "type": "number",
-            "format": "float",
-            "example": 25.50
-          },
-          "deliveryTime": {
-            "type": "integer",
-            "example": 3,
-            "description": "Prazo em dias úteis"
-          }
+          "id": { "type": "string" },
+          "rating": { "type": "integer", "minimum": 1, "maximum": 5, "example": 5 },
+          "comment": { "type": "string" },
+          "verified": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" }
         }
       },
       "Return": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string"
-          },
-          "orderId": {
-            "type": "string"
-          },
-          "reason": {
-            "type": "string",
-            "enum": ["DEFECTIVE", "WRONG_PRODUCT", "NOT_AS_DESCRIBED", "CHANGED_MIND"]
-          },
-          "status": {
-            "type": "string",
-            "enum": ["PENDING", "APPROVED", "REJECTED", "COMPLETED"]
-          },
-          "description": {
-            "type": "string"
-          }
+          "id": { "type": "string" },
+          "orderId": { "type": "string" },
+          "reason": { "type": "string", "enum": ["DEFECTIVE", "WRONG_PRODUCT", "NOT_AS_DESCRIBED", "CHANGED_MIND"] },
+          "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED", "COMPLETED"] },
+          "reasonDetails": { "type": "string" }
         }
       },
-      "WebhookOrderStatusUpdate": {
+      "ShippingQuote": {
         "type": "object",
-        "description": "Payload enviado ao n8n quando status de pedido é atualizado",
         "properties": {
-          "type": {
-            "type": "string",
-            "example": "order.status.update",
-            "description": "Tipo do evento"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time",
-            "example": "2026-01-14T10:30:00Z"
-          },
-          "orderId": {
-            "type": "string"
-          },
-          "orderNumber": {
-            "type": "string",
-            "example": "ORD-2026-000001"
-          },
-          "status": {
-            "type": "string",
-            "enum": ["PENDING", "CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED", "REFUNDED", "QUOTE"]
-          },
-          "total": {
-            "type": "number"
-          },
-          "user": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "name": {
-                "type": "string"
-              },
-              "email": {
-                "type": "string"
-              },
-              "phone": {
-                "type": "string"
-              }
-            }
-          },
-          "trackingCode": {
-            "type": "string",
-            "nullable": true
-          },
-          "trackingUrl": {
-            "type": "string",
-            "nullable": true
-          },
-          "paymentMethod": {
-            "type": "string"
-          },
-          "items": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "productId": {
-                  "type": "string"
-                },
-                "quantity": {
-                  "type": "integer"
-                },
-                "price": {
-                  "type": "number"
-                },
-                "product": {
-                  "type": "object",
-                  "properties": {
-                    "name": {
-                      "type": "string"
-                    },
-                    "sku": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
-            }
-          }
+          "service": { "type": "string", "example": "SEDEX" },
+          "price": { "type": "number", "format": "float", "example": 25.5 },
+          "deliveryTime": { "type": "integer", "example": 3, "description": "Prazo em dias úteis" }
         }
       },
-      "WebhookReturnCreated": {
+      "Coupon": {
         "type": "object",
-        "description": "Payload enviado ao n8n quando uma devolução é criada",
         "properties": {
-          "type": {
-            "type": "string",
-            "example": "returns.created"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "returnId": {
-            "type": "string"
-          },
-          "orderId": {
-            "type": "string"
-          },
-          "orderNumber": {
-            "type": "string"
-          },
-          "reason": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string"
-          },
-          "user": {
-            "type": "object",
-            "properties": {
-              "name": {
-                "type": "string"
-              },
-              "email": {
-                "type": "string"
-              }
-            }
-          }
+          "id": { "type": "string" },
+          "code": { "type": "string", "example": "DESCONTO10" },
+          "description": { "type": "string" },
+          "discountType": { "type": "string", "enum": ["PERCENTAGE", "FIXED"] },
+          "value": { "type": "number", "format": "float", "example": 10 },
+          "isActive": { "type": "boolean" },
+          "usageLimit": { "type": "integer", "nullable": true },
+          "usageCount": { "type": "integer" },
+          "minPurchase": { "type": "number", "nullable": true },
+          "startDate": { "type": "string", "format": "date-time", "nullable": true },
+          "endDate": { "type": "string", "format": "date-time", "nullable": true }
         }
       },
-      "WebhookGeneric": {
+      "Notification": {
         "type": "object",
-        "description": "Formato genérico de webhook enviado ao n8n",
         "properties": {
-          "type": {
-            "type": "string",
-            "description": "Tipo do evento (ex: returns.approved, shipping.label_ready)"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "additionalProperties": true
+          "id": { "type": "string" },
+          "type": { "type": "string", "example": "ORDER_STATUS" },
+          "title": { "type": "string" },
+          "message": { "type": "string" },
+          "isRead": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
       },
-      "Error": {
+      "Address": {
         "type": "object",
         "properties": {
-          "error": {
-            "type": "string",
-            "example": "Produto não encontrado"
-          },
-          "code": {
-            "type": "string",
-            "example": "PRODUCT_NOT_FOUND"
-          }
+          "addressZip": { "type": "string", "example": "44002264" },
+          "addressStreet": { "type": "string", "example": "Rua Vitorino Gouveia" },
+          "addressNumber": { "type": "string", "example": "35" },
+          "addressComplement": { "type": "string", "nullable": true },
+          "addressNeighborhood": { "type": "string", "example": "Centro" },
+          "addressCity": { "type": "string", "example": "Feira de Santana" },
+          "addressState": { "type": "string", "example": "BA" }
+        }
+      },
+      "SupportChat": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "status": { "type": "string", "enum": ["BOT", "OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"] },
+          "userName": { "type": "string" },
+          "userEmail": { "type": "string", "nullable": true },
+          "subject": { "type": "string", "nullable": true },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "page": { "type": "integer" },
+          "limit": { "type": "integer" },
+          "total": { "type": "integer" },
+          "totalPages": { "type": "integer" }
         }
       }
     }
@@ -429,8 +206,7 @@
     "/api/auth/register": {
       "post": {
         "tags": ["Autenticação"],
-        "summary": "Registrar novo usuário",
-        "description": "Cria uma nova conta de usuário no sistema",
+        "summary": "Criar nova conta",
         "requestBody": {
           "required": true,
           "content": {
@@ -439,66 +215,46 @@
                 "type": "object",
                 "required": ["name", "email", "password"],
                 "properties": {
-                  "name": {
-                    "type": "string",
-                    "example": "João Silva"
-                  },
-                  "email": {
-                    "type": "string",
-                    "format": "email",
-                    "example": "joao@email.com"
-                  },
-                  "password": {
-                    "type": "string",
-                    "format": "password",
-                    "example": "SenhaSegura123!"
-                  }
+                  "name": { "type": "string", "example": "João Silva" },
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string", "minLength": 6 },
+                  "phone": { "type": "string", "example": "(75) 98159-8195" },
+                  "cpf": { "type": "string", "example": "123.456.789-00" },
+                  "birthDate": { "type": "string", "format": "date" }
                 }
               }
             }
           }
         },
         "responses": {
-          "201": {
-            "description": "Usuário criado com sucesso",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": true
-                    },
-                    "user": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "email": {
-                          "type": "string"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Dados inválidos",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
+          "201": { "description": "Conta criada com sucesso" },
+          "400": { "description": "Dados inválidos ou e-mail já cadastrado" }
+        }
+      }
+    },
+    "/api/auth/change-password": {
+      "post": {
+        "tags": ["Autenticação"],
+        "summary": "Alterar senha (autenticado)",
+        "security": [{ "SessionAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["currentPassword", "newPassword"],
+                "properties": {
+                  "currentPassword": { "type": "string" },
+                  "newPassword": { "type": "string", "minLength": 8, "description": "Mínimo 8 chars com maiúscula, minúscula e número" }
                 }
               }
             }
           }
+        },
+        "responses": {
+          "200": { "description": "Senha alterada" },
+          "401": { "description": "Senha atual incorreta" }
         }
       }
     },
@@ -506,56 +262,14 @@
       "get": {
         "tags": ["Produtos"],
         "summary": "Listar produtos",
-        "description": "Retorna lista paginada de produtos com filtros opcionais",
         "parameters": [
-          {
-            "name": "page",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "default": 1
-            },
-            "description": "Número da página"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "default": 20
-            },
-            "description": "Itens por página"
-          },
-          {
-            "name": "category",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "description": "Filtrar por ID de categoria"
-          },
-          {
-            "name": "search",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "description": "Buscar por nome ou descrição"
-          },
-          {
-            "name": "minPrice",
-            "in": "query",
-            "schema": {
-              "type": "number"
-            }
-          },
-          {
-            "name": "maxPrice",
-            "in": "query",
-            "schema": {
-              "type": "number"
-            }
-          }
+          { "in": "query", "name": "search", "schema": { "type": "string" } },
+          { "in": "query", "name": "category", "schema": { "type": "string" } },
+          { "in": "query", "name": "page", "schema": { "type": "integer", "default": 1 } },
+          { "in": "query", "name": "limit", "schema": { "type": "integer", "default": 20 } },
+          { "in": "query", "name": "minPrice", "schema": { "type": "number" } },
+          { "in": "query", "name": "maxPrice", "schema": { "type": "number" } },
+          { "in": "query", "name": "sort", "schema": { "type": "string", "enum": ["price_asc", "price_desc", "newest", "rating"] } }
         ],
         "responses": {
           "200": {
@@ -565,242 +279,495 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "products": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Product"
-                      }
-                    },
-                    "total": {
-                      "type": "integer"
-                    },
-                    "page": {
-                      "type": "integer"
-                    },
-                    "totalPages": {
-                      "type": "integer"
-                    }
+                    "products": { "type": "array", "items": { "$ref": "#/components/schemas/Product" } },
+                    "pagination": { "$ref": "#/components/schemas/Pagination" }
                   }
                 }
               }
             }
           }
+        }
+      },
+      "post": {
+        "tags": ["Admin — Produtos"],
+        "summary": "Criar produto",
+        "security": [{ "SessionAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "price", "categoryId"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "description": { "type": "string" },
+                  "price": { "type": "number" },
+                  "promotionalPrice": { "type": "number", "nullable": true },
+                  "stock": { "type": "integer" },
+                  "sku": { "type": "string" },
+                  "categoryId": { "type": "string" },
+                  "imageUrl": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Produto criado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Product" } } } }
         }
       }
     },
     "/api/products/{id}": {
       "get": {
         "tags": ["Produtos"],
-        "summary": "Obter produto por ID",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "summary": "Detalhes de um produto",
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
         "responses": {
-          "200": {
-            "description": "Detalhes do produto",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Product"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Produto não encontrado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
+          "200": { "description": "Produto encontrado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Product" } } } },
+          "404": { "description": "Produto não encontrado" }
+        }
+      },
+      "put": {
+        "tags": ["Admin — Produtos"],
+        "summary": "Atualizar produto",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Product" } } } },
+        "responses": { "200": { "description": "Produto atualizado" } }
+      },
+      "delete": {
+        "tags": ["Admin — Produtos"],
+        "summary": "Remover produto",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Produto removido" } }
+      }
+    },
+    "/api/products/{id}/reviews": {
+      "get": {
+        "tags": ["Avaliações"],
+        "summary": "Avaliações de um produto",
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Lista de avaliações" } }
+      },
+      "post": {
+        "tags": ["Avaliações"],
+        "summary": "Avaliar produto",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["rating"],
+                "properties": {
+                  "rating": { "type": "integer", "minimum": 1, "maximum": 5 },
+                  "comment": { "type": "string" },
+                  "title": { "type": "string" }
                 }
               }
             }
           }
-        }
+        },
+        "responses": { "201": { "description": "Avaliação registrada" } }
+      }
+    },
+    "/api/reviews/{id}": {
+      "get": {
+        "tags": ["Avaliações"],
+        "summary": "Detalhes de uma avaliação",
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Avaliação encontrada" } }
+      },
+      "put": {
+        "tags": ["Avaliações"],
+        "summary": "Editar avaliação (autor ou admin)",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rating": { "type": "integer", "minimum": 1, "maximum": 5 },
+                  "title": { "type": "string" },
+                  "comment": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Avaliação atualizada" } }
+      },
+      "patch": {
+        "tags": ["Avaliações"],
+        "summary": "Ações em avaliação (helpful / resposta da loja)",
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["action"],
+                "properties": {
+                  "action": { "type": "string", "enum": ["helpful", "seller_response"] },
+                  "sellerResponse": { "type": "string", "description": "Obrigatório quando action=seller_response (admin apenas)" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Ação executada" } }
+      },
+      "delete": {
+        "tags": ["Avaliações"],
+        "summary": "Remover avaliação (autor ou admin)",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Avaliação removida" } }
       }
     },
     "/api/categories": {
       "get": {
         "tags": ["Categorias"],
         "summary": "Listar categorias",
-        "responses": {
-          "200": {
-            "description": "Lista de categorias",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Category"
-                  }
-                }
-              }
-            }
-          }
-        }
+        "responses": { "200": { "description": "Lista de categorias" } }
       }
     },
     "/api/orders": {
+      "get": {
+        "tags": ["Pedidos"],
+        "summary": "Listar pedidos do usuário autenticado",
+        "security": [{ "SessionAuth": [] }],
+        "responses": { "200": { "description": "Lista de pedidos" } }
+      },
       "post": {
         "tags": ["Pedidos"],
-        "summary": "Criar novo pedido",
-        "security": [
-          {
-            "SessionAuth": []
-          }
-        ],
+        "summary": "Criar pedido",
+        "security": [{ "SessionAuth": [] }],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["items", "shippingAddress"],
+                "required": ["items", "entrega"],
                 "properties": {
-                  "items": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "productId": {
-                          "type": "string"
-                        },
-                        "quantity": {
-                          "type": "integer"
-                        }
-                      }
-                    }
-                  },
-                  "shippingAddress": {
+                  "items": { "type": "array", "items": { "type": "object", "properties": { "productId": { "type": "string" }, "quantity": { "type": "integer" } } } },
+                  "dados": {
                     "type": "object",
                     "properties": {
-                      "street": {
-                        "type": "string"
-                      },
-                      "number": {
-                        "type": "string"
-                      },
-                      "complement": {
-                        "type": "string"
-                      },
-                      "neighborhood": {
-                        "type": "string"
-                      },
-                      "city": {
-                        "type": "string"
-                      },
-                      "state": {
-                        "type": "string"
-                      },
-                      "zipCode": {
-                        "type": "string"
-                      }
+                      "nome": { "type": "string" },
+                      "email": { "type": "string" },
+                      "telefone": { "type": "string" },
+                      "cpf": { "type": "string" }
                     }
                   },
-                  "paymentMethod": {
-                    "type": "string",
-                    "enum": ["PIX", "CREDIT_CARD", "BOLETO"]
-                  }
+                  "entrega": {
+                    "type": "object",
+                    "properties": {
+                      "cep": { "type": "string" },
+                      "endereco": { "type": "string" },
+                      "numero": { "type": "string" },
+                      "bairro": { "type": "string" },
+                      "cidade": { "type": "string" },
+                      "estado": { "type": "string" }
+                    }
+                  },
+                  "shippingServiceId": { "type": "string" },
+                  "shippingPrice": { "type": "number" },
+                  "couponCode": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Pedido criado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Order" } } } } }
+      }
+    },
+    "/api/orders/quote": {
+      "post": {
+        "tags": ["Pedidos"],
+        "summary": "Criar pedido do tipo orçamento (QUOTE)",
+        "security": [{ "SessionAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["items", "customer"],
+                "properties": {
+                  "items": { "type": "array", "items": { "type": "object", "properties": { "productId": { "type": "string" }, "quantity": { "type": "integer" } } } },
+                  "customer": { "type": "object", "properties": { "name": { "type": "string" }, "email": { "type": "string" }, "phone": { "type": "string" } } },
+                  "shippingOption": { "type": "object" },
+                  "destinationZip": { "type": "string" },
+                  "validityDays": { "type": "integer", "default": 7 },
+                  "notes": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Orçamento criado" } }
+      }
+    },
+    "/api/orders/{id}/payment": {
+      "post": {
+        "tags": ["Pedidos"],
+        "summary": "Registrar método de pagamento num pedido existente",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["paymentMethod"],
+                "properties": {
+                  "paymentMethod": { "type": "string", "enum": ["PIX", "CREDIT_CARD", "BOLETO"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Pagamento registrado" } }
+      }
+    },
+    "/api/user/orders": {
+      "get": {
+        "tags": ["Pedidos"],
+        "summary": "Histórico de pedidos do usuário",
+        "security": [{ "SessionAuth": [] }],
+        "responses": { "200": { "description": "Lista de pedidos do usuário" } }
+      }
+    },
+    "/api/user/orders/{id}": {
+      "get": {
+        "tags": ["Pedidos"],
+        "summary": "Detalhes de um pedido do usuário",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Detalhes do pedido" } }
+      },
+      "patch": {
+        "tags": ["Pedidos"],
+        "summary": "Cancelar pedido",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "properties": { "action": { "type": "string", "enum": ["cancel"] } } } } }
+        },
+        "responses": { "200": { "description": "Pedido cancelado" } }
+      }
+    },
+    "/api/user/orders/{id}/confirm-delivery": {
+      "post": {
+        "tags": ["Pedidos"],
+        "summary": "Confirmar recebimento do pedido",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Entrega confirmada, pedido marcado como DELIVERED" } }
+      }
+    },
+    "/api/payments/mercadopago/pix": {
+      "post": {
+        "tags": ["Pagamentos"],
+        "summary": "Gerar QR code PIX",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["orderId", "amount", "userEmail"],
+                "properties": {
+                  "orderId": { "type": "string" },
+                  "amount": { "type": "number", "format": "float" },
+                  "userEmail": { "type": "string", "format": "email" },
+                  "userName": { "type": "string" }
                 }
               }
             }
           }
         },
         "responses": {
-          "201": {
-            "description": "Pedido criado com sucesso",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Order"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Não autorizado"
-          }
-        }
-      }
-    },
-    "/api/user/orders": {
-      "get": {
-        "tags": ["Pedidos"],
-        "summary": "Listar pedidos do usuário",
-        "security": [
-          {
-            "SessionAuth": []
-          }
-        ],
-        "responses": {
           "200": {
-            "description": "Lista de pedidos",
+            "description": "QR code gerado",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Order"
+                  "type": "object",
+                  "properties": {
+                    "paymentId": { "type": "string" },
+                    "qrCode": { "type": "string" },
+                    "qrCodeBase64": { "type": "string" },
+                    "expiresAt": { "type": "string", "format": "date-time" }
                   }
                 }
               }
             }
           }
         }
+      }
+    },
+    "/api/payments/mercadopago/boleto": {
+      "post": {
+        "tags": ["Pagamentos"],
+        "summary": "Gerar boleto bancário",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["orderId", "amount", "userEmail", "userName", "userCpf"],
+                "properties": {
+                  "orderId": { "type": "string" },
+                  "amount": { "type": "number" },
+                  "userEmail": { "type": "string" },
+                  "userName": { "type": "string" },
+                  "userCpf": { "type": "string", "example": "123.456.789-00" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Boleto gerado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "paymentId": { "type": "string" },
+                    "status": { "type": "string" },
+                    "boletoUrl": { "type": "string" },
+                    "barcode": { "type": "string" },
+                    "dueDate": { "type": "string", "format": "date" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payments/mercadopago/process": {
+      "post": {
+        "tags": ["Pagamentos"],
+        "summary": "Processar pagamento com cartão de crédito",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["formData", "orderId", "amount"],
+                "properties": {
+                  "orderId": { "type": "string" },
+                  "amount": { "type": "number" },
+                  "formData": { "type": "object", "description": "Payload do Mercado Pago SDK (token, installments, payer, etc.)" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pagamento processado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "approved" },
+                    "paymentId": { "type": "string" },
+                    "statusDetail": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payments/mercadopago/public-key": {
+      "get": {
+        "tags": ["Pagamentos"],
+        "summary": "Obter chave pública do Mercado Pago",
+        "responses": {
+          "200": {
+            "description": "Chave pública",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "publicKey": { "type": "string" } } } } }
+          }
+        }
+      }
+    },
+    "/api/payments/mercadopago/simulate-approval": {
+      "post": {
+        "tags": ["Pagamentos"],
+        "summary": "Simular aprovação de pagamento (somente sandbox)",
+        "security": [{ "SessionAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "required": ["paymentId"], "properties": { "paymentId": { "type": "string" } } } } }
+        },
+        "responses": { "200": { "description": "Aprovação simulada", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "orderId": { "type": "string" } } } } } }
+        }
+      }
+    },
+    "/api/payments/mercadopago/webhook": {
+      "post": {
+        "tags": ["Pagamentos"],
+        "summary": "Webhook do Mercado Pago",
+        "description": "Recebe notificações de pagamento. Valida assinatura HMAC e enfileira processamento via BullMQ.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": { "type": "string", "example": "payment" },
+                  "data": { "type": "object", "properties": { "id": { "type": "string" } } }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Recebido" } }
       }
     },
     "/api/shipping/quote": {
       "post": {
         "tags": ["Envio"],
         "summary": "Calcular frete",
-        "description": "Calcula opções de frete para um CEP destino",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["cep", "items"],
+                "required": ["destinationZip", "items"],
                 "properties": {
-                  "cep": {
-                    "type": "string",
-                    "example": "01310-100",
-                    "pattern": "^[0-9]{5}-?[0-9]{3}$"
-                  },
+                  "destinationZip": { "type": "string", "example": "01310100" },
                   "items": {
                     "type": "array",
                     "items": {
                       "type": "object",
                       "properties": {
-                        "productId": {
-                          "type": "string"
-                        },
-                        "quantity": {
-                          "type": "integer"
-                        }
+                        "productId": { "type": "string" },
+                        "quantity": { "type": "integer" }
                       }
                     }
-                  }
-                }
-              },
-              "examples": {
-                "exemplo1": {
-                  "summary": "Cálculo simples",
-                  "value": {
-                    "cep": "01310-100",
-                    "items": [
-                      {
-                        "productId": "clx123abc",
-                        "quantity": 2
-                      }
-                    ]
                   }
                 }
               }
@@ -809,383 +776,133 @@
         },
         "responses": {
           "200": {
-            "description": "Opções de frete calculadas",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ShippingQuote"
-                  }
-                },
-                "examples": {
-                  "exemplo1": {
-                    "summary": "Resposta com opções",
-                    "value": [
-                      {
-                        "service": "SEDEX",
-                        "price": 25.50,
-                        "deliveryTime": 3
-                      },
-                      {
-                        "service": "PAC",
-                        "price": 15.80,
-                        "deliveryTime": 7
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "CEP inválido ou itens ausentes"
+            "description": "Opções de frete",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/ShippingQuote" } } } }
           }
         }
       }
     },
-    "/api/payments/mercadopago/pix": {
+    "/api/shipping/track": {
       "post": {
-        "tags": ["Pagamentos"],
-        "summary": "Gerar pagamento PIX",
-        "security": [
-          {
-            "SessionAuth": []
-          }
-        ],
+        "tags": ["Envio"],
+        "summary": "Rastrear encomendas",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["orderId"],
+                "required": ["trackingCodes"],
                 "properties": {
-                  "orderId": {
-                    "type": "string"
-                  }
-                }
-              },
-              "examples": {
-                "exemplo1": {
-                  "value": {
-                    "orderId": "clx789xyz"
-                  }
+                  "trackingCodes": { "type": "array", "items": { "type": "string" }, "example": ["BR123456789XX"] }
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "QR Code PIX gerado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "qrCode": {
-                      "type": "string",
-                      "description": "Código PIX copia e cola"
-                    },
-                    "qrCodeBase64": {
-                      "type": "string",
-                      "description": "Imagem QR Code em base64"
-                    },
-                    "paymentId": {
-                      "type": "string"
-                    },
-                    "expiresAt": {
-                      "type": "string",
-                      "format": "date-time"
-                    }
-                  }
-                },
-                "examples": {
-                  "exemplo1": {
-                    "value": {
-                      "qrCode": "00020126580014br.gov.bcb.pix...",
-                      "qrCodeBase64": "data:image/png;base64,iVBORw0KGgo...",
-                      "paymentId": "123456789",
-                      "expiresAt": "2026-01-14T15:30:00Z"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+        "responses": { "200": { "description": "Eventos de rastreamento por código" } }
       }
     },
-    "/api/products/{id}/reviews": {
+    "/api/shipping/pickups": {
       "get": {
-        "tags": ["Avaliações"],
-        "summary": "Listar avaliações de um produto",
+        "tags": ["Envio"],
+        "summary": "Listar pontos de retirada pelo CEP",
         "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
+          { "in": "query", "name": "zip", "required": true, "schema": { "type": "string" }, "example": "44002264" }
         ],
-        "responses": {
-          "200": {
-            "description": "Lista de avaliações",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Review"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": ["Avaliações"],
-        "summary": "Criar avaliação",
-        "security": [
-          {
-            "SessionAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["rating", "comment"],
-                "properties": {
-                  "rating": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 5
-                  },
-                  "comment": {
-                    "type": "string"
-                  }
-                }
-              },
-              "examples": {
-                "exemplo1": {
-                  "value": {
-                    "rating": 5,
-                    "comment": "Produto excelente, entrega rápida!"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Avaliação criada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "rating": {
-                      "type": "integer"
-                    },
-                    "comment": {
-                      "type": "string"
-                    },
-                    "verified": {
-                      "type": "boolean"
-                    },
-                    "createdAt": {
-                      "type": "string",
-                      "format": "date-time"
-                    }
-                  }
-                },
-                "examples": {
-                  "exemplo1": {
-                    "value": {
-                      "id": "review123",
-                      "rating": 5,
-                      "comment": "Produto excelente, entrega rápida!",
-                      "verified": true,
-                      "createdAt": "2026-01-14T10:30:00Z"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+        "responses": { "200": { "description": "Lista de pontos de retirada" } }
       }
     },
     "/api/returns": {
-      "get": {
-        "tags": ["Devoluções"],
-        "summary": "Listar devoluções (Admin)",
-        "security": [
-          {
-            "SessionAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Lista de devoluções",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Return"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
       "post": {
         "tags": ["Devoluções"],
-        "summary": "Solicitar devolução",
-        "security": [
-          {
-            "SessionAuth": []
-          }
-        ],
+        "summary": "Abrir solicitação de devolução",
+        "security": [{ "SessionAuth": [] }],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["orderId", "reason"],
+                "required": ["orderId", "reason", "items"],
                 "properties": {
-                  "orderId": {
-                    "type": "string"
-                  },
-                  "reason": {
-                    "type": "string",
-                    "enum": ["DEFECTIVE", "WRONG_PRODUCT", "NOT_AS_DESCRIBED", "CHANGED_MIND"]
-                  },
-                  "description": {
-                    "type": "string"
-                  }
+                  "orderId": { "type": "string" },
+                  "reason": { "type": "string", "enum": ["DEFECTIVE", "WRONG_PRODUCT", "NOT_AS_DESCRIBED", "CHANGED_MIND"] },
+                  "reasonDetails": { "type": "string" },
+                  "items": { "type": "array", "items": { "type": "object", "properties": { "orderItemId": { "type": "string" }, "quantity": { "type": "integer" } } } }
                 }
               }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": "Devolução criada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "orderId": {
-                      "type": "string"
-                    },
-                    "status": {
-                      "type": "string"
-                    },
-                    "reason": {
-                      "type": "string"
-                    },
-                    "description": {
-                      "type": "string"
-                    },
-                    "createdAt": {
-                      "type": "string",
-                      "format": "date-time"
-                    }
-                  }
-                },
-                "examples": {
-                  "exemplo1": {
-                    "value": {
-                      "id": "return123",
-                      "orderId": "order123",
-                      "status": "PENDING",
-                      "reason": "DEFECTIVE",
-                      "description": "Produto chegou com defeito na embalagem",
-                      "createdAt": "2026-01-14T10:30:00Z"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+        "responses": { "201": { "description": "Devolução aberta", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Return" } } } } }
       }
     },
-    "/api/integrations/stock/sync": {
-      "post": {
-        "tags": ["Integrações"],
-        "summary": "Sincronizar estoque",
-        "description": "Atualiza estoque de produtos via integração externa (requer API Key)",
-        "security": [
-          {
-            "ApiKeyAuth": []
-          }
-        ],
+    "/api/returns/{id}": {
+      "get": {
+        "tags": ["Devoluções"],
+        "summary": "Detalhes de uma devolução",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Devolução encontrada" } }
+      },
+      "put": {
+        "tags": ["Devoluções"],
+        "summary": "Ações do cliente na devolução (cancelar / marcar enviado)",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["sku", "quantity"],
+                "required": ["action"],
+                "properties": { "action": { "type": "string", "enum": ["cancel", "mark_shipped"] } }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Ação executada" } }
+      }
+    },
+    "/api/returns/{id}/approve": {
+      "put": {
+        "tags": ["Devoluções"],
+        "summary": "Aprovar devolução (admin)",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "content": { "application/json": { "schema": { "type": "object", "properties": { "adminNotes": { "type": "string" } } } } }
+        },
+        "responses": { "200": { "description": "Devolução aprovada" } }
+      },
+      "delete": {
+        "tags": ["Devoluções"],
+        "summary": "Rejeitar devolução (admin)",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "content": { "application/json": { "schema": { "type": "object", "properties": { "adminNotes": { "type": "string" } } } } }
+        },
+        "responses": { "200": { "description": "Devolução rejeitada" } }
+      }
+    },
+    "/api/coupons/validate": {
+      "post": {
+        "tags": ["Cupons"],
+        "summary": "Validar e calcular desconto de um cupom",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["code", "cartTotal"],
                 "properties": {
-                  "sku": {
-                    "type": "string",
-                    "example": "MAKITA-DHR243Z"
-                  },
-                  "quantity": {
-                    "type": "integer",
-                    "example": 50
-                  },
-                  "source": {
-                    "type": "string",
-                    "enum": ["MERCADO_LIVRE", "HIPER", "MANUAL"],
-                    "example": "MERCADO_LIVRE"
-                  },
-                  "reason": {
-                    "type": "string",
-                    "example": "Venda ML #MLB123456"
-                  }
-                }
-              },
-              "examples": {
-                "venda_ml": {
-                  "summary": "Sincronização por venda ML",
-                  "value": {
-                    "sku": "MAKITA-DHR243Z",
-                    "quantity": 45,
-                    "source": "MERCADO_LIVRE",
-                    "reason": "Venda ML #MLB123456"
-                  }
+                  "code": { "type": "string", "example": "DESCONTO10" },
+                  "cartTotal": { "type": "number", "example": 250.00 },
+                  "userId": { "type": "string" }
                 }
               }
             }
@@ -1193,42 +910,22 @@
         },
         "responses": {
           "200": {
-            "description": "Estoque sincronizado",
+            "description": "Resultado da validação",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "product": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string"
-                        },
-                        "sku": {
-                          "type": "string"
-                        },
-                        "previousStock": {
-                          "type": "integer"
-                        },
-                        "newStock": {
-                          "type": "integer"
-                        }
-                      }
-                    }
+                    "valid": { "type": "boolean" },
+                    "couponId": { "type": "string" },
+                    "discount": { "type": "number" },
+                    "discountValue": { "type": "number" },
+                    "discountType": { "type": "string", "enum": ["PERCENTAGE", "FIXED"] },
+                    "error": { "type": "string" }
                   }
                 }
               }
             }
-          },
-          "401": {
-            "description": "API Key inválida ou ausente"
-          },
-          "404": {
-            "description": "Produto não encontrado"
           }
         }
       }
@@ -1236,216 +933,653 @@
     "/api/profile": {
       "get": {
         "tags": ["Perfil"],
-        "summary": "Obter perfil do usuário",
-        "security": [
-          {
-            "SessionAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Dados do perfil",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "name": {
-                      "type": "string"
-                    },
-                    "email": {
-                      "type": "string"
-                    },
-                    "phone": {
-                      "type": "string"
-                    },
-                    "cpf": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+        "summary": "Obter perfil do usuário autenticado",
+        "security": [{ "SessionAuth": [] }],
+        "responses": { "200": { "description": "Dados do perfil" } }
       },
       "put": {
         "tags": ["Perfil"],
         "summary": "Atualizar perfil",
-        "security": [
-          {
-            "SessionAuth": []
-          }
-        ],
+        "security": [{ "SessionAuth": [] }],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
-                  "name": {
-                    "type": "string"
-                  },
-                  "phone": {
-                    "type": "string"
-                  },
-                  "cpf": {
-                    "type": "string"
-                  }
+                  "name": { "type": "string" },
+                  "phone": { "type": "string" },
+                  "birthDate": { "type": "string", "format": "date" }
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Perfil atualizado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "name": {
-                      "type": "string"
-                    },
-                    "email": {
-                      "type": "string"
-                    },
-                    "phone": {
-                      "type": "string"
-                    },
-                    "cpf": {
-                      "type": "string"
-                    }
-                  }
-                },
-                "examples": {
-                  "exemplo1": {
-                    "value": {
-                      "id": "user123",
-                      "name": "João Silva",
-                      "email": "joao@email.com",
-                      "phone": "(11) 98765-4321",
-                      "cpf": "123.456.789-00"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+        "responses": { "200": { "description": "Perfil atualizado" } }
       }
     },
-    "/api/admin/products": {
+    "/api/user/addresses": {
       "get": {
-        "tags": ["Admin"],
-        "summary": "Listar todos os produtos (Admin)",
-        "security": [
-          {
-            "SessionAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Lista completa de produtos",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Product"
-                  }
-                },
-                "examples": {
-                  "exemplo1": {
-                    "value": [
-                      {
-                        "id": "clx123abc",
-                        "name": "Furadeira Bosch",
-                        "price": 299.99,
-                        "stock": 50,
-                        "sku": "BOSCH-GSB-650"
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        }
+        "tags": ["Perfil"],
+        "summary": "Obter endereço padrão do usuário",
+        "security": [{ "SessionAuth": [] }],
+        "responses": { "200": { "description": "Endereço", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Address" } } } } }
       },
-      "post": {
-        "tags": ["Admin"],
-        "summary": "Criar produto (Admin)",
-        "security": [
-          {
-            "SessionAuth": []
-          }
-        ],
+      "put": {
+        "tags": ["Perfil"],
+        "summary": "Atualizar endereço padrão",
+        "security": [{ "SessionAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Address" } } } },
+        "responses": { "200": { "description": "Endereço atualizado" } }
+      }
+    },
+    "/api/user/password": {
+      "put": {
+        "tags": ["Perfil"],
+        "summary": "Alterar senha pelo painel do usuário",
+        "security": [{ "SessionAuth": [] }],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["name", "price", "categoryId", "sku"],
+                "required": ["currentPassword", "newPassword"],
                 "properties": {
-                  "name": {
-                    "type": "string"
-                  },
-                  "description": {
-                    "type": "string"
-                  },
-                  "price": {
-                    "type": "number"
-                  },
-                  "promotionalPrice": {
-                    "type": "number"
-                  },
-                  "stock": {
-                    "type": "integer"
-                  },
-                  "categoryId": {
-                    "type": "string"
-                  },
-                  "sku": {
-                    "type": "string"
-                  },
-                  "imageUrl": {
-                    "type": "string"
-                  }
+                  "currentPassword": { "type": "string" },
+                  "newPassword": { "type": "string", "minLength": 8 }
                 }
               }
             }
           }
         },
+        "responses": { "200": { "description": "Senha alterada" } }
+      }
+    },
+    "/api/notifications": {
+      "get": {
+        "tags": ["Notificações"],
+        "summary": "Listar notificações do usuário",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [
+          { "in": "query", "name": "unreadOnly", "schema": { "type": "boolean" } },
+          { "in": "query", "name": "limit", "schema": { "type": "integer", "default": 20 } },
+          { "in": "query", "name": "offset", "schema": { "type": "integer", "default": 0 } }
+        ],
         "responses": {
-          "201": {
-            "description": "Produto criado",
+          "200": {
+            "description": "Lista de notificações",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "notifications": { "type": "array", "items": { "$ref": "#/components/schemas/Notification" } }, "pagination": { "$ref": "#/components/schemas/Pagination" } } } } }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Notificações"],
+        "summary": "Marcar notificação(ões) como lida(s)",
+        "security": [{ "SessionAuth": [] }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "notificationId": { "type": "string" },
+                  "markAllAsRead": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Notificação(ões) marcada(s) como lida(s)" } }
+      },
+      "delete": {
+        "tags": ["Notificações"],
+        "summary": "Remover notificação(ões)",
+        "security": [{ "SessionAuth": [] }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "notificationId": { "type": "string" },
+                  "deleteAll": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Removida(s)" } }
+      }
+    },
+    "/api/consent": {
+      "post": {
+        "tags": ["LGPD"],
+        "summary": "Registrar consentimento de cookies (Art. 7 LGPD)",
+        "description": "Chamado automaticamente pelo banner de cookies. Cria um registro auditável no banco. Não requer autenticação.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["analytics", "marketing", "version"],
+                "properties": {
+                  "essential": { "type": "boolean", "default": true },
+                  "analytics": { "type": "boolean" },
+                  "marketing": { "type": "boolean" },
+                  "version": { "type": "string", "example": "1" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Consentimento registrado", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" } } } } } } }
+      }
+    },
+    "/api/user/export": {
+      "get": {
+        "tags": ["LGPD"],
+        "summary": "Exportar todos os dados pessoais (Art. 18, V LGPD — portabilidade)",
+        "security": [{ "SessionAuth": [] }],
+        "description": "Retorna JSON com todos os dados do titular: perfil, pedidos, avaliações, devoluções e log de atividade. CPF é mascarado.",
+        "responses": {
+          "200": {
+            "description": "Arquivo JSON para download",
+            "headers": {
+              "Content-Disposition": { "schema": { "type": "string", "example": "attachment; filename=\"meus-dados-2026-04-14.json\"" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/user/account": {
+      "delete": {
+        "tags": ["LGPD"],
+        "summary": "Excluir conta (Art. 18, VI LGPD — esquecimento)",
+        "security": [{ "SessionAuth": [] }],
+        "description": "Anonimiza todos os dados pessoais, invalida JWTs ativos via tokenVersion e registra no log externo de exclusões para proteção contra backup resurrection.",
+        "responses": {
+          "200": { "description": "Conta anonimizada com sucesso" },
+          "401": { "description": "Não autorizado" }
+        }
+      }
+    },
+    "/api/support/chats": {
+      "get": {
+        "tags": ["Suporte"],
+        "summary": "Listar chats de suporte (admin)",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [
+          { "in": "query", "name": "status", "schema": { "type": "string", "enum": ["active", "bot", "OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"] } }
+        ],
+        "responses": { "200": { "description": "Lista de chats", "content": { "application/json": { "schema": { "type": "object", "properties": { "chats": { "type": "array", "items": { "$ref": "#/components/schemas/SupportChat" } } } } } } }
+        }
+      },
+      "post": {
+        "tags": ["Suporte"],
+        "summary": "Abrir ou continuar um chat de suporte",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["userName", "initialMessage"],
+                "properties": {
+                  "userName": { "type": "string" },
+                  "userEmail": { "type": "string" },
+                  "subject": { "type": "string" },
+                  "initialMessage": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Chat criado ou retomado" } }
+      }
+    },
+    "/api/support/chats/{chatId}": {
+      "get": {
+        "tags": ["Suporte"],
+        "summary": "Mensagens de um chat",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [
+          { "in": "path", "name": "chatId", "required": true, "schema": { "type": "string" } },
+          { "in": "query", "name": "limit", "schema": { "type": "integer", "default": 50 } },
+          { "in": "query", "name": "before", "schema": { "type": "string", "format": "date-time" } }
+        ],
+        "responses": { "200": { "description": "Chat com mensagens" } }
+      },
+      "post": {
+        "tags": ["Suporte"],
+        "summary": "Enviar mensagem no chat",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "chatId", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["message"],
+                "properties": {
+                  "message": { "type": "string" },
+                  "asAttendant": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Mensagem enviada" } }
+      },
+      "patch": {
+        "tags": ["Suporte"],
+        "summary": "Atualizar status do chat (admin)",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "chatId", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["status"],
+                "properties": { "status": { "type": "string", "enum": ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"] } }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Status atualizado" } }
+      }
+    },
+    "/api/support/my-chat": {
+      "get": {
+        "tags": ["Suporte"],
+        "summary": "Obter chat ativo do usuário autenticado",
+        "security": [{ "SessionAuth": [] }],
+        "responses": { "200": { "description": "Chat ativo ou null", "content": { "application/json": { "schema": { "type": "object", "properties": { "chat": { "oneOf": [{ "$ref": "#/components/schemas/SupportChat" }, { "type": "null" }] } } } } } } }
+      }
+    },
+    "/api/admin/products": {
+      "get": {
+        "tags": ["Admin — Produtos"],
+        "summary": "Listar todos os produtos (admin)",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [
+          { "in": "query", "name": "page", "schema": { "type": "integer" } },
+          { "in": "query", "name": "search", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Produtos com estoque e vendas" } }
+      }
+    },
+    "/api/admin/products/{id}": {
+      "put": {
+        "tags": ["Admin — Produtos"],
+        "summary": "Atualizar produto (admin)",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Product" } } } },
+        "responses": { "200": { "description": "Produto atualizado" } }
+      },
+      "delete": {
+        "tags": ["Admin — Produtos"],
+        "summary": "Remover produto (admin)",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Produto removido" } }
+      }
+    },
+    "/api/admin/categories": {
+      "get": {
+        "tags": ["Admin — Categorias"],
+        "summary": "Listar categorias (admin)",
+        "security": [{ "SessionAuth": [] }],
+        "responses": { "200": { "description": "Lista de categorias" } }
+      },
+      "post": {
+        "tags": ["Admin — Categorias"],
+        "summary": "Criar categoria",
+        "security": [{ "SessionAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "slug"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "slug": { "type": "string" },
+                  "description": { "type": "string" },
+                  "image": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Categoria criada" } }
+      },
+      "put": {
+        "tags": ["Admin — Categorias"],
+        "summary": "Atualizar categoria",
+        "security": [{ "SessionAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "required": ["id"], "properties": { "id": { "type": "string" }, "name": { "type": "string" }, "slug": { "type": "string" } } } } }
+        },
+        "responses": { "200": { "description": "Categoria atualizada" } }
+      },
+      "delete": {
+        "tags": ["Admin — Categorias"],
+        "summary": "Remover categoria",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "query", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Categoria removida" } }
+      }
+    },
+    "/api/admin/coupons": {
+      "get": {
+        "tags": ["Admin — Cupons"],
+        "summary": "Listar cupons",
+        "security": [{ "SessionAuth": [] }],
+        "responses": { "200": { "description": "Lista de cupons", "content": { "application/json": { "schema": { "type": "object", "properties": { "coupons": { "type": "array", "items": { "$ref": "#/components/schemas/Coupon" } } } } } } }
+        }
+      },
+      "post": {
+        "tags": ["Admin — Cupons"],
+        "summary": "Criar cupom",
+        "security": [{ "SessionAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["code", "discountType", "value"],
+                "properties": {
+                  "code": { "type": "string" },
+                  "description": { "type": "string" },
+                  "discountType": { "type": "string", "enum": ["PERCENTAGE", "FIXED"] },
+                  "value": { "type": "number" },
+                  "minPurchase": { "type": "number", "nullable": true },
+                  "maxDiscount": { "type": "number", "nullable": true },
+                  "usageLimit": { "type": "integer", "nullable": true },
+                  "usagePerUser": { "type": "integer", "nullable": true },
+                  "isActive": { "type": "boolean" },
+                  "startDate": { "type": "string", "format": "date-time" },
+                  "endDate": { "type": "string", "format": "date-time" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Cupom criado" } }
+      }
+    },
+    "/api/admin/coupons/{id}": {
+      "get": {
+        "tags": ["Admin — Cupons"],
+        "summary": "Detalhes de um cupom",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Cupom encontrado" } }
+      },
+      "put": {
+        "tags": ["Admin — Cupons"],
+        "summary": "Atualizar cupom",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Coupon" } } } },
+        "responses": { "200": { "description": "Cupom atualizado" } }
+      },
+      "delete": {
+        "tags": ["Admin — Cupons"],
+        "summary": "Remover cupom",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Cupom removido" } }
+      }
+    },
+    "/api/admin/orders": {
+      "get": {
+        "tags": ["Admin — Pedidos"],
+        "summary": "Listar todos os pedidos",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [
+          { "in": "query", "name": "page", "schema": { "type": "integer", "default": 1 } },
+          { "in": "query", "name": "limit", "schema": { "type": "integer", "default": 20 } },
+          { "in": "query", "name": "search", "schema": { "type": "string" } },
+          { "in": "query", "name": "status", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Pedidos com paginação" } }
+      }
+    },
+    "/api/admin/orders/{id}": {
+      "get": {
+        "tags": ["Admin — Pedidos"],
+        "summary": "Detalhes de um pedido (admin)",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Pedido com itens e totais" } }
+      }
+    },
+    "/api/admin/orders/shipped": {
+      "get": {
+        "tags": ["Admin — Pedidos"],
+        "summary": "Listar pedidos expedidos / entregues / cancelados",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [
+          { "in": "query", "name": "page", "schema": { "type": "integer" } },
+          { "in": "query", "name": "search", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Pedidos filtrados por SHIPPED, DELIVERED, CANCELLED, REFUNDED" } }
+      }
+    },
+    "/api/admin/orders/{id}/label": {
+      "get": {
+        "tags": ["Admin — Pedidos"],
+        "summary": "Consultar etiqueta de envio",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "URL da etiqueta e código de rastreio" } }
+      },
+      "post": {
+        "tags": ["Admin — Pedidos"],
+        "summary": "Gerar etiqueta de envio via Melhor Envio",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Etiqueta gerada" } }
+      }
+    },
+    "/api/admin/orders/{id}/shipping": {
+      "get": {
+        "tags": ["Admin — Pedidos"],
+        "summary": "Dados de envio Melhor Envio do pedido",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Metadados Melhor Envio" } }
+      },
+      "post": {
+        "tags": ["Admin — Pedidos"],
+        "summary": "Executar ação no envio (gerar, finalizar, imprimir, etc.)",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["action"],
+                "properties": {
+                  "action": { "type": "string", "enum": ["create_label", "checkout", "generate", "print", "preview", "status"] },
+                  "mode": { "type": "string", "enum": ["sandbox", "production"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Resultado da ação" } }
+      }
+    },
+    "/api/admin/orders/{id}/reverse": {
+      "post": {
+        "tags": ["Admin — Pedidos"],
+        "summary": "Gerar etiqueta de devolução reversa",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["newSenderEmail", "newSenderPhone"],
+                "properties": {
+                  "newSenderEmail": { "type": "string" },
+                  "newSenderPhone": { "type": "string" },
+                  "mode": { "type": "string", "enum": ["auto", "manual"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Etiqueta reversa gerada" } }
+      }
+    },
+    "/api/admin/orders/{id}/send-label": {
+      "post": {
+        "tags": ["Admin — Pedidos"],
+        "summary": "Enviar notificação de etiqueta ao cliente",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Notificação enviada" } }
+      }
+    },
+    "/api/admin/returns": {
+      "get": {
+        "tags": ["Admin — Devoluções"],
+        "summary": "Listar devoluções (admin)",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [
+          { "in": "query", "name": "status", "schema": { "type": "string" } },
+          { "in": "query", "name": "page", "schema": { "type": "integer" } },
+          { "in": "query", "name": "search", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Devoluções com stats" } }
+      }
+    },
+    "/api/admin/returns/{id}": {
+      "get": {
+        "tags": ["Admin — Devoluções"],
+        "summary": "Detalhes de uma devolução (admin)",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Devolução com detalhes do pedido" } }
+      },
+      "put": {
+        "tags": ["Admin — Devoluções"],
+        "summary": "Atualizar devolução (aprovar, rejeitar, gerar etiqueta, etc.)",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["action"],
+                "properties": {
+                  "action": { "type": "string", "enum": ["approve", "reject", "generate_label", "mark_received", "start_inspection", "approve_refund", "complete_refund", "update_notes"] },
+                  "adminNotes": { "type": "string" },
+                  "refundMethod": { "type": "string" },
+                  "refundAmount": { "type": "number" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Devolução atualizada" } }
+      }
+    },
+    "/api/admin/reviews": {
+      "get": {
+        "tags": ["Admin — Avaliações"],
+        "summary": "Listar avaliações para moderação",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [
+          { "in": "query", "name": "page", "schema": { "type": "integer" } },
+          { "in": "query", "name": "status", "schema": { "type": "string" } },
+          { "in": "query", "name": "rating", "schema": { "type": "integer" } },
+          { "in": "query", "name": "search", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Avaliações com paginação" } }
+      }
+    },
+    "/api/admin/picking": {
+      "get": {
+        "tags": ["Admin — Picking"],
+        "summary": "Listar pedidos para separação",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [
+          { "in": "query", "name": "page", "schema": { "type": "integer" } },
+          { "in": "query", "name": "search", "schema": { "type": "string" } },
+          { "in": "query", "name": "sort", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Pedidos com status CONFIRMED ou PROCESSING" } }
+      }
+    },
+    "/api/admin/picking/{id}": {
+      "patch": {
+        "tags": ["Admin — Picking"],
+        "summary": "Atualizar status de separação",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["status"],
+                "properties": {
+                  "status": { "type": "string", "enum": ["PROCESSING", "SHIPPED"] },
+                  "trackingCode": { "type": "string" },
+                  "trackingUrl": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Pedido atualizado" } }
+      }
+    },
+    "/api/admin/financial/summary": {
+      "get": {
+        "tags": ["Admin — Financeiro"],
+        "summary": "Resumo financeiro com filtros",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [
+          { "in": "query", "name": "startDate", "schema": { "type": "string", "format": "date" } },
+          { "in": "query", "name": "endDate", "schema": { "type": "string", "format": "date" } },
+          { "in": "query", "name": "status", "schema": { "type": "string" } },
+          { "in": "query", "name": "includeOrders", "schema": { "type": "boolean" } },
+          { "in": "query", "name": "includeStock", "schema": { "type": "boolean" } },
+          { "in": "query", "name": "criticalOnly", "schema": { "type": "boolean" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resumo financeiro",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Product"
-                },
-                "examples": {
-                  "exemplo1": {
-                    "value": {
-                      "id": "clx123abc",
-                      "name": "Furadeira Bosch 650W",
-                      "description": "Furadeira profissional",
-                      "price": 299.99,
-                      "promotionalPrice": null,
-                      "stock": 50,
-                      "sku": "BOSCH-GSB-650",
-                      "imageUrl": "/products/furadeira.jpg",
-                      "categoryId": "cat123"
-                    }
+                  "type": "object",
+                  "properties": {
+                    "totalRevenue": { "type": "number" },
+                    "ordersCount": { "type": "integer" },
+                    "avgTicket": { "type": "number" },
+                    "topProducts": { "type": "array", "items": { "type": "object" } }
                   }
                 }
               }
@@ -1454,15 +1588,47 @@
         }
       }
     },
+    "/api/admin/financial/export": {
+      "get": {
+        "tags": ["Admin — Financeiro"],
+        "summary": "Exportar relatório financeiro",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [
+          { "in": "query", "name": "format", "required": true, "schema": { "type": "string", "enum": ["xlsx", "pdf"] } },
+          { "in": "query", "name": "startDate", "schema": { "type": "string", "format": "date" } },
+          { "in": "query", "name": "endDate", "schema": { "type": "string", "format": "date" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Arquivo para download (.xlsx ou .pdf)",
+            "headers": {
+              "Content-Disposition": { "schema": { "type": "string" } },
+              "Content-Type": { "schema": { "type": "string", "example": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/financial/config": {
+      "get": {
+        "tags": ["Admin — Financeiro"],
+        "summary": "Obter configurações financeiras (owner)",
+        "security": [{ "SessionAuth": [] }],
+        "responses": { "200": { "description": "Configurações financeiras" } }
+      },
+      "put": {
+        "tags": ["Admin — Financeiro"],
+        "summary": "Atualizar configurações financeiras (owner)",
+        "security": [{ "SessionAuth": [] }],
+        "requestBody": { "content": { "application/json": { "schema": { "type": "object" } } } },
+        "responses": { "200": { "description": "Configurações atualizadas" } }
+      }
+    },
     "/api/admin/stats": {
       "get": {
-        "tags": ["Admin"],
-        "summary": "Estatísticas da loja (Admin)",
-        "security": [
-          {
-            "SessionAuth": []
-          }
-        ],
+        "tags": ["Admin — Financeiro"],
+        "summary": "KPIs do dashboard administrativo",
+        "security": [{ "SessionAuth": [] }],
         "responses": {
           "200": {
             "description": "Estatísticas gerais",
@@ -1471,171 +1637,10 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "totalOrders": {
-                      "type": "integer"
-                    },
-                    "totalRevenue": {
-                      "type": "number"
-                    },
-                    "pendingReturns": {
-                      "type": "integer"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  },
-  "webhooks": {
-    "orderStatusUpdate": {
-      "post": {
-        "tags": ["Webhooks N8N"],
-        "summary": "Atualização de status do pedido",
-        "description": "Enviado automaticamente ao n8n quando o status de um pedido muda. Sempre com type='order.status.update', diferenciando pelo campo 'status'. Veja os 8 exemplos possíveis abaixo.",
-        "x-webhook-url": "$N8N_ORDERS_WEBHOOK_URL ou $N8N_WEBHOOK_URL",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WebhookOrderStatusUpdate"
-              },
-              "examples": {
-                "status_PENDING": {
-                  "summary": "Status: PENDING - Pedido criado",
-                  "value": {
-                    "type": "order.status.update",
-                    "timestamp": "2026-01-14T10:30:00Z",
-                    "orderId": "clx123abc",
-                    "orderNumber": "ORD-2026-000001",
-                    "status": "PENDING",
-                    "total": 599.99,
-                    "user": {
-                      "id": "user123",
-                      "name": "João Silva",
-                      "email": "joao@email.com",
-                      "phone": "(11) 98765-4321"
-                    },
-                    "paymentMethod": "PIX",
-                    "items": [
-                      {
-                        "productId": "prod123",
-                        "quantity": 2,
-                        "price": 299.99,
-                        "product": {
-                          "name": "Furadeira Bosch",
-                          "sku": "BOSCH-GSB-650"
-                        }
-                      }
-                    ]
-                  }
-                },
-                "status_CONFIRMED": {
-                  "summary": "Status: CONFIRMED - Pagamento aprovado",
-                  "value": {
-                    "type": "order.status.update",
-                    "timestamp": "2026-01-14T11:00:00Z",
-                    "orderId": "clx123abc",
-                    "orderNumber": "ORD-2026-000001",
-                    "status": "CONFIRMED",
-                    "total": 599.99,
-                    "paymentMethod": "PIX",
-                    "paidAt": "2026-01-14T11:00:00Z"
-                  }
-                },
-                "status_PROCESSING": {
-                  "summary": "Status: PROCESSING - Em separação",
-                  "value": {
-                    "type": "order.status.update",
-                    "timestamp": "2026-01-14T14:00:00Z",
-                    "orderId": "clx123abc",
-                    "orderNumber": "ORD-2026-000001",
-                    "status": "PROCESSING"
-                  }
-                },
-                "status_SHIPPED": {
-                  "summary": "Status: SHIPPED - Enviado",
-                  "value": {
-                    "type": "order.status.update",
-                    "timestamp": "2026-01-14T15:30:00Z",
-                    "orderId": "clx123abc",
-                    "orderNumber": "ORD-2026-000001",
-                    "status": "SHIPPED",
-                    "trackingCode": "BR123456789",
-                    "trackingUrl": "https://rastreio.correios.com.br/app/index.php",
-                    "shippedAt": "2026-01-14T15:00:00Z"
-                  }
-                },
-                "status_DELIVERED": {
-                  "summary": "Status: DELIVERED - Entregue",
-                  "value": {
-                    "type": "order.status.update",
-                    "timestamp": "2026-01-14T18:00:00Z",
-                    "orderId": "clx123abc",
-                    "orderNumber": "ORD-2026-000001",
-                    "status": "DELIVERED",
-                    "deliveredAt": "2026-01-14T18:00:00Z"
-                  }
-                },
-                "status_CANCELLED": {
-                  "summary": "Status: CANCELLED - Cancelado",
-                  "value": {
-                    "type": "order.status.update",
-                    "timestamp": "2026-01-14T12:00:00Z",
-                    "orderId": "clx123abc",
-                    "orderNumber": "ORD-2026-000001",
-                    "status": "CANCELLED"
-                  }
-                },
-                "status_REFUNDED": {
-                  "summary": "Status: REFUNDED - Reembolsado",
-                  "value": {
-                    "type": "order.status.update",
-                    "timestamp": "2026-01-14T16:00:00Z",
-                    "orderId": "clx123abc",
-                    "orderNumber": "ORD-2026-000001",
-                    "status": "REFUNDED"
-                  }
-                },
-                "status_QUOTE": {
-                  "summary": "Status: QUOTE - Cotação/Orçamento",
-                  "value": {
-                    "type": "order.status.update",
-                    "timestamp": "2026-01-14T09:00:00Z",
-                    "orderId": "clx123abc",
-                    "orderNumber": "ORD-2026-000001",
-                    "status": "QUOTE",
-                    "total": 599.99,
-                    "extra": {
-                      "validityDays": 7
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Webhook recebido",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    }
-                  }
-                },
-                "examples": {
-                  "sucesso": {
-                    "value": {
-                      "success": true
-                    }
+                    "totalOrders": { "type": "integer" },
+                    "totalRevenue": { "type": "number" },
+                    "pendingOrders": { "type": "integer" },
+                    "totalProducts": { "type": "integer" }
                   }
                 }
               }
@@ -1644,58 +1649,41 @@
         }
       }
     },
-    "returnCreated": {
-      "post": {
-        "tags": ["Webhooks N8N"],
-        "summary": "Webhook de devolução criada",
-        "description": "Enviado quando um cliente solicita uma devolução",
-        "x-webhook-url": "$N8N_ORDERS_WEBHOOK_URL ou $N8N_WEBHOOK_URL",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WebhookReturnCreated"
-              },
-              "examples": {
-                "devolucao_criada": {
-                  "summary": "Nova devolução",
-                  "value": {
-                    "type": "returns.created",
-                    "timestamp": "2026-01-14T10:30:00Z",
-                    "returnId": "return123",
-                    "orderId": "order123",
-                    "orderNumber": "ORD-2026-000001",
-                    "reason": "DEFECTIVE",
-                    "status": "PENDING",
-                    "user": {
-                      "name": "João Silva",
-                      "email": "joao@email.com"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
+    "/api/admin/shipping/cart": {
+      "get": {
+        "tags": ["Admin — Integrações"],
+        "summary": "Consultar carrinho Melhor Envio",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [{ "in": "query", "name": "itemId", "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Itens no carrinho Melhor Envio" } }
+      },
+      "delete": {
+        "tags": ["Admin — Integrações"],
+        "summary": "Remover item(ns) do carrinho Melhor Envio",
+        "security": [{ "SessionAuth": [] }],
+        "parameters": [
+          { "in": "query", "name": "itemId", "schema": { "type": "string" } },
+          { "in": "query", "name": "clearAll", "schema": { "type": "boolean" } }
+        ],
+        "responses": { "200": { "description": "Item(ns) removido(s)" } }
+      }
+    },
+    "/api/admin/integrations/melhor-envio/status": {
+      "get": {
+        "tags": ["Admin — Integrações"],
+        "summary": "Status da integração com Melhor Envio",
+        "security": [{ "SessionAuth": [] }],
         "responses": {
           "200": {
-            "description": "Webhook recebido",
+            "description": "Status da conexão",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "success": {
-                      "type": "boolean"
-                    }
-                  }
-                },
-                "examples": {
-                  "sucesso": {
-                    "value": {
-                      "success": true
-                    }
+                    "connected": { "type": "boolean" },
+                    "environment": { "type": "string", "enum": ["sandbox", "production"] },
+                    "expiresAt": { "type": "string", "format": "date-time" }
                   }
                 }
               }
@@ -1704,161 +1692,149 @@
         }
       }
     },
-    "returnApproved": {
+    "/api/admin/integrations/mercado-pago/config": {
       "post": {
-        "tags": ["Webhooks N8N"],
-        "summary": "Webhook de devolução aprovada",
-        "description": "Enviado quando admin aprova uma solicitação de devolução",
-        "x-webhook-url": "$N8N_ORDERS_WEBHOOK_URL ou $N8N_WEBHOOK_URL",
+        "tags": ["Admin — Integrações"],
+        "summary": "Configurar credenciais do Mercado Pago",
+        "security": [{ "SessionAuth": [] }],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/WebhookGeneric"
-              },
-              "examples": {
-                "aprovada": {
-                  "value": {
-                    "type": "returns.approved",
-                    "timestamp": "2026-01-14T11:00:00Z",
-                    "returnId": "return123",
-                    "orderId": "order123"
+                "type": "object",
+                "required": ["publicKey", "accessToken"],
+                "properties": {
+                  "publicKey": { "type": "string" },
+                  "accessToken": { "type": "string" },
+                  "environment": { "type": "string", "enum": ["sandbox", "production"], "default": "sandbox" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Credenciais salvas" } }
+      }
+    },
+    "/api/admin/integrations/webhook/test": {
+      "post": {
+        "tags": ["Admin — Integrações"],
+        "summary": "Disparar webhook de teste para n8n",
+        "security": [{ "SessionAuth": [] }],
+        "responses": { "200": { "description": "Webhook enviado" } }
+      }
+    },
+    "/api/admin/site-config": {
+      "get": {
+        "tags": ["Admin — Configurações"],
+        "summary": "Obter configurações do site",
+        "security": [{ "SessionAuth": [] }],
+        "responses": { "200": { "description": "Configurações" } }
+      },
+      "put": {
+        "tags": ["Admin — Configurações"],
+        "summary": "Atualizar configurações do site",
+        "security": [{ "SessionAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": { "assistantMode": { "type": "string", "enum": ["smart", "ai"] } }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Configurações atualizadas" } }
+      }
+    },
+    "/api/integrations/stock/sync": {
+      "post": {
+        "tags": ["Integrações"],
+        "summary": "Sincronizar estoque via API key",
+        "security": [{ "ApiKeyAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["sku", "stock"],
+                  "properties": {
+                    "sku": { "type": "string" },
+                    "stock": { "type": "integer" },
+                    "price": { "type": "number" }
                   }
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Webhook recebido",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    }
-                  }
-                },
-                "examples": {
-                  "sucesso": {
-                    "value": {
-                      "success": true
-                    }
-                  }
+        "responses": { "200": { "description": "Estoque sincronizado" } }
+      }
+    },
+    "/api/integrations/orders/update-status": {
+      "post": {
+        "tags": ["Integrações"],
+        "summary": "Atualizar status de pedido via API key (n8n, ERPs)",
+        "security": [{ "ApiKeyAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["orderNumber", "status"],
+                "properties": {
+                  "orderNumber": { "type": "string", "example": "ORD-2026-000001" },
+                  "status": { "type": "string", "enum": ["CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED", "REFUNDED"] },
+                  "trackingCode": { "type": "string" },
+                  "trackingUrl": { "type": "string" }
                 }
               }
             }
           }
+        },
+        "responses": { "200": { "description": "Status atualizado com validação de transição" } }
+      }
+    },
+    "/api/integrations/marketing/abandoned-carts": {
+      "get": {
+        "tags": ["Integrações"],
+        "summary": "Listar carrinhos abandonados",
+        "parameters": [{ "in": "query", "name": "hours", "schema": { "type": "integer", "default": 24 } }],
+        "responses": { "200": { "description": "Carrinhos abandonados" } }
+      },
+      "post": {
+        "tags": ["Integrações"],
+        "summary": "Disparar e-mails de recuperação de carrinhos (CRON_SECRET)",
+        "description": "Requer header `Authorization: Bearer <CRON_SECRET>`",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cartId": { "type": "string" },
+                  "hours": { "type": "integer", "default": 24 }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "E-mails enviados", "content": { "application/json": { "schema": { "type": "object", "properties": { "sent": { "type": "integer" }, "failed": { "type": "integer" }, "total": { "type": "integer" } } } } } }
         }
       }
     },
-    "returnRejected": {
-      "post": {
-        "tags": ["Webhooks N8N"],
-        "summary": "Webhook de devolução rejeitada",
-        "description": "Enviado quando admin rejeita uma solicitação de devolução",
-        "x-webhook-url": "$N8N_ORDERS_WEBHOOK_URL ou $N8N_WEBHOOK_URL",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WebhookGeneric"
-              },
-              "examples": {
-                "rejeitada": {
-                  "value": {
-                    "type": "returns.rejected",
-                    "timestamp": "2026-01-14T11:00:00Z",
-                    "returnId": "return123",
-                    "orderId": "order123"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Webhook recebido",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    }
-                  }
-                },
-                "examples": {
-                  "sucesso": {
-                    "value": {
-                      "success": true
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "shippingLabelReady": {
-      "post": {
-        "tags": ["Webhooks N8N"],
-        "summary": "Webhook de etiqueta de envio pronta",
-        "description": "Enviado quando uma etiqueta de envio é gerada",
-        "x-webhook-url": "$N8N_ORDERS_WEBHOOK_URL ou $N8N_WEBHOOK_URL",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WebhookGeneric"
-              },
-              "examples": {
-                "etiqueta_pronta": {
-                  "value": {
-                    "type": "shipping.label_ready",
-                    "timestamp": "2026-01-14T14:00:00Z",
-                    "orderId": "order123",
-                    "orderNumber": "ORD-2026-000001",
-                    "labelUrl": "https://melhorenvio.com.br/labels/123.pdf"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Webhook recebido",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    }
-                  }
-                },
-                "examples": {
-                  "sucesso": {
-                    "value": {
-                      "success": true
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+    "/api/integrations/melhor-envio/authorize": {
+      "get": {
+        "tags": ["Integrações"],
+        "summary": "Iniciar fluxo OAuth com Melhor Envio",
+        "description": "Redireciona para a página de autorização do Melhor Envio.",
+        "responses": { "302": { "description": "Redirect para Melhor Envio" } }
       }
     }
   }

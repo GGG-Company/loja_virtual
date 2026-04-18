@@ -36,6 +36,15 @@ function saveConsent(consent: ConsentState) {
   } catch {
     // storage indisponível
   }
+
+  // Registrar no banco para prova auditável (fire-and-forget)
+  fetch('/api/consent', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...consent, version: CONSENT_VERSION }),
+  }).catch(() => {
+    // falha silenciosa — não bloqueia o banner
+  });
 }
 
 export function CookieConsent() {

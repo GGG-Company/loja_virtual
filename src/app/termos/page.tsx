@@ -146,7 +146,7 @@ export default function TermsPage() {
               <p className="text-gray-600 leading-relaxed font-body mb-4">
                 Bem-vindo à <strong>Feira das Ferramentas</strong>. Estes Termos de Serviço
                 constituem um contrato legal entre você e a Feira das Ferramentas (CNPJ em
-                constituição), com sede em Feira de Santana, Bahia, Brasil.
+                constituição), com sede na Rua Vitorino Gouveia, 35, Centro, Feira de Santana, Bahia, CEP 44002-264.
               </p>
               <p className="text-gray-600 leading-relaxed font-body">
                 Ao criar uma conta ou realizar uma compra, você confirma que leu, compreendeu

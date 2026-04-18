@@ -3,7 +3,7 @@
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { motion } from 'framer-motion';
-import { Shield, Lock, Eye, FileText } from 'lucide-react';
+import { Shield, Lock, Eye, FileText, Scale, PencilLine } from 'lucide-react';
 
 const sections = [
   {
@@ -16,8 +16,18 @@ const sections = [
     ],
   },
   {
+    icon: Scale,
+    title: '2. Bases Legais para o Tratamento (Art. 7 LGPD)',
+    content: [
+      'Execução de contrato (Art. 7, V): processamos seus dados para cumprir o contrato de compra e venda — processar pedidos, emitir notas fiscais e realizar entregas.',
+      'Consentimento (Art. 7, I): para cookies de analytics e marketing, solicitamos seu consentimento explícito, que pode ser revogado a qualquer momento.',
+      'Legítimo interesse (Art. 7, IX): usamos dados de navegação para prevenir fraudes e melhorar a segurança da plataforma.',
+      'Cumprimento de obrigação legal (Art. 7, II): mantemos dados fiscais e de transações pelo prazo exigido pela legislação tributária.',
+    ],
+  },
+  {
     icon: Lock,
-    title: '2. Uso das Informações',
+    title: '3. Uso das Informações',
     content: [
       'Suas informações são utilizadas para processar pedidos e enviar produtos.',
       'Enviamos comunicações sobre seus pedidos e ofertas personalizadas (você pode optar por não receber).',
@@ -27,7 +37,7 @@ const sections = [
   },
   {
     icon: Eye,
-    title: '3. Compartilhamento de Dados',
+    title: '4. Compartilhamento de Dados',
     content: [
       'Compartilhamos dados com parceiros logísticos apenas para entrega de produtos.',
       'Processadores de pagamento recebem dados necessários para transações seguras.',
@@ -35,13 +45,24 @@ const sections = [
     ],
   },
   {
-    icon: FileText,
-    title: '4. Seus Direitos',
+    icon: PencilLine,
+    title: '5. Direito à Retificação (Art. 18, III)',
     content: [
-      'Você tem direito de acessar, corrigir ou excluir seus dados pessoais a qualquer momento.',
-      'Pode solicitar a portabilidade dos seus dados para outro serviço.',
-      'Pode revogar consentimentos dados anteriormente.',
-      'Para exercer seus direitos, entre em contato através do email: privacidade@shopferramentas.com.br',
+      'Você pode corrigir dados incompletos, inexatos ou desatualizados a qualquer momento acessando Minha Conta → Perfil.',
+      'Alterações de nome, e-mail, telefone, endereço e data de nascimento ficam disponíveis imediatamente.',
+      'Para corrigir dados que não podem ser alterados pelo painel (ex.: CPF), envie solicitação ao DPO com documento comprobatório.',
+      'O prazo de resposta para correções via DPO é de até 15 dias úteis (Art. 18, §3º da LGPD).',
+    ],
+  },
+  {
+    icon: FileText,
+    title: '6. Seus Demais Direitos (Art. 18 LGPD)',
+    content: [
+      'Acesso: confirmar a existência de tratamento e obter cópia dos seus dados.',
+      'Portabilidade: exportar todos os seus dados em formato JSON via Minha Conta → Exportar Dados.',
+      'Exclusão: solicitar a anonimização ou eliminação dos dados tratados com base no consentimento via Minha Conta → Excluir Conta.',
+      'Revogação de consentimento: alterar preferências de cookies a qualquer momento pelo banner ou entrando em contato com o DPO.',
+      'Para exercer seus direitos, acesse Minha Conta ou envie e-mail para: privacidade@feiradeferramentas.com.br',
     ],
   },
 ];
@@ -171,38 +192,33 @@ export default function PrivacyPage() {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="bg-white rounded-2xl shadow-lg p-8 mt-8"
+              className="bg-white rounded-sm shadow-md p-8 mt-8 border-l-4 border-[#CC1020]"
             >
-              <h2 className="text-2xl font-bold text-metallic-900 mb-4">
-                5. Uso de Cookies
-              </h2>
-              <p className="text-metallic-700 leading-relaxed mb-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-1 h-6 bg-[#CC1020] rounded-full" />
+                <h2 className="font-display text-xl font-bold text-[#1A1A1A] uppercase">
+                  7. Uso de Cookies
+                </h2>
+              </div>
+              <p className="text-gray-600 leading-relaxed font-body mb-4">
                 Utilizamos cookies e tecnologias similares para:
               </p>
-              <ul className="space-y-2 text-metallic-700">
-                <li className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-2 h-2 bg-primary-600 rounded-full mt-2" />
-                  <span>Manter você conectado ao fazer login</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-2 h-2 bg-primary-600 rounded-full mt-2" />
-                  <span>Lembrar suas preferências e itens no carrinho</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-2 h-2 bg-primary-600 rounded-full mt-2" />
-                  <span>
-                    Analisar o tráfego do site e melhorar a experiência do
-                    usuário
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-2 h-2 bg-primary-600 rounded-full mt-2" />
-                  <span>Personalizar conteúdo e anúncios</span>
-                </li>
+              <ul className="space-y-3">
+                {[
+                  'Manter você conectado ao fazer login (cookies essenciais)',
+                  'Lembrar suas preferências e itens no carrinho',
+                  'Analisar o tráfego do site e melhorar a experiência do usuário (apenas com consentimento)',
+                  'Personalizar conteúdo e comunicações de marketing (apenas com consentimento)',
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-3 text-gray-600 leading-relaxed font-body">
+                    <span className="flex-shrink-0 w-2 h-2 bg-[#CC1020] rounded-full mt-2" />
+                    <span>{item}</span>
+                  </li>
+                ))}
               </ul>
-              <p className="text-metallic-700 leading-relaxed mt-4">
-                Você pode configurar seu navegador para recusar cookies, mas
-                isso pode afetar a funcionalidade do site.
+              <p className="text-gray-600 leading-relaxed font-body mt-4">
+                Você pode ajustar suas preferências de cookies a qualquer momento pelo banner
+                exibido no rodapé do site.
               </p>
             </motion.div>
 
@@ -211,21 +227,24 @@ export default function PrivacyPage() {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="bg-white rounded-2xl shadow-lg p-8 mt-8"
+              className="bg-white rounded-sm shadow-md p-8 mt-8 border-l-4 border-[#CC1020]"
             >
-              <h2 className="text-2xl font-bold text-metallic-900 mb-4">
-                6. Segurança dos Dados
-              </h2>
-              <p className="text-metallic-700 leading-relaxed mb-4">
-                Implementamos medidas de segurança técnicas e organizacionais
-                para proteger suas informações pessoais contra acesso não
-                autorizado, alteração, divulgação ou destruição.
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-1 h-6 bg-[#CC1020] rounded-full" />
+                <h2 className="font-display text-xl font-bold text-[#1A1A1A] uppercase">
+                  8. Segurança dos Dados
+                </h2>
+              </div>
+              <p className="text-gray-600 leading-relaxed font-body mb-4">
+                Implementamos medidas de segurança técnicas e organizacionais para proteger
+                suas informações pessoais contra acesso não autorizado, alteração, divulgação
+                ou destruição, incluindo criptografia em trânsito (TLS) e controle de acesso
+                baseado em funções (RBAC).
               </p>
-              <p className="text-metallic-700 leading-relaxed">
-                No entanto, nenhum método de transmissão pela internet ou
-                armazenamento eletrônico é 100% seguro. Embora nos esforcemos
-                para proteger suas informações, não podemos garantir segurança
-                absoluta.
+              <p className="text-gray-600 leading-relaxed font-body">
+                No entanto, nenhum método de transmissão pela internet ou armazenamento
+                eletrônico é 100% seguro. Em caso de incidente de segurança que possa
+                afetar seus dados, você será notificado nos prazos previstos pela LGPD.
               </p>
             </motion.div>
 
@@ -250,7 +269,7 @@ export default function PrivacyPage() {
               </p>
               <div className="bg-gray-50 border border-gray-200 rounded-sm p-4 space-y-2">
                 <p className="text-sm font-semibold text-[#1A1A1A]">Encarregado: Equipe de Privacidade — Feira das Ferramentas</p>
-                <p className="text-sm text-gray-600">E-mail: <a href="mailto:dpo@shopferramentas.com.br" className="text-[#CC1020] underline">dpo@shopferramentas.com.br</a></p>
+                <p className="text-sm text-gray-600">E-mail: <a href="mailto:dpo@feiradeferramentas.com.br" className="text-[#CC1020] underline">dpo@feiradeferramentas.com.br</a></p>
                 <p className="text-sm text-gray-600">Telefone: (75) 98159-8195</p>
                 <p className="text-sm text-gray-500">Prazo de resposta: até 15 dias úteis (conforme Art. 18, §3º da LGPD)</p>
               </div>
@@ -275,9 +294,9 @@ export default function PrivacyPage() {
               </p>
               <div className="space-y-2">
                 <p className="font-semibold">
-                  E-mail: <a href="mailto:privacidade@shopferramentas.com.br" className="underline">privacidade@shopferramentas.com.br</a>
+                  E-mail: <a href="mailto:privacidade@feiradeferramentas.com.br" className="underline">privacidade@feiradeferramentas.com.br</a>
                 </p>
-                <p className="font-semibold">DPO: <a href="mailto:dpo@shopferramentas.com.br" className="underline">dpo@shopferramentas.com.br</a></p>
+                <p className="font-semibold">DPO: <a href="mailto:dpo@feiradeferramentas.com.br" className="underline">dpo@feiradeferramentas.com.br</a></p>
                 <p className="font-semibold">Telefone: (75) 98159-8195</p>
               </div>
             </motion.div>

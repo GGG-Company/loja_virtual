@@ -33,6 +33,7 @@ model User {
   updatedAt           DateTime       @updatedAt
   accounts            Account[]
   carts               Cart?
+  consentRecords      ConsentRecord[]
   notifications       Notification[]
   orders              Order[]
   returns             Return[]
@@ -653,6 +654,26 @@ model SiteConfig {
     updatedAt     DateTime @updatedAt
 
     @@map("site_config")
+}
+
+/// LGPD Art. 7 — Registro auditável de consentimento de cookies.
+/// Cada aceite/recusa gera uma nova linha (append-only).
+model ConsentRecord {
+  id          String   @id @default(cuid())
+  userId      String?
+  essential   Boolean  @default(true)
+  analytics   Boolean  @default(false)
+  marketing   Boolean  @default(false)
+  ipAddress   String?
+  userAgent   String?
+  version     String   // versão do banner no momento do registro
+  createdAt   DateTime @default(now())
+
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("consent_records")
 }
 
 enum SupportStatus {

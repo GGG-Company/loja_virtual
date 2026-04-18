@@ -63,7 +63,8 @@ function normalizeZip(zip: string) {
   return zip.replace(/\D/g, '');
 }
 
-function parseDimensions(dim: any): ShippingDimension | null {
+/** @internal Exportada para testes unitários */
+export function parseDimensions(dim: any): ShippingDimension | null {
   if (!dim || typeof dim !== 'object') return null;
   const height = Number((dim.height ?? dim.altura ?? dim.h) || 0);
   const width = Number((dim.width ?? dim.largura ?? dim.w) || 0);
@@ -76,13 +77,15 @@ function parseDimensions(dim: any): ShippingDimension | null {
   };
 }
 
-function resolveVolumetricWeight(dim: ShippingDimension | null) {
+/** @internal Exportada para testes unitários */
+export function resolveVolumetricWeight(dim: ShippingDimension | null) {
   if (!dim) return 0;
   const cubicCm = dim.height * dim.width * dim.length;
   return cubicCm / 6000; // regra volumétrica padrão
 }
 
-function aggregatePackage(items: ShippingItem[]) {
+/** @internal Exportada para testes unitários */
+export function aggregatePackage(items: ShippingItem[]) {
   let totalWeightKg = 0;
   let totalPrice = 0;
   let length = 0;
@@ -112,7 +115,8 @@ function aggregatePackage(items: ShippingItem[]) {
   };
 }
 
-function roundPrice(v: number) {
+/** @internal Exportada para testes unitários */
+export function roundPrice(v: number) {
   return Math.max(0, Math.round(v * 100) / 100);
 }
 

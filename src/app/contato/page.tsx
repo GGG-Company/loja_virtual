@@ -97,7 +97,7 @@ export default function ContactPage() {
                   {
                     icon: MapPin,
                     title: 'Endereço',
-                    content: 'Av. Principal, 1234',
+                    content: 'Rua Vitorino Gouveia, 35, Centro',
                     subcontent: 'Feira de Santana, BA — CEP 44002-264',
                   },
                   {

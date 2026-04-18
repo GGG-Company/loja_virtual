@@ -39,7 +39,7 @@ export function Footer() {
             </p>
             {/* Social */}
             <div className="flex gap-3 mt-5">
-              <a
+              {/* <a
                 href="https://facebook.com"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -47,9 +47,9 @@ export function Footer() {
                 aria-label="Facebook"
               >
                 <Facebook className="h-4 w-4" />
-              </a>
+              </a> */}
               <a
-                href="https://instagram.com"
+                href="https://www.instagram.com/feiraferramentas/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-11 h-11 bg-[#1e1e1e] hover:bg-[#CC1020] border border-white/10 rounded-sm flex items-center justify-center transition-colors"
@@ -131,7 +131,7 @@ export function Footer() {
                 <div className="w-8 h-8 bg-[#CC1020]/15 rounded flex items-center justify-center shrink-0">
                   <MapPin className="h-4 w-4 text-[#CC1020]" />
                 </div>
-                Feira de Santana, BA
+                Rua Vitorino Gouveia, 35 — Centro, Feira de Santana, BA
               </li>
             </ul>
 

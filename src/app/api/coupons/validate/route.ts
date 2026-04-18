@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { toNum } from '@/lib/decimal-helpers';
+import { calculateDiscount } from '@/lib/coupon-calculator';
 
 export const dynamic = 'force-dynamic';
 
@@ -76,25 +77,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Calcular desconto
-    let discount = 0;
-
-    if (coupon.discountType === 'PERCENTAGE') {
-      discount = (cartTotal * toNum(coupon.value)) / 100;
-    } else {
-      // FIXED
-      discount = toNum(coupon.value);
-    }
-
-    // Aplicar teto de desconto se definido
-    if (coupon.maxDiscount !== null && discount > toNum(coupon.maxDiscount)) {
-      discount = toNum(coupon.maxDiscount);
-    }
-
-    // O desconto não pode ser maior que o total do carrinho
-    if (discount > cartTotal) {
-      discount = cartTotal;
-    }
+    const { discount } = calculateDiscount(
+      {
+        discountType: coupon.discountType as 'PERCENTAGE' | 'FIXED',
+        value: toNum(coupon.value),
+        maxDiscount: coupon.maxDiscount !== null ? toNum(coupon.maxDiscount) : null,
+      },
+      cartTotal,
+    );
 
     return NextResponse.json({
       valid: true,
@@ -102,7 +92,7 @@ export async function POST(req: NextRequest) {
       code: coupon.code,
       discountType: coupon.discountType,
       discountValue: toNum(coupon.value),
-      discount: parseFloat(discount.toFixed(2)),
+      discount,
       description: coupon.description ?? null,
     });
   } catch (error) {
