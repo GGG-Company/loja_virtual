@@ -15,6 +15,30 @@ type MercadoPagoStatus = {
   updatedAt?: string | null;
 };
 
+type EventStatus = 'idle' | 'sending' | 'ok' | 'error';
+type EventResult = { event: string; label: string; ok: boolean; error?: string };
+
+const ALL_EVENTS = [
+  'order.PENDING', 'order.QUOTE', 'order.CONFIRMED', 'order.PROCESSING',
+  'order.SHIPPED', 'order.DELIVERED', 'order.CANCELLED', 'order.REFUNDED',
+  'returns.created', 'returns.approved', 'returns.rejected', 'shipping.label_ready',
+] as const;
+
+const EVENT_LABELS: Record<string, string> = {
+  'order.PENDING':        'PENDING — pedido criado',
+  'order.QUOTE':          'QUOTE — orçamento',
+  'order.CONFIRMED':      'CONFIRMED — pagamento confirmado',
+  'order.PROCESSING':     'PROCESSING — em separação',
+  'order.SHIPPED':        'SHIPPED — enviado',
+  'order.DELIVERED':      'DELIVERED — entregue',
+  'order.CANCELLED':      'CANCELLED — cancelado',
+  'order.REFUNDED':       'REFUNDED — reembolsado',
+  'returns.created':      'returns.created — devolução aberta',
+  'returns.approved':     'returns.approved — devolução aprovada',
+  'returns.rejected':     'returns.rejected — devolução rejeitada',
+  'shipping.label_ready': 'shipping.label_ready — etiqueta enviada',
+};
+
 export default function AdminSettingsPage() {
   const [meStatus, setMeStatus] = useState<MelhorEnvioStatus | null>(null);
   const [mpStatus, setMpStatus] = useState<MercadoPagoStatus | null>(null);
@@ -22,8 +46,9 @@ export default function AdminSettingsPage() {
   const [mpConfigLoading, setMpConfigLoading] = useState(false);
   const [showMpForm, setShowMpForm] = useState(false);
   const [mpForm, setMpForm] = useState({ publicKey: "", accessToken: "" });
-  const [webhookSending, setWebhookSending] = useState(false);
-  const [webhookFeedback, setWebhookFeedback] = useState<string | null>(null);
+  const [eventStatuses, setEventStatuses] = useState<Record<string, EventStatus>>({});
+  const [testAllSending, setTestAllSending] = useState(false);
+  const [testAllSummary, setTestAllSummary] = useState<string | null>(null);
 
   // Carregar status das integrações
   useEffect(() => {
@@ -88,24 +113,49 @@ export default function AdminSettingsPage() {
     }
   };
 
-  const handleSendWebhookTest = async () => {
+  const fireEvent = async (event: string) => {
+    setEventStatuses((s) => ({ ...s, [event]: 'sending' }));
     try {
-      setWebhookFeedback(null);
-      setWebhookSending(true);
-      const res = await fetch("/api/admin/integrations/webhook/test", { method: "POST" });
+      const res = await fetch('/api/admin/integrations/webhook/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event }),
+      });
       const data = await res.json().catch(() => null);
+      const ok = res.ok && data?.results?.[0]?.ok !== false;
+      setEventStatuses((s) => ({ ...s, [event]: ok ? 'ok' : 'error' }));
+    } catch (err) {
+      logger.error(err);
+      setEventStatuses((s) => ({ ...s, [event]: 'error' }));
+    }
+  };
 
-      if (!res.ok) {
-        setWebhookFeedback(data?.error || "Erro ao enviar webhook de teste");
+  const handleTestAll = async () => {
+    setTestAllSending(true);
+    setTestAllSummary(null);
+    setEventStatuses({});
+    try {
+      const res = await fetch('/api/admin/integrations/webhook/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data: { results?: EventResult[]; error?: string } = await res.json().catch(() => ({}));
+      if (!res.ok || data.error) {
+        setTestAllSummary(data.error || 'Erro ao enviar webhooks');
         return;
       }
-
-      setWebhookFeedback(data?.message || "Webhook de teste enviado");
-    } catch (error) {
-      logger.error(error);
-      setWebhookFeedback('Erro ao enviar webhook de teste');
+      const next: Record<string, EventStatus> = {};
+      (data.results ?? []).forEach((r) => { next[r.event] = r.ok ? 'ok' : 'error'; });
+      setEventStatuses(next);
+      const ok = (data.results ?? []).filter((r) => r.ok).length;
+      const fail = (data.results ?? []).length - ok;
+      setTestAllSummary(fail === 0 ? `✓ ${ok} eventos enviados com sucesso.` : `${ok} ok · ${fail} com erro`);
+    } catch (err) {
+      logger.error(err);
+      setTestAllSummary('Erro de rede');
     } finally {
-      setWebhookSending(false);
+      setTestAllSending(false);
     }
   };
 
@@ -222,15 +272,75 @@ export default function AdminSettingsPage() {
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Webhooks</h2>
-          <p className="text-sm text-gray-600 mb-4">Envie um evento de teste para validar a URL configurada (N8N_ORDERS_WEBHOOK_URL ou N8N_WEBHOOK_URL).</p>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-            <button onClick={handleSendWebhookTest} disabled={webhookSending} className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50">
-              {webhookSending ? "Enviando…" : "Enviar webhook de teste"}
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="text-xl font-semibold">Webhooks</h2>
+            <button
+              onClick={handleTestAll}
+              disabled={testAllSending}
+              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 text-sm font-medium"
+            >
+              {testAllSending ? 'Enviando todos…' : 'Testar todos'}
             </button>
-            {webhookFeedback && <span className="text-sm text-gray-700">{webhookFeedback}</span>}
           </div>
-          <p className="text-xs text-gray-500 mt-3">O payload contém um pedido fictício; personalize pelo corpo da requisição, se necessário.</p>
+          <p className="text-sm text-gray-500 mb-4">
+            Dispare cada evento real que o sistema envia para a URL configurada
+            (<code className="bg-gray-100 px-1 rounded text-xs">N8N_ORDERS_WEBHOOK_URL</code>).
+            Payloads fictícios, prontos para validar seu fluxo no n8n.
+          </p>
+
+          {testAllSummary && (
+            <p className={`text-sm mb-3 font-medium ${testAllSummary.startsWith('✓') ? 'text-green-600' : 'text-red-600'}`}>
+              {testAllSummary}
+            </p>
+          )}
+
+          {/* order.status.update */}
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">order.status.update</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-5">
+            {ALL_EVENTS.filter((e) => e.startsWith('order.')).map((event) => {
+              const s = eventStatuses[event] ?? 'idle';
+              return (
+                <div key={event} className="flex items-center justify-between border border-gray-200 rounded px-3 py-2">
+                  <span className="text-sm text-gray-700">{EVENT_LABELS[event]}</span>
+                  <div className="flex items-center gap-2 ml-3 shrink-0">
+                    {s === 'ok' && <span className="text-green-500 text-lg">✓</span>}
+                    {s === 'error' && <span className="text-red-500 text-lg">✗</span>}
+                    <button
+                      onClick={() => fireEvent(event)}
+                      disabled={s === 'sending'}
+                      className="px-2 py-1 text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 rounded hover:bg-indigo-100 disabled:opacity-50"
+                    >
+                      {s === 'sending' ? '…' : 'Testar'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Eventos customizados */}
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Eventos customizados</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {ALL_EVENTS.filter((e) => !e.startsWith('order.')).map((event) => {
+              const s = eventStatuses[event] ?? 'idle';
+              return (
+                <div key={event} className="flex items-center justify-between border border-gray-200 rounded px-3 py-2">
+                  <span className="text-sm text-gray-700">{EVENT_LABELS[event]}</span>
+                  <div className="flex items-center gap-2 ml-3 shrink-0">
+                    {s === 'ok' && <span className="text-green-500 text-lg">✓</span>}
+                    {s === 'error' && <span className="text-red-500 text-lg">✗</span>}
+                    <button
+                      onClick={() => fireEvent(event)}
+                      disabled={s === 'sending'}
+                      className="px-2 py-1 text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 rounded hover:bg-indigo-100 disabled:opacity-50"
+                    >
+                      {s === 'sending' ? '…' : 'Testar'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
       </div>
