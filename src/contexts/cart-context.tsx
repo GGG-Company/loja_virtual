@@ -32,7 +32,8 @@ const CartContext = createContext<CartContextValue | null>(null);
 function readFromStorage(): CartItem[] {
   if (typeof window === 'undefined') return [];
   try {
-    return JSON.parse(localStorage.getItem(CART_KEY) || '[]');
+    const parsed: any[] = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
+    return parsed.map((i) => ({ ...i, price: Number(i.price) }));
   } catch {
     return [];
   }
@@ -64,14 +65,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const addItem = useCallback((incoming: Omit<CartItem, 'quantity'> & { quantity?: number }) => {
     const qty = incoming.quantity ?? 1;
+    const item = { ...incoming, price: Number(incoming.price) };
     setItems((prev) => {
-      const existing = prev.find((i) => i.id === incoming.id);
+      const existing = prev.find((i) => i.id === item.id);
       if (existing) {
         return prev.map((i) =>
-          i.id === incoming.id ? { ...i, quantity: i.quantity + qty } : i
+          i.id === item.id ? { ...i, quantity: i.quantity + qty } : i
         );
       }
-      return [...prev, { ...incoming, quantity: qty }];
+      return [...prev, { ...item, quantity: qty }];
     });
   }, []);
 

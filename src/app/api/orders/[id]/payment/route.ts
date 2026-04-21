@@ -4,6 +4,8 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { sendOrderStatusUpdate } from '@/lib/webhooks';
 import { createShippingLabelForOrder } from '@/lib/melhorenvio-shipping';
+import { createHiperOrder } from '@/lib/hiper';
+import { toNum } from '@/lib/decimal-helpers';
 
 export async function POST(
   request: NextRequest,
@@ -150,8 +152,68 @@ export async function POST(
       // Não bloquear o pagamento se a etiqueta falhar
     }
 
+    // Enviar pedido ao Hiper (fire-and-forget — não bloqueia o pagamento)
+    if (process.env.HIPER_API_SECRET_KEY) {
+      try {
+        const orderFull = await prisma.order.findUnique({
+          where: { id },
+          include: {
+            user: true,
+            items: { include: { product: { select: { id: true, externalIdHiper: true } } } },
+          },
+        });
+
+        if (orderFull) {
+          const addr = orderFull.shippingAddress as any;
+          const itemsWithHiper = orderFull.items.filter((i) => i.product.externalIdHiper);
+
+          if (itemsWithHiper.length > 0) {
+            const hiperResult = await createHiperOrder({
+              orderNumber: orderFull.orderNumber,
+              total: toNum(orderFull.total),
+              shipping: toNum(orderFull.shipping),
+              installments: orderFull.installments,
+              paymentMethod: orderFull.paymentMethod,
+              customer: {
+                name: orderFull.user?.name || addr?.name || 'Cliente',
+                email: orderFull.user?.email || addr?.email || '',
+                cpf: addr?.cpf || '',
+              },
+              address: {
+                street: addr?.street || '',
+                number: addr?.number || 'S/N',
+                complement: addr?.complement,
+                neighborhood: addr?.neighborhood || '',
+                city: addr?.city || '',
+                state: addr?.state || '',
+                zip: addr?.zip || '',
+              },
+              items: itemsWithHiper.map((item) => ({
+                hiperProductId: item.product.externalIdHiper!,
+                quantity: item.quantity,
+                unitPrice: toNum(item.price),
+                netPrice: toNum(item.subtotal) / item.quantity,
+              })),
+            });
+
+            if (hiperResult.success && hiperResult.hiperOrderId) {
+              await prisma.order.update({
+                where: { id },
+                data: { hiperOrderId: hiperResult.hiperOrderId },
+              });
+              logger.info('[PAYMENT] Pedido enviado ao Hiper: %s', hiperResult.hiperOrderId);
+            } else {
+              logger.warn('[PAYMENT] Falha ao enviar pedido ao Hiper: %s', hiperResult.error);
+            }
+          }
+        }
+      } catch (hiperErr) {
+        logger.error(hiperErr as Error, '[PAYMENT] Exceção ao enviar pedido ao Hiper');
+      }
+    }
+
     logger.info({ orderId: updatedOrder.id }, '[PAYMENT] Finalizando processamento de pagamento');
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       order: updatedOrder,
       payment: paymentPayload,

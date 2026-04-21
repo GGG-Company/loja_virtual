@@ -6,9 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { ArrowLeft, Trash2 } from 'lucide-react';
+import { ArrowLeft, Trash2, Link2, Link2Off, Search } from 'lucide-react';
 import Link from 'next/link';
 import Image from "next/image";
+
+interface HiperProduct {
+  id: string;
+  nome: string;
+  codigo: number;
+  codigoDeBarras: string;
+  preco: number;
+}
 
 interface Product {
   id: string;
@@ -23,6 +31,7 @@ interface Product {
   stockLocation?: string | null;
   slug?: string;
   imageUrl?: string | null;
+  externalIdHiper?: string | null;
   category?: { name?: string } | null;
 }
 
@@ -34,6 +43,11 @@ export default function EditProductPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [product, setProduct] = useState<Product | null>(null);
+  const [hiperProducts, setHiperProducts] = useState<HiperProduct[]>([]);
+  const [hiperSearch, setHiperSearch] = useState('');
+  const [hiperLinked, setHiperLinked] = useState<string | null>(null);
+  const [hiperSelected, setHiperSelected] = useState<string>('');
+  const [linkingSaving, setLinkingSaving] = useState(false);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [imagePreview, setImagePreview] = useState<string>("/placeholder.svg");
   const [showPreview, setShowPreview] = useState(false);
@@ -53,6 +67,14 @@ export default function EditProductPage() {
   });
 
   useEffect(() => {
+    // Carregar produtos do Hiper para o seletor de vínculo
+    fetch('/api/admin/integrations/hiper/products')
+      .then((r) => r.json())
+      .then((d) => setHiperProducts(d.products ?? []))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     // Carregar categorias
     fetch("/api/categories")
       .then((res) => res.json())
@@ -65,6 +87,8 @@ export default function EditProductPage() {
         .then((data) => {
           setProduct(data);
           setSlug(data.slug || productId);
+          setHiperLinked(data.externalIdHiper ?? null);
+          setHiperSelected(data.externalIdHiper ?? '');
           setFormData({
             name: data.name,
             description: data.description,
@@ -149,6 +173,34 @@ export default function EditProductPage() {
       toast.error("Erro ao excluir produto");
     }
   };
+
+  const handleSaveHiperLink = async (hiperProductId: string | null) => {
+    setLinkingSaving(true);
+    try {
+      const res = await fetch(`/api/admin/integrations/hiper/link/${productId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hiperProductId }),
+      });
+      if (!res.ok) throw new Error();
+      setHiperLinked(hiperProductId);
+      setHiperSelected(hiperProductId ?? '');
+      toast.success(hiperProductId ? 'Produto vinculado ao Hiper' : 'Vínculo removido');
+    } catch {
+      toast.error('Erro ao salvar vínculo');
+    } finally {
+      setLinkingSaving(false);
+    }
+  };
+
+  const hiperFiltered = hiperProducts.filter((h) =>
+    !hiperSearch ||
+    h.nome.toLowerCase().includes(hiperSearch.toLowerCase()) ||
+    String(h.codigo).includes(hiperSearch) ||
+    h.codigoDeBarras.includes(hiperSearch),
+  );
+
+  const linkedHiperProduct = hiperProducts.find((h) => h.id === hiperLinked);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData((prev) => ({
@@ -295,6 +347,72 @@ export default function EditProductPage() {
               <option value="ACTIVE">Ativo</option>
               <option value="INACTIVE">Inativo</option>
             </select>
+          </div>
+
+          {/* ── Vínculo com Hiper ── */}
+          <div className="border rounded-lg p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-base font-semibold">Vínculo com Hiper Gestão</Label>
+              {hiperLinked ? (
+                <span className="flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2.5 py-1">
+                  <Link2 className="w-3.5 h-3.5" />
+                  Vinculado
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5 text-xs text-gray-400 bg-gray-50 border border-gray-200 rounded-full px-2.5 py-1">
+                  <Link2Off className="w-3.5 h-3.5" />
+                  Não vinculado
+                </span>
+              )}
+            </div>
+
+            {linkedHiperProduct && (
+              <div className="text-sm bg-green-50 border border-green-100 rounded-md px-3 py-2 text-green-800">
+                <span className="font-medium">{linkedHiperProduct.nome}</span>
+                <span className="text-green-600 ml-2">
+                  (cód. {linkedHiperProduct.codigo}
+                  {linkedHiperProduct.codigoDeBarras ? ` · ${linkedHiperProduct.codigoDeBarras}` : ''})
+                </span>
+              </div>
+            )}
+
+            {hiperProducts.length === 0 ? (
+              <p className="text-xs text-gray-400">Nenhum produto disponível no Hiper. Configure produtos no Hiper Gestão → Vendas → Loja Virtual.</p>
+            ) : (
+              <div className="space-y-2">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
+                  <Input
+                    placeholder="Buscar por nome, código ou EAN..."
+                    value={hiperSearch}
+                    onChange={(e) => setHiperSearch(e.target.value)}
+                    className="pl-8 text-sm"
+                  />
+                </div>
+                <select
+                  value={hiperSelected}
+                  onChange={(e) => setHiperSelected(e.target.value)}
+                  className="w-full h-10 rounded-lg border border-gray-300 px-3 text-sm bg-white text-gray-900"
+                  size={hiperFiltered.length > 0 ? Math.min(hiperFiltered.length + 1, 6) : 2}
+                >
+                  <option value="">— Nenhum (desvincular) —</option>
+                  {hiperFiltered.map((h) => (
+                    <option key={h.id} value={h.id}>
+                      {h.nome} · cód. {h.codigo}{h.codigoDeBarras ? ` · ${h.codigoDeBarras}` : ''} · R$ {Number(h.preco).toFixed(2)}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={linkingSaving || hiperSelected === (hiperLinked ?? '')}
+                  onClick={() => handleSaveHiperLink(hiperSelected || null)}
+                >
+                  {linkingSaving ? 'Salvando...' : hiperSelected ? 'Vincular ao produto selecionado' : 'Desvincular'}
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-4">
