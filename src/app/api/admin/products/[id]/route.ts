@@ -24,6 +24,7 @@ export async function GET(
       where: { id },
       include: {
         category: true,
+        brand: { select: { id: true, name: true } },
         images: true,
       },
     });
@@ -57,18 +58,20 @@ export async function PUT(
     }
 
     const body = await req.json();
-    const { 
-      name, 
-      description, 
-      price, 
-      promotionalPrice, 
-      stock, 
-      status, 
-      imageUrl, 
-      isFeatured, 
+    const {
+      name,
+      description,
+      price,
+      promotionalPrice,
+      stock,
+      status,
+      imageUrl,
+      isFeatured,
       isPromo,
-      stockLocation, 
-      categoryId 
+      stockLocation,
+      categoryId,
+      brandId,
+      ean,
     } = body;
 
     // Garante que o produto existe e captura categoryId atual para fallback
@@ -108,6 +111,8 @@ export async function PUT(
       isActive: status === 'ACTIVE' ? true : status === 'INACTIVE' ? false : existing.isActive,
       stockLocation: stockLocation?.trim() || null,
       categoryId: validCategoryId,
+      brandId: brandId || null,
+      ean: ean?.trim() || null,
       ...(imageUrl !== undefined && { imageUrl: normalizedImage }),
     };
 

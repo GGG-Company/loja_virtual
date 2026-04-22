@@ -87,6 +87,7 @@ export async function proxy(request: NextRequest) {
       '/api/site-config',
       '/api/financial/config',
       '/api/shipping',
+      '/api/search',
     ];
 
     if (publicApiRoutes.some(route => pathname.includes(route))) {

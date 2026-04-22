@@ -102,6 +102,22 @@ model Category {
   @@map("categories")
 }
 
+model Brand {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+  logoUrl     String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+
+  @@index([slug])
+  @@index([isActive])
+  @@map("brands")
+}
+
 model Product {
   id               String           @id @default(cuid())
   sku              String           @unique
@@ -122,6 +138,7 @@ model Product {
   minStock         Int              @default(5)
   externalIdML     String?          @unique
   externalIdHiper  String?          @unique
+  brandId          String?
   specs            Json?
   weight           Float?
   dimensions       Json?
@@ -138,12 +155,16 @@ model Product {
   images           ProductImage[]
   variants         ProductVariant[]
   category         Category         @relation(fields: [categoryId], references: [id])
+  brand            Brand?           @relation(fields: [brandId], references: [id])
   reviews          Review[]
   stockLogs        StockLog[]
+
+  searchVector Unsupported("tsvector")?
 
   @@index([sku])
   @@index([slug])
   @@index([categoryId])
+  @@index([brandId])
   @@index([isFeatured])
   @@map("products")
 }

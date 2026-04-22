@@ -1,34 +1,19 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
-import { ProductCard } from "@/components/product-card";
-import { SkeletonCard } from "@/components/skeleton-card";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
-import { SlidersHorizontal, Search, PackageSearch } from "lucide-react";
-import { apiClient } from "@/lib/api-client";
-import { Breadcrumb } from "@/components/breadcrumb";
-import logger from "@/lib/logger";
-
-// Helper to forward client logs to server for debugging in VSCode terminal
-// Only active in development — no-op in production to avoid unnecessary requests
-async function sendServerLog(tag: string, payload: unknown) {
-  if (process.env.NODE_ENV !== 'development') return;
-  try {
-    fetch("/api/dev/log", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tag, payload, ts: new Date().toISOString() }),
-    }).catch(() => {});
-  } catch {
-    // ignore
-  }
-}
+import { useCallback, useEffect, useMemo, useState, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { Header } from '@/components/header';
+import { Footer } from '@/components/footer';
+import { ProductCard } from '@/components/product-card';
+import { SkeletonCard } from '@/components/skeleton-card';
+import { ProductFilters, type FilterCounts } from '@/components/ProductFilters';
+import { Button } from '@/components/ui/button';
+import { SlidersHorizontal, PackageSearch } from 'lucide-react';
+import { apiClient } from '@/lib/api-client';
+import { Breadcrumb } from '@/components/breadcrumb';
+import logger from '@/lib/logger';
+import { PRICE_MIN, PRICE_MAX } from '@/hooks/useFilters';
 
 type ProductListItem = {
   id: string;
@@ -37,285 +22,172 @@ type ProductListItem = {
   promotionalPrice?: number | null;
   imageUrl?: string | null;
   images?: { url: string; alt?: string | null }[];
-  category?: {
-    id?: string;
-    name?: string;
-    slug?: string;
-  };
+  category?: { id?: string; name?: string; slug?: string };
+  brand?: { id?: string; name?: string; slug?: string } | null;
   specs?: Record<string, unknown>;
   createdAt?: string;
 };
 
+const VOLTAGE_OPTIONS = ['110V', '220V', 'Bivolt', 'Bateria'];
+
+function extractBrand(p: ProductListItem): string | null {
+  if (p.brand?.name) return p.brand.name;
+  const s = String(p.specs?.marca || p.specs?.brand || '').trim();
+  if (s && s !== 'undefined' && s !== 'null') return s;
+  return null;
+}
+
+function extractVoltages(p: ProductListItem): string[] {
+  const s = String(p.specs?.voltagem || p.specs?.voltage || '').trim();
+  if (s && s !== 'undefined') return [s];
+  const name = (p.name || '').toLowerCase();
+  return VOLTAGE_OPTIONS.filter((v) => name.includes(v.toLowerCase()));
+}
+
+// ── Sorting helper ────────────────────────────────────────────────────────────
+function sortProducts(list: ProductListItem[], sortVal: string): ProductListItem[] {
+  return [...list].sort((a, b) => {
+    const pA = a.promotionalPrice ?? a.price ?? 0;
+    const pB = b.promotionalPrice ?? b.price ?? 0;
+    switch (sortVal) {
+      case 'price-asc':  return pA - pB;
+      case 'price-desc': return pB - pA;
+      case 'name':       return (a.name || '').localeCompare(b.name || '');
+      default:
+        if (a.createdAt && b.createdAt)
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        return 0;
+    }
+  });
+}
+
+function parseIntSafe(v: string | null, fallback: number) {
+  if (!v) return fallback;
+  const n = parseInt(v, 10);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+type DbBrand = { id: string; name: string; slug: string; _count: { products: number } };
+
+// ── Page content ──────────────────────────────────────────────────────────────
 function ProductsContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const [products, setProducts] = useState<ProductListItem[]>([]);
-  const [allProducts, setAllProducts] = useState<ProductListItem[]>([]); // raw fetched list
-  const [isLoading, setIsLoading] = useState(true);
+  const router       = useRouter();
+
+  const [allProducts, setAllProducts] = useState<ProductListItem[]>([]);
+  const [dbBrands,    setDbBrands]    = useState<DbBrand[]>([]);
+  const [isLoading,   setIsLoading]   = useState(true);
   const [showFilters, setShowFilters] = useState(false);
-  const [priceRange, setPriceRange] = useState([0, 5000]);
-  const [tempRange, setTempRange] = useState<number[]>([0, 5000]);
-  const [sortBy, setSortBy] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem('plp-sort') || 'recent';
-    }
-    return 'recent';
-  });
 
-  // Controlled filter states
-  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
-  const [selectedVoltages, setSelectedVoltages] = useState<string[]>([]);
+  // Only re-fetch when categoria or search changes — NOT when filter params change
+  const categoria = searchParams?.get('categoria') ?? null;
+  const search    = searchParams?.get('search')    ?? null;
 
-  const searchKey = useMemo(() => searchParams?.toString() ?? "", [searchParams]);
-
-  // Fetch only the raw product list (no filtering here)
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
     try {
-      const categoria = searchParams?.get("categoria");
-      const search = searchParams?.get("search");
-      let url = "/api/products";
       const params = new URLSearchParams();
-      if (categoria) params.set("categoria", categoria);
-      if (search) params.set("search", search);
-      if (params.toString()) url += `?${params.toString()}`;
-      const response = await apiClient.get<{ products: ProductListItem[] }>(url);
-      const arr = response.data.products ?? [];
-      logger.debug({ count: arr.length, categoria, search, url }, "[PLP] fetchProducts -> fetched");
-      sendServerLog("fetchProducts", { count: arr.length, categoria, url });
-      setAllProducts(arr);
-      // By default show all fetched products (user can apply filters)
-      setProducts(arr);
-
-      // Initialize priceRange from URL if present
-      const minParam = searchParams?.get("minPrice");
-      const maxParam = searchParams?.get("maxPrice");
-      const minP = minParam ? parseInt(minParam, 10) : 0;
-      const maxP = maxParam ? parseInt(maxParam, 10) : 5000;
-      const normalizedMin = Number.isFinite(minP) ? minP : 0;
-      const normalizedMax = Number.isFinite(maxP) ? maxP : 5000;
-      setPriceRange([normalizedMin, normalizedMax]);
-      setTempRange([normalizedMin, normalizedMax]);
-
-      // Initialize brands/voltages from URL if present
-      const brandsParam = searchParams?.get("brands");
-      const voltsParam = searchParams?.get("voltages");
-      if (brandsParam) {
-        setSelectedBrands(brandsParam.split(","));
-        logger.debug({ brands: brandsParam.split(",") }, "[PLP] init brands from URL");
-      }
-      if (voltsParam) {
-        setSelectedVoltages(voltsParam.split(","));
-        logger.debug({ voltages: voltsParam.split(",") }, "[PLP] init voltages from URL");
-      }
-
-      // If URL already has filter params, apply them immediately (avoid showing full list after router.push)
-      const sortParam = searchParams?.get("sort") ?? undefined;
-      const hasFiltersInUrl = !!(minParam || maxParam || brandsParam || voltsParam || sortParam);
-      if (hasFiltersInUrl) {
-        const min = Math.min(minP, maxP);
-        const max = Math.max(minP, maxP);
-        const brandsArr = brandsParam ? brandsParam.split(",") : [];
-        const voltsArr = voltsParam ? voltsParam.split(",") : [];
-
-        // filter
-        const filteredFromUrl = arr.filter((p) => {
-          const finalPrice = p.promotionalPrice ?? p.price ?? 0;
-          if (finalPrice < min || finalPrice > max) return false;
-          if (brandsArr.length > 0) {
-            const brandFromSpecs = (p.specs && (p.specs.marca || p.specs.brand)) || "";
-            const nameMatches = brandsArr.some((b) => p.name?.toLowerCase().includes(b.toLowerCase()));
-            const specsMatches = brandsArr.some((b) => String(brandFromSpecs).toLowerCase().includes(b.toLowerCase()));
-            if (!nameMatches && !specsMatches) return false;
-          }
-          if (voltsArr.length > 0) {
-            const volFromSpecs = (p.specs && (p.specs.voltagem || p.specs.voltage)) || "";
-            const nameMatches = voltsArr.some((v) => p.name?.toLowerCase().includes(v.toLowerCase()));
-            const specsMatches = voltsArr.some((v) => String(volFromSpecs).toLowerCase().includes(v.toLowerCase()));
-            if (!nameMatches && !specsMatches) return false;
-          }
-          return true;
-        });
-
-        // sort
-        const sortedFromUrl = [...filteredFromUrl].sort((a, b) => {
-          const priceA = a.promotionalPrice ?? a.price ?? 0;
-          const priceB = b.promotionalPrice ?? b.price ?? 0;
-          switch (sortParam) {
-            case "price-asc":
-              return priceA - priceB;
-            case "price-desc":
-              return priceB - priceA;
-            case "name":
-              return (a.name || "").localeCompare(b.name || "");
-            case "recent":
-            default:
-              if (a.createdAt && b.createdAt) return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-              return 0;
-          }
-        });
-
-        logger.debug({ count: sortedFromUrl.length }, "[PLP] fetchProducts -> applied URL filters");
-        setProducts(sortedFromUrl);
-      }
-    } catch (error) {
-      logger.error(error, "Erro ao carregar produtos");
+      if (categoria) params.set('categoria', categoria);
+      if (search)    params.set('search', search);
+      const url = params.toString() ? `/api/products?${params}` : '/api/products';
+      const res = await apiClient.get<{ products: ProductListItem[] }>(url);
+      setAllProducts(res.data.products ?? []);
+    } catch (err) {
+      logger.error(err, '[PLP] fetchProducts failed');
     } finally {
       setIsLoading(false);
     }
-  }, [searchParams]);
+  }, [categoria, search]);
 
   useEffect(() => {
-    // Fetch when category (search params) change — do NOT refetch on slider moves
     fetchProducts();
-  }, [fetchProducts, searchKey]);
+  }, [fetchProducts]);
 
-  // Toggle brand selection
-  const toggleBrand = useCallback((brand: string) => {
-    setSelectedBrands((prev) => {
-      const next = prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand];
-      logger.debug({ brand, next }, "[PLP] toggleBrand");
-      sendServerLog("toggleBrand", { brand, next });
-      return next;
-    });
+  useEffect(() => {
+    fetch('/api/brands')
+      .then((r) => r.json())
+      .then((d) => setDbBrands(d.brands ?? []))
+      .catch(() => {});
   }, []);
 
-  // Toggle voltage selection
-  const toggleVoltage = useCallback((vol: string) => {
-    setSelectedVoltages((prev) => {
-      const next = prev.includes(vol) ? prev.filter((v) => v !== vol) : [...prev, vol];
-      logger.debug({ vol, next }, "[PLP] toggleVoltage");
-      sendServerLog("toggleVoltage", { vol, next });
-      return next;
-    });
-  }, []);
+  // ── Dynamic filter options from loaded products ───────────────────────────
+  const brandCounts = useMemo<FilterCounts>(() => {
+    // Seed from DB brands so all registered brands appear (even with 0 products loaded)
+    const counts: FilterCounts = {};
+    for (const b of dbBrands) counts[b.name] = 0;
+    // Count products in the current loaded set
+    for (const p of allProducts) {
+      const brand = extractBrand(p);
+      if (brand) counts[brand] = (counts[brand] ?? 0) + 1;
+    }
+    return counts;
+  }, [allProducts, dbBrands]);
 
-  // Apply client-side filters using the raw fetched list
-  const applyFilters = useCallback(() => {
-    // Use current slider temp values (commit immediately for this run)
-    const [minTemp, maxTemp] = tempRange;
-    const min = Math.min(minTemp, maxTemp);
-    const max = Math.max(minTemp, maxTemp);
-    // update committed state so UI reflects chosen range
-    setPriceRange([min, max]);
+  const voltageCounts = useMemo<FilterCounts>(() => {
+    const counts: FilterCounts = {};
+    for (const p of allProducts) {
+      for (const v of extractVoltages(p)) {
+        counts[v] = (counts[v] ?? 0) + 1;
+      }
+    }
+    return counts;
+  }, [allProducts]);
 
-    const params = new URLSearchParams();
-    const categoria = searchParams?.get("categoria");
-    const search = searchParams?.get("search");
-    if (categoria) params.set("categoria", categoria);
-    if (search) params.set("search", search);
-    if (sortBy) params.set("sort", sortBy);
-    if (min !== 0) params.set("minPrice", String(min));
-    if (max !== 5000) params.set("maxPrice", String(max));
-    if (selectedBrands.length) params.set("brands", selectedBrands.join(","));
-    if (selectedVoltages.length) params.set("voltages", selectedVoltages.join(","));
+  // ── Reactive client-side filtering — URL is the single source of truth ────
+  const filteredProducts = useMemo(() => {
+    const minPrice     = parseIntSafe(searchParams?.get('minPrice'), PRICE_MIN);
+    const maxPrice     = parseIntSafe(searchParams?.get('maxPrice'), PRICE_MAX);
+    const brandFilter  = (searchParams?.get('brands')   ?? '').split(',').filter(Boolean);
+    const voltFilter   = (searchParams?.get('voltages') ?? '').split(',').filter(Boolean);
+    const sortVal      = searchParams?.get('sort') ?? 'recent';
 
-    logger.debug({ min, max, selectedBrands, selectedVoltages, sortBy }, "[PLP] applyFilters -> params");
-    sendServerLog("applyFiltersParams", { min, max, selectedBrands, selectedVoltages, sortBy });
-
-    const paramString = params.toString();
-    if (paramString) router.push(`/produtos?${paramString}`);
-    else router.push("/produtos");
-
-    // Filter from allProducts (raw data) using min/max
     const filtered = allProducts.filter((p) => {
-      const finalPrice = p.promotionalPrice ?? p.price ?? 0;
-      if (finalPrice < min || finalPrice > max) return false;
+      const price = p.promotionalPrice ?? p.price ?? 0;
+      if (price < minPrice || price > maxPrice) return false;
 
-      if (selectedBrands.length > 0) {
-        const brandFromSpecs = (p.specs && (p.specs.marca || p.specs.brand)) || "";
-        const nameMatches = selectedBrands.some((b) => p.name?.toLowerCase().includes(b.toLowerCase()));
-        const specsMatches = selectedBrands.some((b) => String(brandFromSpecs).toLowerCase().includes(b.toLowerCase()));
-        if (!nameMatches && !specsMatches) return false;
+      if (brandFilter.length > 0) {
+        const brandName = extractBrand(p) || '';
+        const ok = brandFilter.some(
+          (b) => brandName.toLowerCase() === b.toLowerCase(),
+        );
+        if (!ok) return false;
       }
 
-      if (selectedVoltages.length > 0) {
-        const volFromSpecs = (p.specs && (p.specs.voltagem || p.specs.voltage)) || "";
-        const nameMatches = selectedVoltages.some((v) => p.name?.toLowerCase().includes(v.toLowerCase()));
-        const specsMatches = selectedVoltages.some((v) => String(volFromSpecs).toLowerCase().includes(v.toLowerCase()));
-        if (!nameMatches && !specsMatches) return false;
+      if (voltFilter.length > 0) {
+        const vol = String(p.specs?.voltagem || p.specs?.voltage || '');
+        const ok = voltFilter.some(
+          (v) =>
+            p.name?.toLowerCase().includes(v.toLowerCase()) ||
+            vol.toLowerCase().includes(v.toLowerCase()),
+        );
+        if (!ok) return false;
       }
 
       return true;
     });
 
-    logger.debug({ filteredCount: filtered.length, total: allProducts.length }, "[PLP] applyFilters -> results");
-    sendServerLog("applyFiltersFiltered", { count: filtered.length, from: allProducts.length });
+    return sortProducts(filtered, sortVal);
+  }, [allProducts, searchParams]);
 
-    // Apply sorting to filtered results
-    const sorted = [...filtered].sort((a, b) => {
-      const priceA = a.promotionalPrice ?? a.price ?? 0;
-      const priceB = b.promotionalPrice ?? b.price ?? 0;
-      switch (sortBy) {
-        case "price-asc":
-          return priceA - priceB;
-        case "price-desc":
-          return priceB - priceA;
-        case "name":
-          return (a.name || "").localeCompare(b.name || "");
-        case "recent":
-        default:
-          if (a.createdAt && b.createdAt) return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-          return 0;
-      }
-    });
+  // ── Sort selector (toolbar) — updates URL directly ───────────────────────
+  const currentSort = searchParams?.get('sort') ?? 'recent';
 
-    logger.debug(
-      {
-        sortedCount: sorted.length,
-        exampleIds: sorted.slice(0, 5).map((p) => p.id),
-      },
-      "[PLP] applyFilters -> sortedCount"
-    );
-    sendServerLog("applyFiltersSorted", { count: sorted.length, exampleIds: sorted.slice(0, 5).map((p) => p.id) });
-
-    setProducts(sorted);
-  }, [tempRange, selectedBrands, selectedVoltages, sortBy, allProducts, router, searchParams]);
-
-  // When sort changes we reorder current shown products (no refetch)
   const handleSortChange = useCallback(
     (value: string) => {
-      setSortBy(value);
-      sessionStorage.setItem('plp-sort', value);
-      const sorted = [...products].sort((a, b) => {
-        const priceA = a.promotionalPrice ?? a.price ?? 0;
-        const priceB = b.promotionalPrice ?? b.price ?? 0;
-        switch (value) {
-          case "price-asc":
-            return priceA - priceB;
-          case "price-desc":
-            return priceB - priceA;
-          case "name":
-            return (a.name || "").localeCompare(b.name || "");
-          case "recent":
-          default:
-            if (a.createdAt && b.createdAt) return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-            return 0;
-        }
-      });
-      setProducts(sorted);
+      const params = new URLSearchParams(searchParams?.toString() ?? '');
+      if (value === 'recent') params.delete('sort');
+      else params.set('sort', value);
+      const str = params.toString();
+      router.replace(str ? `/produtos?${str}` : '/produtos', { scroll: false });
     },
-    [products]
+    [router, searchParams],
   );
-
-  // Commit tempRange on pointer up (user released the thumb)
-  const commitTempRange = useCallback(() => {
-    // Normalize so min <= max
-    const [a, b] = tempRange;
-    const min = Math.min(a, b);
-    const max = Math.max(a, b);
-    setPriceRange([min, max]);
-    // Also update tempRange normalized
-    setTempRange([min, max]);
-    logger.debug({ min, max }, "[PLP] commitTempRange");
-    sendServerLog("commitTempRange", { min, max });
-  }, [tempRange]);
 
   return (
     <>
       <Header />
       <main className="min-h-screen bg-gray-50">
-        {/* Hero — Dark Industrial */}
+        {/* Hero */}
         <div className="relative bg-[#1A1A1A] text-white py-8 lg:py-14 overflow-hidden">
           <div
             className="absolute inset-0 opacity-[0.04] pointer-events-none"
@@ -327,7 +199,9 @@ function ProductsContent() {
           <div className="container mx-auto px-4 relative z-10">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-1 h-8 bg-[#CC1020] rounded-full" />
-              <p className="text-xs font-display font-bold text-[#CC1020] tracking-widest uppercase">Catálogo</p>
+              <p className="text-xs font-display font-bold text-[#CC1020] tracking-widest uppercase">
+                Catálogo
+              </p>
             </div>
             <h1 className="font-display text-4xl font-bold uppercase mb-1">Nossos Produtos</h1>
             <p className="text-gray-300 font-body">Encontre as melhores ferramentas profissionais</p>
@@ -335,81 +209,43 @@ function ProductsContent() {
         </div>
 
         <div className="container mx-auto px-4 py-8">
-          <Breadcrumb
-            items={[{ label: 'Produtos', href: '/produtos' }]}
-            className="mb-6"
-          />
+          <Breadcrumb items={[{ label: 'Produtos', href: '/produtos' }]} className="mb-6" />
+
           <div className="grid lg:grid-cols-4 gap-6">
-            {/* Filters Sidebar */}
-            <div className={`lg:col-span-1 ${showFilters ? "block" : "hidden lg:block"}`}>
-              <div className="bg-white rounded-sm shadow-md border-t-4 border-[#CC1020] p-6 space-y-6 sticky top-24">
-                <div className="flex justify-between items-center">
-                  <h2 className="font-display text-lg font-bold text-[#1A1A1A] uppercase tracking-wide">Filtros</h2>
-                  <button onClick={() => setShowFilters(false)} aria-label="Fechar filtros" className="lg:hidden text-metallic-600">
-                    ✕
-                  </button>
-                </div>
-
-                {/* Price Range */}
-                <div className="space-y-3">
-                  <Label>Faixa de Preço</Label>
-                  <Slider value={tempRange} onValueChange={(v: number[]) => setTempRange(v)} onPointerUp={commitTempRange} max={5000} step={50} className="my-4" />
-                  <div className="flex justify-between text-sm text-metallic-600">
-                    <span>R$ {tempRange[0]}</span>
-                    <span>R$ {tempRange[1]}</span>
-                  </div>
-                </div>
-
-                {/* Brands */}
-                <div className="space-y-3">
-                  <Label>Marcas</Label>
-                  <div className="space-y-2">
-                    {["Makita", "Bosch", "DeWalt", "Black+Decker", "Tramontina"].map((brand) => (
-                      <label key={brand} className="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" className="rounded border-gray-300 accent-[#CC1020]" checked={selectedBrands.includes(brand)} onChange={() => toggleBrand(brand)} />
-                        <span className="text-sm text-metallic-700">{brand}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Voltage */}
-                <div className="space-y-3">
-                  <Label>Voltagem</Label>
-                  <div className="space-y-2">
-                    {["110V", "220V", "Bivolt", "Bateria"].map((voltage) => (
-                      <label key={voltage} className="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" className="rounded border-gray-300 accent-[#CC1020]" checked={selectedVoltages.includes(voltage)} onChange={() => toggleVoltage(voltage)} />
-                        <span className="text-sm text-metallic-700">{voltage}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <Button className="w-full" onClick={applyFilters}>
-                  Aplicar Filtros
-                </Button>
-              </div>
+            {/* ── Filter Sidebar ── */}
+            <div className={`lg:col-span-1 ${showFilters ? 'block' : 'hidden lg:block'}`}>
+              <ProductFilters
+                brandCounts={brandCounts}
+                voltageCounts={voltageCounts}
+                onClose={() => setShowFilters(false)}
+              />
             </div>
 
-            {/* Products Grid */}
+            {/* ── Product Grid ── */}
             <div className="lg:col-span-3">
               {/* Toolbar */}
-              <div className="bg-white rounded-lg shadow-md p-4 mb-6 flex justify-between items-center">
-                <Button variant="outline" onClick={() => setShowFilters(!showFilters)} className="lg:hidden">
-                  <SlidersHorizontal className="h-5 w-5 mr-2" />
+              <div className="bg-white rounded-lg shadow-md p-4 mb-6 flex items-center justify-between gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="lg:hidden"
+                >
+                  <SlidersHorizontal className="h-4 w-4 mr-2" />
                   Filtros
                 </Button>
 
-                <div className="hidden lg:block text-sm text-metallic-600">{products.length} produtos encontrados</div>
+                <span className="hidden lg:block text-sm text-gray-500">
+                  {isLoading ? (
+                    <span className="animate-pulse bg-gray-200 rounded h-4 w-28 inline-block" />
+                  ) : (
+                    <>{filteredProducts.length} produto{filteredProducts.length !== 1 ? 's' : ''} encontrado{filteredProducts.length !== 1 ? 's' : ''}</>
+                  )}
+                </span>
 
                 <select
-                  value={sortBy}
-                  onChange={(e) => {
-                    setSortBy(e.target.value);
-                    handleSortChange(e.target.value);
-                  }}
-                  className="border border-metallic-300 rounded-md px-4 py-2 text-sm"
+                  value={currentSort}
+                  onChange={(e) => handleSortChange(e.target.value)}
+                  className="ml-auto border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC1020]/30 focus:border-[#CC1020]"
                 >
                   <option value="recent">Mais Recentes</option>
                   <option value="price-asc">Menor Preço</option>
@@ -418,17 +254,18 @@ function ProductsContent() {
                 </select>
               </div>
 
-              {/* Products */}
+              {/* Grid */}
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {isLoading ? (
-                  <>
-                    {[...Array(6)].map((_, i) => (
-                      <SkeletonCard key={i} />
-                    ))}
-                  </>
-                ) : products.length > 0 ? (
-                  products.map((product, index) => (
-                    <motion.div key={product.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
+                  [...Array(6)].map((_, i) => <SkeletonCard key={i} />)
+                ) : filteredProducts.length > 0 ? (
+                  filteredProducts.map((product, i) => (
+                    <motion.div
+                      key={product.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.04 }}
+                    >
                       <ProductCard product={product} />
                     </motion.div>
                   ))
@@ -440,25 +277,14 @@ function ProductsContent() {
                     <p className="font-display text-lg font-bold text-[#1A1A1A] uppercase mb-1">
                       Nenhum produto encontrado
                     </p>
-                    {searchParams?.get('busca') ? (
-                      <>
-                        <p className="text-sm text-gray-500 mb-6">
-                          Nenhum resultado para &quot;{searchParams.get('busca')}&quot;. Tente outro termo ou remova os filtros.
-                        </p>
-                        <Button variant="outline" onClick={() => router.push('/produtos')}>
-                          Ver todos os produtos
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-sm text-gray-500 mb-6">
-                          Tente ajustar os filtros ou explore outras categorias.
-                        </p>
-                        <Button variant="outline" onClick={() => router.push('/produtos')}>
-                          Limpar filtros
-                        </Button>
-                      </>
-                    )}
+                    <p className="text-sm text-gray-500 mb-6">
+                      {search
+                        ? `Nenhum resultado para "${search}". Tente outro termo ou remova os filtros.`
+                        : 'Tente ajustar os filtros ou explore outras categorias.'}
+                    </p>
+                    <Button variant="outline" onClick={() => router.push('/produtos')}>
+                      Ver todos os produtos
+                    </Button>
                   </div>
                 )}
               </div>
@@ -473,7 +299,13 @@ function ProductsContent() {
 
 export default function ProductsPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#CC1020]" /></div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#CC1020]" />
+        </div>
+      }
+    >
       <ProductsContent />
     </Suspense>
   );

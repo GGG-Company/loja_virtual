@@ -17,12 +17,14 @@ interface Product {
   isPromo: boolean;
   externalIdHiper: string | null;
   category: { name: string };
+  brand?: { name: string } | null;
 }
 
 interface SyncResult {
   matched: number;
   unmatched: number;
   stockUpdated: number;
+  deactivated: number;
   errors: number;
   nextPontoDeSincronizacao: number;
 }
@@ -116,6 +118,9 @@ export default function AdminProductsPage() {
             <div className="flex flex-wrap gap-x-4 gap-y-1">
               <span><strong>{syncResult.matched}</strong> produtos vinculados</span>
               <span><strong>{syncResult.stockUpdated}</strong> estoques atualizados</span>
+              {syncResult.deactivated > 0 && (
+                <span className="text-gray-600"><strong>{syncResult.deactivated}</strong> desativados (removido/inativo no Hiper)</span>
+              )}
               {syncResult.unmatched > 0 && (
                 <span className="text-amber-700"><strong>{syncResult.unmatched}</strong> sem correspondência local</span>
               )}
@@ -144,6 +149,7 @@ export default function AdminProductsPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marca</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Preço</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estoque</th>
@@ -155,7 +161,7 @@ export default function AdminProductsPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {products.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                     Nenhum produto encontrado
                   </td>
                 </tr>
@@ -174,6 +180,11 @@ export default function AdminProductsPage() {
                           )}
                         </div>
                       </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {product.brand?.name
+                        ? <span className="font-medium text-gray-700">{product.brand.name}</span>
+                        : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {product.category?.name || 'S/ Categoria'}

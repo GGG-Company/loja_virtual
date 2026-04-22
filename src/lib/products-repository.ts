@@ -114,30 +114,44 @@ export async function listProducts(params: ListProductsParams) {
     const cap = limit ?? 40;
 
     // Step 1 — Full-Text Search via tsvector GIN index (O(log n), dicionário PT)
-    const ftsResults = await prisma.$queryRaw<any[]>`
-      SELECT
-        p.*,
-        row_to_json(c.*) AS category,
-        (
-          SELECT json_agg(pi.*)
-          FROM (
-            SELECT url, alt, "order" FROM "product_images"
-            WHERE "productId" = p.id
-            ORDER BY "order" ASC
-            LIMIT 1
-          ) pi
-        ) AS images,
-        ts_rank("searchVector", plainto_tsquery('portuguese', ${search})) AS rank
-      FROM "products" p
-      LEFT JOIN "categories" c ON c.id = p."categoryId"
-      WHERE
-        p."isActive" = true
-        AND "searchVector" @@ plainto_tsquery('portuguese', ${search})
-      ORDER BY rank DESC
-      LIMIT ${cap}
-    `;
+    // Wrapped in try/catch: se a coluna searchVector ainda não existir no banco
+    // (migration pendente), cai graciosamente no Step 2 (ILIKE).
+    try {
+      const ftsResults = await prisma.$queryRaw<any[]>`
+        SELECT
+          p.id, p.sku, p.slug, p.name, p.description, p."shortDescription",
+          p."imageUrl", p.price, p."compareAtPrice", p."promotionalPrice",
+          p.stock, p."isFeatured", p."isPromo", p."isActive",
+          p.specs, p."categoryId", p."createdAt", p."updatedAt",
+          row_to_json(c.*) AS category,
+          row_to_json(b.*) AS brand,
+          (
+            SELECT json_agg(pi.*)
+            FROM (
+              SELECT url, alt, "order" FROM "product_images"
+              WHERE "productId" = p.id
+              ORDER BY "order" ASC
+              LIMIT 1
+            ) pi
+          ) AS images,
+          ts_rank(p."searchVector", plainto_tsquery('portuguese', ${search})) AS rank
+        FROM "products" p
+        LEFT JOIN "categories" c ON c.id = p."categoryId"
+        LEFT JOIN "brands" b ON b.id = p."brandId"
+        WHERE
+          p."isActive" = true
+          AND p."searchVector" @@ plainto_tsquery('portuguese', ${search})
+        ORDER BY rank DESC
+        LIMIT ${cap}
+      `;
 
-    if (ftsResults.length > 0) return ftsResults;
+      if (ftsResults.length > 0) return ftsResults;
+    } catch (e: any) {
+      // Código 42703 = coluna inexistente; qualquer outro erro de DB também cai aqui
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn('[products-repository] FTS falhou, usando ILIKE:', e?.message);
+      }
+    }
 
     // Step 2 — ILIKE fallback (short terms, brand names, SKUs)
     const ilikeResults = await prisma.product.findMany({
@@ -146,10 +160,12 @@ export async function listProducts(params: ListProductsParams) {
         OR: [
           { name: { contains: search, mode: 'insensitive' } },
           { sku:  { contains: search, mode: 'insensitive' } },
+          { brand: { name: { contains: search, mode: 'insensitive' } } },
         ],
       },
       include: {
         category: { select: { id: true, name: true, slug: true } },
+        brand: { select: { id: true, name: true, slug: true } },
         images: { take: 1, select: { url: true, alt: true, order: true } },
       },
       take: cap,
@@ -175,6 +191,7 @@ export async function listProducts(params: ListProductsParams) {
         isPromo: true,
         createdAt: true,
         category: { select: { id: true, name: true, slug: true } },
+        brand: { select: { id: true, name: true, slug: true } },
         images: { take: 1, select: { url: true, alt: true, order: true } },
       },
       take: 300, // limit candidate pool to avoid OOM
@@ -186,6 +203,7 @@ export async function listProducts(params: ListProductsParams) {
         _score: Math.max(
           bestWordSimilarity(p.name, search),
           p.sku ? bestWordSimilarity(p.sku, search) : 0,
+          p.brand?.name ? bestWordSimilarity(p.brand.name, search) : 0,
         ),
       }))
       .filter(p => p._score >= FUZZY_THRESHOLD)
@@ -199,6 +217,7 @@ export async function listProducts(params: ListProductsParams) {
     where,
     include: {
       category: { select: { id: true, name: true, slug: true } },
+      brand: { select: { id: true, name: true, slug: true } },
       images: { take: 1, select: { url: true, alt: true, order: true } },
     },
     take: limit ?? undefined,

@@ -1,153 +1,28 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { ShoppingCart, User, Search, Menu, X } from 'lucide-react';
+import { ShoppingCart, User, Menu, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { NotificationBell } from './notification-bell';
-import { useState, useEffect, useRef } from 'react';
+import { SmartSearchBar } from './SmartSearchBar';
+import { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useCart } from '@/contexts/cart-context';
 
-// ── Search result cache — module-level so it persists across renders ────────
-type CachedResult = { products: SearchProduct[]; ts: number };
-const SEARCH_CACHE = new Map<string, CachedResult>();
-const CACHE_TTL_MS = 60_000; // 60 s
-
-function getCached(key: string): SearchProduct[] | null {
-  const entry = SEARCH_CACHE.get(key);
-  if (!entry) return null;
-  if (Date.now() - entry.ts > CACHE_TTL_MS) {
-    SEARCH_CACHE.delete(key);
-    return null;
-  }
-  return entry.products;
-}
-
-function setCache(key: string, products: SearchProduct[]) {
-  // Evict oldest entry if cache exceeds 50 unique queries
-  if (SEARCH_CACHE.size >= 50) {
-    const oldest = [...SEARCH_CACHE.entries()].sort((a, b) => a[1].ts - b[1].ts)[0];
-    if (oldest) SEARCH_CACHE.delete(oldest[0]);
-  }
-  SEARCH_CACHE.set(key, { products, ts: Date.now() });
-}
-
-type SearchProduct = {
-  id: string;
-  name: string;
-  price: number;
-  promotionalPrice?: number | null;
-  imageUrl?: string | null;
-  images?: Array<{ url: string }>;
-};
-
 export function Header() {
-  const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { count: cartCount } = useCart();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<SearchProduct[]>([]);
-  const [showResults, setShowResults] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
-  const searchRef = useRef<HTMLDivElement>(null);
-  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
+  const { count: cartCount } = useCart();
   const { data: session } = useSession();
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  type UserRole = "CUSTOMER" | "ADMIN" | "OWNER";
+  type UserRole = 'CUSTOMER' | 'ADMIN' | 'OWNER';
   const role = (session?.user as { role?: UserRole } | undefined)?.role;
-
-  const handleSearch = () => {
-    const q = searchQuery.trim();
-    if (!q) return;
-    router.push(`/produtos?busca=${encodeURIComponent(q)}`);
-  };
-
-  // Keyboard shortcut "/" to focus search
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-      }
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, []);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 8);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  // Fechar dropdown ao clicar fora
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
-        setShowResults(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Busca via Socket.io com debounce + cache local
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value);
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-
-    const trimmed = value.trim();
-    if (trimmed.length < 2) {
-      setSearchResults([]);
-      setShowResults(false);
-      return;
-    }
-
-    // Servir do cache imediatamente se disponível (sem delay)
-    const cached = getCached(trimmed.toLowerCase());
-    if (cached) {
-      setSearchResults(cached);
-      setShowResults(cached.length > 0);
-      return;
-    }
-
-    searchTimerRef.current = setTimeout(() => {
-      fetchSearchFallback(trimmed);
-    }, 300);
-  };
-
-  const fetchSearchFallback = async (query: string) => {
-    setIsSearching(true);
-    try {
-      const res = await fetch(`/api/products?search=${encodeURIComponent(query)}`);
-      const data = await res.json();
-      const results: SearchProduct[] = (data.products || []).slice(0, 6);
-      setCache(query.toLowerCase(), results);
-      setSearchResults(results);
-      setShowResults(results.length > 0);
-    } catch {
-      setSearchResults([]);
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      setShowResults(false);
-      router.push(`/produtos?search=${encodeURIComponent(searchQuery.trim())}`);
-    }
-  };
-
-  const goToProduct = (id: string) => {
-    setShowResults(false);
-    setSearchQuery('');
-    router.push(`/produtos/${id}`);
-  };
 
   return (
     <header
@@ -199,28 +74,9 @@ export function Header() {
               </div>
             </Link>
 
-            {/* Search Bar — Desktop */}
+            {/* Smart Search Bar — Desktop */}
             <div className="hidden md:flex flex-1 max-w-2xl mx-4">
-              <div className="relative w-full flex">
-                <input
-                  ref={searchInputRef}
-                  type="search"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  placeholder="Buscar ferramentas, marcas... (pressione / para focar)"
-                  aria-label="Buscar produtos"
-                  className="w-full px-4 py-2.5 pl-4 border-2 border-[#CC1020] rounded-l-md focus:outline-none focus:ring-2 focus:ring-[#CC1020]/30 font-body text-sm"
-                />
-                <button
-                  onClick={handleSearch}
-                  aria-label="Buscar"
-                  className="bg-[#CC1020] hover:bg-[#a80816] text-white px-4 rounded-r-md transition-colors flex items-center gap-2 font-display font-bold text-sm tracking-wide"
-                >
-                  <Search className="h-4 w-4" />
-                  <span className="hidden lg:block">BUSCAR</span>
-                </button>
-              </div>
+              <SmartSearchBar enableSlashShortcut />
             </div>
 
             {/* Actions */}
@@ -237,12 +93,12 @@ export function Header() {
                     >
                       <User className="h-5 w-5 mr-1.5" />
                       <span className="hidden lg:inline text-sm font-semibold">
-                        {session.user?.name?.split(" ")[0]}
+                        {session.user?.name?.split(' ')[0]}
                       </span>
                     </Button>
                   </Link>
 
-                  {role !== "CUSTOMER" && role && (
+                  {role !== 'CUSTOMER' && role && (
                     <Link href="/admin">
                       <Button
                         variant="outline"
@@ -276,7 +132,10 @@ export function Header() {
                 </Link>
               )}
 
-              <Link href="/carrinho" aria-label={`Carrinho${cartCount > 0 ? ` — ${cartCount} ${cartCount === 1 ? 'item' : 'itens'}` : ''}`}>
+              <Link
+                href="/carrinho"
+                aria-label={`Carrinho${cartCount > 0 ? ` — ${cartCount} ${cartCount === 1 ? 'item' : 'itens'}` : ''}`}
+              >
                 <Button
                   variant="ghost"
                   size="sm"
@@ -365,26 +224,12 @@ export function Header() {
       {/* Mobile Menu */}
       {isMenuOpen && (
         <div className="lg:hidden bg-white border-t border-gray-100 shadow-xl">
-          {/* Mobile Search */}
+          {/* Mobile Smart Search */}
           <div className="p-4 border-b border-gray-100">
-            <div className="flex">
-              <input
-                type="search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="Buscar ferramentas..."
-                aria-label="Buscar produtos"
-                className="w-full px-3 py-2 border-2 border-[#CC1020] rounded-l-md text-sm focus:outline-none focus:ring-2 focus:ring-[#CC1020]/30"
-              />
-              <button
-                onClick={handleSearch}
-                aria-label="Buscar"
-                className="bg-[#CC1020] text-white px-3 rounded-r-md"
-              >
-                <Search className="h-4 w-4" />
-              </button>
-            </div>
+            <SmartSearchBar
+              placeholder="Buscar ferramentas..."
+              autoFocus
+            />
           </div>
           <div className="flex flex-col">
             {[

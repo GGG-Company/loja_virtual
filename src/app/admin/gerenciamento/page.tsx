@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { RotateCcw, ChevronRight, Settings, Package, FileText, Tag } from "lucide-react";
+import { RotateCcw, ChevronRight, Settings, Package, FileText, Tag, Bookmark } from "lucide-react";
 
 const modules = [
   {
@@ -23,6 +23,14 @@ const modules = [
     icon: Tag,
     href: "/admin/gerenciamento/categories",
     color: "bg-green-500",
+  },
+  {
+    id: "marcas",
+    title: "Marcas",
+    description: "Cadastrar e gerenciar marcas dos produtos (importadas do Hiper ou manuais)",
+    icon: Bookmark,
+    href: "/admin/gerenciamento/marcas",
+    color: "bg-violet-500",
   },
   {
     id: "coupons",

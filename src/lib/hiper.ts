@@ -221,7 +221,7 @@ export async function createHiperOrder(input: HiperOrderInput): Promise<HiperOrd
 
     const res = await fetch(`${BASE_URL}/pedido-de-venda/`, {
       method: 'POST',
-      headers: authHeaders(token),
+      headers: authHeaders(token, true),
       body: JSON.stringify(body),
     });
 
