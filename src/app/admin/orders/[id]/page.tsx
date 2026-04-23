@@ -108,7 +108,18 @@ export default function OrderDetailPage() {
         // Recarregar pedido para atualizar dados
         const orderRes = await fetch(`/api/admin/orders/${orderId}`);
         const orderData = await orderRes.json();
-        setOrder(orderData);
+        setOrder({
+          ...orderData,
+          total: parseFloat(String(orderData.total ?? 0)) || 0,
+          subtotal: parseFloat(String(orderData.subtotal ?? 0)) || 0,
+          shipping: parseFloat(String(orderData.shipping ?? 0)) || 0,
+          discount: parseFloat(String(orderData.discount ?? 0)) || 0,
+          items: (orderData.items ?? []).map((i: any) => ({
+            ...i,
+            price: parseFloat(String(i.price ?? 0)) || 0,
+            subtotal: parseFloat(String(i.subtotal ?? 0)) || 0,
+          })),
+        });
       } else {
         toast.error(data.error || "Erro ao gerar etiqueta");
       }

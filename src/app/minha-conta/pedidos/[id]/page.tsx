@@ -70,6 +70,18 @@ export default function PedidoDetalhePage() {
   const params = useParams();
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
+  const normalizeOrder = (d: any): Order => ({
+    ...d,
+    total: parseFloat(String(d.total ?? 0)) || 0,
+    subtotal: parseFloat(String(d.subtotal ?? 0)) || 0,
+    shipping: parseFloat(String(d.shipping ?? 0)) || 0,
+    discount: parseFloat(String(d.discount ?? 0)) || 0,
+    items: (d.items ?? []).map((i: any) => ({
+      ...i,
+      price: parseFloat(String(i.price ?? 0)) || 0,
+      subtotal: parseFloat(String(i.subtotal ?? 0)) || 0,
+    })),
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [isConfirming, setIsConfirming] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -81,18 +93,7 @@ export default function PedidoDetalhePage() {
     const fetchOrder = async () => {
       try {
         const response = await apiClient.get<Order>(`/api/user/orders/${params.id}`);
-        const d = response.data as any;
-        setOrder({
-          ...d,
-          total: parseFloat(String(d.total ?? 0)) || 0,
-          subtotal: parseFloat(String(d.subtotal ?? 0)) || 0,
-          shipping: parseFloat(String(d.shipping ?? 0)) || 0,
-          discount: parseFloat(String(d.discount ?? 0)) || 0,
-          items: (d.items ?? []).map((i: any) => ({
-            ...i,
-            price: parseFloat(String(i.price ?? 0)) || 0,
-          })),
-        });
+        setOrder(normalizeOrder(response.data));
       } catch (error) {
         console.error("Erro ao carregar pedido:", error);
         toast.error("Erro ao carregar pedido");
@@ -133,7 +134,7 @@ export default function PedidoDetalhePage() {
       toast.success("Recebimento confirmado!");
       // Recarregar pedido
       const response = await apiClient.get<Order>(`/api/user/orders/${params.id}`);
-      setOrder(response.data);
+      setOrder(normalizeOrder(response.data));
     } catch (error) {
       console.error("Erro ao confirmar recebimento:", error);
       toast.error("Erro ao confirmar recebimento");
@@ -148,7 +149,7 @@ export default function PedidoDetalhePage() {
     setIsCancelling(true);
     try {
       const response = await apiClient.patch<Order>(`/api/user/orders/${params.id}`, { action: 'cancel' });
-      setOrder(response.data);
+      setOrder(normalizeOrder(response.data));
       toast.success("Pedido cancelado com sucesso");
     } catch (error) {
       console.error("Erro ao cancelar pedido:", error);

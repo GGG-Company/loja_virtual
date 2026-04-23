@@ -65,7 +65,13 @@ function ProductDetailContent() {
   const fetchProduct = useCallback(async () => {
     try {
       const response = await apiClient.get<{ product: ProductDetail }>(`/api/products/${params?.id}`);
-      setProduct(response.data.product);
+      const p = response.data.product;
+      setProduct({
+        ...p,
+        price: Number(p.price),
+        promotionalPrice: p.promotionalPrice != null ? Number(p.promotionalPrice) : null,
+        compareAtPrice: p.compareAtPrice != null ? Number(p.compareAtPrice) : null,
+      });
       if (response.data.product.variants && response.data.product.variants.length > 0) {
         setSelectedVoltage(response.data.product.variants[0].name);
       }
