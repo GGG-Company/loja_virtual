@@ -14,6 +14,7 @@ interface MercadoPagoPaymentBrickProps {
   userEmail?: string;
   userFirstName?: string;
   userLastName?: string;
+  maxInstallments?: number;
 }
 
 export const MercadoPagoPaymentBrick = memo(function MercadoPagoPaymentBrick({
@@ -24,6 +25,7 @@ export const MercadoPagoPaymentBrick = memo(function MercadoPagoPaymentBrick({
   userEmail,
   userFirstName,
   userLastName,
+  maxInstallments = 12,
 }: MercadoPagoPaymentBrickProps) {
   const { initialized } = useMercadoPago();
 
@@ -47,9 +49,9 @@ export const MercadoPagoPaymentBrick = memo(function MercadoPagoPaymentBrick({
     paymentMethods: {
       creditCard: 'all' as const,
       debitCard: 'all' as const,
-      maxInstallments: 12,
+      maxInstallments,
     },
-  }), []);
+  }), [maxInstallments]);
 
   const onSubmit = useCallback(async (formData: any) => {
     try {

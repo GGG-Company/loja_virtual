@@ -72,7 +72,7 @@ function sanitizeQuestion(question: string): string {
 }
 
 // Função para gerar resposta inteligente
-async function generateResponse(question: string) {
+async function generateResponse(question: string, cfg: { freeShippingMinValue: number; maxInstallments: number }) {
   const q = question.toLowerCase();
 
   // Saudações e conversação básica
@@ -132,7 +132,7 @@ async function generateResponse(question: string) {
   // Perguntas sobre pagamento
   if (/(pagamento|pagar|forma.*pag|aceita)/i.test(q)) {
     return {
-      answer: "Aceitamos as seguintes formas de pagamento: Cartão de Crédito, Cartão de Débito, PIX (aprovação imediata) e Boleto Bancário. Para cartão, você pode parcelar suas compras em até 12x.",
+      answer: `Aceitamos as seguintes formas de pagamento: Cartão de Crédito, Cartão de Débito, PIX (aprovação imediata) e Boleto Bancário. Para cartão, você pode parcelar suas compras em até ${cfg.maxInstallments}x.`,
       type: "payment_info",
       data: null,
     };
@@ -141,7 +141,7 @@ async function generateResponse(question: string) {
   // Perguntas sobre frete
   if (/(frete|entrega|prazo|envio|entreg)/i.test(q)) {
     return {
-      answer: "Trabalhamos com frete via Melhor Envio para todo o Brasil. O prazo e valor são calculados no checkout com base no seu CEP. Você pode escolher entre PAC, SEDEX e outras transportadoras disponíveis. Pedidos acima de R$ 299 têm frete grátis para algumas regiões!",
+      answer: `Trabalhamos com frete via Melhor Envio para todo o Brasil. O prazo e valor são calculados no checkout com base no seu CEP. Você pode escolher entre PAC, SEDEX e outras transportadoras disponíveis. Pedidos acima de R$ ${cfg.freeShippingMinValue.toFixed(0)} têm frete grátis!`,
       type: "shipping_info",
       data: null,
     };
@@ -277,8 +277,20 @@ export async function POST(request: Request) {
       });
     }
 
+    // Busca configuração financeira para respostas dinâmicas
+    let assistantCfg = { freeShippingMinValue: 299, maxInstallments: 12 };
+    try {
+      const financialConfig = await prisma.financialConfig.findUnique({ where: { id: 'singleton' } });
+      if (financialConfig) {
+        assistantCfg = {
+          freeShippingMinValue: Number(financialConfig.freeShippingMinValue) || 299,
+          maxInstallments: Number(financialConfig.maxInstallments) || 12,
+        };
+      }
+    } catch { /* usa defaults */ }
+
     // Gera resposta inteligente
-    const response = await generateResponse(safeQuestion);
+    const response = await generateResponse(safeQuestion, assistantCfg);
 
     // If caller requested to forward the assistant answer into a support chat,
     // verify the chat exists or create one, persist the assistant message and publish via Redis.

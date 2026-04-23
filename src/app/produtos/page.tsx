@@ -112,13 +112,13 @@ function ProductsContent() {
 
   // ── Dynamic filter options from loaded products ───────────────────────────
   const brandCounts = useMemo<FilterCounts>(() => {
-    // Seed from DB brands so all registered brands appear (even with 0 products loaded)
     const counts: FilterCounts = {};
     for (const b of dbBrands) counts[b.name] = 0;
-    // Count products in the current loaded set
     for (const p of allProducts) {
-      const brand = extractBrand(p);
-      if (brand) counts[brand] = (counts[brand] ?? 0) + 1;
+      const brandName = p.brand?.name;
+      if (brandName && Object.prototype.hasOwnProperty.call(counts, brandName)) {
+        counts[brandName]++;
+      }
     }
     return counts;
   }, [allProducts, dbBrands]);

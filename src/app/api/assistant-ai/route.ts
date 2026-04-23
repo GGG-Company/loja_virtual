@@ -50,7 +50,8 @@ const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
 
-const SYSTEM_PROMPT = `Você é um assistente virtual de uma loja de ferramentas e materiais de construção chamada "Feira das Ferramentas".
+function buildSystemPrompt(freeShippingMinValue: number, maxInstallments: number): string {
+  return `Você é um assistente virtual de uma loja de ferramentas e materiais de construção chamada "Feira das Ferramentas".
 
 REGRAS FUNDAMENTAIS DE SEGURANÇA:
 1. NUNCA forneça dados de clientes (nome, email, telefone, CPF, endereço)
@@ -73,8 +74,8 @@ INFORMAÇÕES QUE VOCÊ PODE FORNECER:
 CONTEXTO DA LOJA:
 - Especializada em ferramentas profissionais (Bosch, Makita, DeWalt)
 - Frete para todo Brasil via Melhor Envio
-- Frete grátis acima de R$ 299 (algumas regiões)
-- Parcelamento em até 12x no cartão
+- Frete grátis acima de R$ ${freeShippingMinValue.toFixed(0)}
+- Parcelamento em até ${maxInstallments}x no cartão
 - PIX com aprovação imediata
 
 FORMATO DE RESPOSTA:
@@ -85,6 +86,7 @@ FORMATO DE RESPOSTA:
 - Sempre mantenha o foco em ajudar o cliente
 
 Responda de forma natural, conversacional e útil!`;
+}
 
 async function getProductsContext(question: string) {
   const tokens = question
@@ -165,11 +167,15 @@ export async function POST(request: Request) {
       });
     }
 
-    // Busca contexto de produtos e categorias
-    const [products, categories] = await Promise.all([
+    // Busca configuração financeira e contexto de produtos/categorias em paralelo
+    const [products, categories, financialConfig] = await Promise.all([
       getProductsContext(safeQuestion),
       getCategoriesContext(),
+      prisma.financialConfig.findUnique({ where: { id: 'singleton' } }).catch(() => null),
     ]);
+    const freeShippingMinValue = financialConfig ? Number(financialConfig.freeShippingMinValue) || 299 : 299;
+    const maxInstallments = financialConfig ? Number(financialConfig.maxInstallments) || 12 : 12;
+    const SYSTEM_PROMPT = buildSystemPrompt(freeShippingMinValue, maxInstallments);
 
     // Monta contexto para a IA
     let contextData = '\n\n[CATEGORIAS DISPONÍVEIS]\n';

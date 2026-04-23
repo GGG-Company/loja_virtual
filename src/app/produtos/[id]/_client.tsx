@@ -2,7 +2,7 @@
 
 import logger from "@/lib/logger";
 import { useEffect, useState, useCallback, Suspense } from 'react';
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
@@ -12,6 +12,7 @@ import { ShoppingCart, Truck, Shield, CreditCard, Heart, Star } from "lucide-rea
 import { apiClient } from "@/lib/api-client";
 import { toast } from "sonner";
 import { usePrice } from "@/hooks/use-price";
+import { useCart } from "@/contexts/cart-context";
 import Image from "next/image";
 // Não exigimos sessão para adicionar ao carrinho — usamos cache local
 import Script from "next/script";
@@ -49,17 +50,26 @@ type ProductDetail = {
   specs?: Record<string, unknown>;
 };
 
+function toMoney(v: unknown): string {
+  const n = Number(v);
+  return (Number.isFinite(n) ? n : 0).toFixed(2);
+}
+
 function ProductDetailContent() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedVoltage, setSelectedVoltage] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [reviewStats, setReviewStats] = useState<{ averageRating: number; totalReviews: number } | null>(null);
-  const displayPrice = product?.promotionalPrice ?? product?.price ?? 0;
-  const { bestInstallment } = usePrice(displayPrice);
+  const [freeShippingMinValue, setFreeShippingMinValue] = useState(299);
+  const displayPrice = Number(product?.promotionalPrice ?? product?.price ?? 0) || 0;
+  const { bestInstallment, installmentOptions, loading: loadingInstallments } = usePrice(displayPrice);
+  const [showAllInstallments, setShowAllInstallments] = useState(false);
 
+  const { addItem } = useCart();
   const { addProduct } = useRecentlyViewed();
 
   const fetchProduct = useCallback(async () => {
@@ -91,6 +101,13 @@ function ProductDetailContent() {
     }
   }, [params?.id, fetchProduct]);
 
+  useEffect(() => {
+    fetch('/api/financial/config')
+      .then((r) => r.ok ? r.json() : null)
+      .then((cfg) => { if (cfg?.freeShippingMinValue) setFreeShippingMinValue(Number(cfg.freeShippingMinValue)); })
+      .catch(() => {});
+  }, []);
+
   // Track this product as recently viewed
   useEffect(() => {
     if (product?.id) {
@@ -105,34 +122,20 @@ function ProductDetailContent() {
 
     if (!product) return;
 
-    const unitPrice = product.promotionalPrice ?? product.price;
+    addItem({
+      id: product.id,
+      sku: product.sku ?? null,
+      ean: product.ean ?? null,
+      name: product.name,
+      price: Number(product.promotionalPrice ?? product.price) || 0,
+      imageUrl: product.imageUrl || product.images?.[0]?.url || "/placeholder.jpg",
+      quantity,
+      selectedVoltage: selectedVoltage || undefined,
+      weightKg: product.weight ?? null,
+      dimensions: product.dimensions ?? null,
+    });
 
-    // Adiciona ao carrinho no localStorage
-    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-    const existingItem = cart.find((item: any) => item.id === product.id);
-
-    if (existingItem) {
-      existingItem.quantity += quantity;
-    } else {
-      cart.push({
-        id: product.id,
-        sku: product.sku,
-        ean: product.ean,
-        name: product.name,
-        price: unitPrice,
-        imageUrl: product.imageUrl || product.images?.[0]?.url || "/placeholder.jpg",
-        quantity: quantity,
-        selectedVoltage: selectedVoltage,
-        weightKg: product.weight ?? undefined,
-        dimensions: product.dimensions ?? undefined,
-      });
-    }
-
-    localStorage.setItem("cart", JSON.stringify(cart));
     toast.success(`${quantity} ${quantity > 1 ? "itens adicionados" : "item adicionado"} ao carrinho!`);
-
-    // Dispara evento customizado para atualizar o header
-    window.dispatchEvent(new Event("cartUpdated"));
   };
 
   if (isLoading) {
@@ -252,12 +255,85 @@ function ProductDetailContent() {
 
               {/* Price */}
               <div className="border-t border-b border-metallic-200 py-6 space-y-2">
-                {product.compareAtPrice && <p className="text-sm text-metallic-600 line-through">De R$ {product.compareAtPrice.toFixed(2)}</p>}
-                <p className="text-3xl lg:text-4xl font-bold text-primary-600">R$ {displayPrice.toFixed(2)}</p>
-                {bestInstallment && (
-                  <p className="text-sm text-metallic-600">
-                    ou {bestInstallment.installments}x de R$ {bestInstallment.installmentValue.toFixed(2)}
-                  </p>
+                {product.compareAtPrice && Number(product.compareAtPrice) > 0 && (
+                  <p className="text-sm text-metallic-600 line-through">De R$ {toMoney(product.compareAtPrice)}</p>
+                )}
+                <p className="text-3xl lg:text-4xl font-bold text-primary-600">R$ {toMoney(displayPrice)}</p>
+
+                {/* Parcelas Mercado Pago */}
+                {loadingInstallments ? (
+                  <div className="h-5 w-48 bg-gray-100 rounded animate-pulse" />
+                ) : bestInstallment ? (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm text-metallic-700">
+                      ou{' '}
+                      <span className="font-semibold text-metallic-900">
+                        {bestInstallment.installments}x de R$ {toMoney(bestInstallment.installmentValue)}
+                      </span>
+                      {bestInstallment.interestFree ? (
+                        <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-bold bg-green-100 text-green-700">
+                          sem juros
+                        </span>
+                      ) : (
+                        <span className="ml-1 text-metallic-500 text-xs">
+                          (total R$ {toMoney(bestInstallment.total)})
+                        </span>
+                      )}
+                    </p>
+                    <span className="text-[11px] text-metallic-400">
+                      via <span className="font-bold text-[#009EE3]">Mercado Pago</span>
+                    </span>
+                  </div>
+                ) : null}
+
+                {/* Ver todas as parcelas */}
+                {!loadingInstallments && installmentOptions.length > 1 && (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setShowAllInstallments((v) => !v)}
+                      className="text-xs text-primary-600 hover:underline font-medium flex items-center gap-1 mt-1"
+                    >
+                      {showAllInstallments ? 'Ocultar parcelas' : 'Ver todas as parcelas'}
+                      <svg className={`h-3 w-3 transition-transform ${showAllInstallments ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+
+                    {showAllInstallments && (
+                      <div className="mt-3 rounded-lg border border-gray-100 overflow-hidden">
+                        <div className="bg-gray-50 px-3 py-2 flex items-center justify-between">
+                          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Parcelas no cartão</span>
+                          <span className="text-xs font-bold text-[#009EE3]">Mercado Pago</span>
+                        </div>
+                        <table className="w-full text-sm">
+                          <tbody>
+                            {installmentOptions.map((opt) => (
+                              <tr key={opt.installments} className="border-t border-gray-100 hover:bg-gray-50">
+                                <td className="px-3 py-2 font-semibold text-metallic-900 w-16">
+                                  {opt.installments}x
+                                </td>
+                                <td className="px-3 py-2 text-metallic-700">
+                                  R$ {toMoney(opt.installmentValue)}
+                                </td>
+                                <td className="px-3 py-2 text-right">
+                                  {opt.interestFree ? (
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-bold bg-green-100 text-green-700">
+                                      sem juros
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs text-metallic-400">
+                                      total R$ {toMoney(opt.total)}
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -332,7 +408,7 @@ function ProductDetailContent() {
                 <div className="text-center">
                   <Truck className="h-8 w-8 text-primary-600 mx-auto mb-2" />
                   <p className="text-xs font-semibold">Frete Grátis</p>
-                  <p className="text-xs text-metallic-600">Acima de R$ 299</p>
+                  <p className="text-xs text-metallic-600">Acima de R$ {freeShippingMinValue.toFixed(0)}</p>
                 </div>
                 <div className="text-center">
                   <Shield className="h-8 w-8 text-primary-600 mx-auto mb-2" />
@@ -341,8 +417,14 @@ function ProductDetailContent() {
                 </div>
                 <div className="text-center">
                   <CreditCard className="h-8 w-8 text-primary-600 mx-auto mb-2" />
-                  <p className="text-xs font-semibold">Parcele</p>
-                  <p className="text-xs text-metallic-600">Sem Juros</p>
+                  <p className="text-xs font-semibold">
+                    {bestInstallment ? `${bestInstallment.installments}x` : 'Parcele'}
+                  </p>
+                  <p className="text-xs text-metallic-600">
+                    {bestInstallment
+                      ? bestInstallment.interestFree ? 'Sem Juros' : 'No Cartão'
+                      : 'No Cartão'}
+                  </p>
                 </div>
               </div>
             </motion.div>

@@ -2,6 +2,7 @@ import logger from "@/lib/logger";
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getShippingOptions } from '@/lib/shipping-calculator';
+import { prisma } from '@/lib/prisma';
 
 const bodySchema = z.object({
   destinationZip: z.string().min(8),
@@ -42,23 +43,33 @@ export async function POST(request: Request) {
       } : undefined
     }));
 
+    // Verificar se subtotal qualifica para frete grátis
+    const subtotal = items.reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0);
+    let freeShippingThreshold = 0;
+    try {
+      const financialConfig = await prisma.financialConfig.findUnique({ where: { id: 'singleton' } });
+      freeShippingThreshold = financialConfig ? Number(financialConfig.freeShippingMinValue) || 0 : 0;
+    } catch { /* usa 0 — sem frete grátis automático */ }
+
+    const isFreeShipping = freeShippingThreshold > 0 && subtotal >= freeShippingThreshold;
+
     const rawOptions = await getShippingOptions({ items: formattedItems, destinationZip });
-    
+
     // Se só tem retirada em loja e não é intencional, avisar o frontend
     const hasShippingOptions = rawOptions.some(opt => !opt.pickup);
-    
+
     // Mapear para o formato esperado pelo frontend (carrinho e checkout)
     const options = rawOptions.map((opt) => ({
       id: opt.id,
       name: opt.service || opt.carrier || 'Frete',
       service: opt.service || opt.carrier || 'Frete',
       carrier: opt.carrier || 'Correios',
-      price: opt.price,
+      price: isFreeShipping && !opt.pickup ? 0 : opt.price,
       delivery_time: opt.etaDays || 0,
       etaDays: opt.etaDays || 0,
       company: opt.carrier ? { name: opt.carrier } : undefined,
       pickup: opt.pickup || false,
-      notes: opt.notes || undefined,
+      notes: isFreeShipping && !opt.pickup ? 'Frete grátis aplicado' : (opt.notes || undefined),
     }));
 
     return NextResponse.json({ 

@@ -50,6 +50,46 @@ export default function AdminSettingsPage() {
   const [testAllSending, setTestAllSending] = useState(false);
   const [testAllSummary, setTestAllSummary] = useState<string | null>(null);
 
+  const [financialForm, setFinancialForm] = useState({
+    maxInstallments: '12',
+    creditCardInterestRate: '0',
+    minInstallmentValue: '5',
+    freeShippingMinValue: '299',
+  });
+  const [financialLoading, setFinancialLoading] = useState(false);
+  const [financialSaved, setFinancialSaved] = useState(false);
+
+  // Carregar config financeira
+  useEffect(() => {
+    fetch('/api/financial/config')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.maxInstallments) setFinancialForm({
+          maxInstallments:      String(d.maxInstallments),
+          creditCardInterestRate: String(d.creditCardInterestRate ?? 0),
+          minInstallmentValue:  String(d.minInstallmentValue ?? 5),
+          freeShippingMinValue: String(d.freeShippingMinValue ?? 299),
+        });
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSaveFinancial = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFinancialLoading(true);
+    setFinancialSaved(false);
+    try {
+      const res = await fetch('/api/financial/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(financialForm),
+      });
+      if (res.ok) { setFinancialSaved(true); setTimeout(() => setFinancialSaved(false), 3000); }
+      else alert('Erro ao salvar');
+    } catch { alert('Erro ao salvar'); }
+    finally { setFinancialLoading(false); }
+  };
+
   // Carregar status das integrações
   useEffect(() => {
     const run = async () => {
@@ -269,6 +309,78 @@ export default function AdminSettingsPage() {
             )}
             <p className="text-xs text-gray-500">Após conectar, o cálculo de frete, pontos de coleta e rastreamento usarão sua conta do Melhor Envio.</p>
           </div>
+        </div>
+
+        {/* Parcelamento */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold mb-1">Parcelamento</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Define como as parcelas são exibidas nas páginas de produto. Configure de acordo com o que você oferece no Mercado Pago.
+          </p>
+          <form onSubmit={handleSaveFinancial} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Máximo de parcelas
+              </label>
+              <input
+                type="number" min="1" max="24"
+                value={financialForm.maxInstallments}
+                onChange={(e) => setFinancialForm({ ...financialForm, maxInstallments: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              />
+              <p className="text-xs text-gray-400 mt-1">Ex: 12 para oferecer até 12x</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Taxa de juros a partir da 2ª parcela (% ao mês)
+              </label>
+              <input
+                type="number" min="0" step="0.01"
+                value={financialForm.creditCardInterestRate}
+                onChange={(e) => setFinancialForm({ ...financialForm, creditCardInterestRate: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              />
+              <p className="text-xs text-gray-400 mt-1">0 = todas sem juros. Ex: 1.99 para 1,99% a.m.</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Valor mínimo por parcela (R$)
+              </label>
+              <input
+                type="number" min="1" step="0.01"
+                value={financialForm.minInstallmentValue}
+                onChange={(e) => setFinancialForm({ ...financialForm, minInstallmentValue: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              />
+              <p className="text-xs text-gray-400 mt-1">Parcelas menores que este valor não são exibidas</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Frete grátis acima de (R$)
+              </label>
+              <input
+                type="number" min="0" step="0.01"
+                value={financialForm.freeShippingMinValue}
+                onChange={(e) => setFinancialForm({ ...financialForm, freeShippingMinValue: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              />
+              <p className="text-xs text-gray-400 mt-1">0 = sem frete grátis por valor</p>
+            </div>
+
+            <div className="sm:col-span-2 flex items-center gap-3">
+              <button
+                type="submit"
+                disabled={financialLoading}
+                className="px-4 py-2 bg-primary-600 text-white rounded-md text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
+              >
+                {financialLoading ? 'Salvando…' : 'Salvar Parcelamento'}
+              </button>
+              {financialSaved && <span className="text-sm text-green-600 font-medium">✓ Salvo com sucesso</span>}
+            </div>
+          </form>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">

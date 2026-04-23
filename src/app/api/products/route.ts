@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { listProducts, isExternalEnabled } from '@/lib/products-repository';
+import { toNum } from '@/lib/parse-decimal';
 import logger from '@/lib/logger';
+
+function serializeProduct(p: any) {
+  if (!p) return p;
+  return {
+    ...p,
+    price:            toNum(p.price),
+    promotionalPrice: p.promotionalPrice != null ? toNum(p.promotionalPrice) : null,
+    compareAtPrice:   p.compareAtPrice   != null ? toNum(p.compareAtPrice)   : null,
+  };
+}
 
 // Buscas com query param `search` são dinâmicas; listagens simples usam ISR via
 // Cache-Control no response. `force-dynamic` é removido para permitir caching.
@@ -26,7 +37,7 @@ export async function GET(request: NextRequest) {
     const response = NextResponse.json({
       success: true,
       source: isExternalEnabled() ? 'external' : 'local',
-      products,
+      products: products.map(serializeProduct),
     });
 
     // Buscas não são cacheáveis (resultado depende do termo)

@@ -51,6 +51,15 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState('pix');
   const [loadingCep, setLoadingCep] = useState(false);
   const [showPaymentBrick, setShowPaymentBrick] = useState(false);
+  const [selectedInstallmentCount, setSelectedInstallmentCount] = useState(1);
+  const [installmentOptions, setInstallmentOptions] = useState<Array<{
+    installments: number;
+    installmentAmount: number;
+    totalAmount: number;
+    interestFree: boolean;
+    label: string;
+  }>>([]);
+  const [loadingInstallments, setLoadingInstallments] = useState(false);
   const [pixCode, setPixCode] = useState('');
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [boletoUrl, setBoletoUrl] = useState('');
@@ -216,6 +225,31 @@ export default function CheckoutPage() {
   const shippingCost = selectedShipping?.price || 0;
   const couponDiscount = appliedCoupon?.discount ?? 0;
   const totalWithShipping = total + shippingCost - couponDiscount;
+
+  const selectedInstallmentOption = installmentOptions.find(o => o.installments === selectedInstallmentCount) ?? null;
+  const effectiveTotal = paymentMethod === 'cartao' && selectedInstallmentOption
+    ? selectedInstallmentOption.totalAmount
+    : totalWithShipping;
+
+  useEffect(() => {
+    if (paymentMethod !== 'cartao' || totalWithShipping <= 0) {
+      setInstallmentOptions([]);
+      setSelectedInstallmentCount(1);
+      return;
+    }
+    setLoadingInstallments(true);
+    fetch(`/api/payments/mercadopago/installments?amount=${totalWithShipping.toFixed(2)}`)
+      .then(r => r.ok ? r.json() : { installments: [] })
+      .then(data => {
+        const opts: typeof installmentOptions = data.installments ?? [];
+        setInstallmentOptions(opts);
+        const defaultOpt = [...opts].reverse().find(o => o.interestFree) || opts[0];
+        if (defaultOpt) setSelectedInstallmentCount(defaultOpt.installments);
+        else setSelectedInstallmentCount(1);
+      })
+      .catch(() => setInstallmentOptions([]))
+      .finally(() => setLoadingInstallments(false));
+  }, [paymentMethod, totalWithShipping]);
 
   // Função para calcular frete via Melhor Envio
   const calcularFrete = async (cep: string) => {
@@ -481,6 +515,7 @@ export default function CheckoutPage() {
         dados: dadosForm,
         entrega: entregaForm,
         paymentMethod,
+        installments: paymentMethod === 'cartao' ? selectedInstallmentCount : 1,
         // Dados do frete selecionado
         shipping: selectedShipping
           ? {
@@ -810,9 +845,40 @@ export default function CheckoutPage() {
                         <CreditCard className="h-6 w-6 mr-3 text-primary-600" />
                         <div className="flex-1">
                           <p className="font-semibold">Cartão de Crédito</p>
-                          <p className="text-sm text-gray-600">Parcelamento em até 12x</p>
+                          <p className="text-sm text-gray-600">Parcelamento disponível</p>
                         </div>
                       </label>
+
+                      {paymentMethod === 'cartao' && (
+                        <div className="border rounded-lg p-4 bg-gray-50">
+                          <p className="font-medium mb-3 text-sm">Número de parcelas</p>
+                          {loadingInstallments ? (
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600" />
+                              Calculando parcelas...
+                            </div>
+                          ) : installmentOptions.length > 0 ? (
+                            <select
+                              value={selectedInstallmentCount}
+                              onChange={e => setSelectedInstallmentCount(Number(e.target.value))}
+                              className="w-full border rounded-md p-2 text-sm bg-white"
+                            >
+                              {installmentOptions.map(opt => (
+                                <option key={opt.installments} value={opt.installments}>
+                                  {opt.label}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <p className="text-sm text-gray-500">Nenhuma opção de parcelamento disponível</p>
+                          )}
+                          {selectedInstallmentOption && !selectedInstallmentOption.interestFree && (
+                            <p className="text-xs text-amber-700 mt-2">
+                              Total com juros: R$ {selectedInstallmentOption.totalAmount.toFixed(2).replace('.', ',')}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Aviso LGPD — transferência internacional de dados */}
@@ -983,7 +1049,11 @@ export default function CheckoutPage() {
                           <span className="font-medium text-primary-700">
                             {paymentMethod === "pix" && "PIX - Aprovação imediata"}
                             {paymentMethod === "boleto" && "Boleto Bancário - Vencimento em 3 dias"}
-                            {paymentMethod === "cartao" && "Cartão de Crédito - Parcelamento em até 12x"}
+                            {paymentMethod === "cartao" && (
+                              selectedInstallmentOption
+                                ? `Cartão de Crédito — ${selectedInstallmentOption.label}`
+                                : "Cartão de Crédito"
+                            )}
                           </span>
                         </div>
                       </div>
@@ -1047,10 +1117,19 @@ export default function CheckoutPage() {
                   )}
                 </div>
 
+                {paymentMethod === 'cartao' && selectedInstallmentOption && !selectedInstallmentOption.interestFree && (
+                  <div className="flex justify-between text-sm text-amber-700 mb-1">
+                    <span>Juros ({selectedInstallmentCount}x)</span>
+                    <span>+ R$ {(selectedInstallmentOption.totalAmount - totalWithShipping).toFixed(2).replace('.', ',')}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total</span>
-                  <span className="text-primary-600">R$ {totalWithShipping.toFixed(2)}</span>
+                  <span className="text-primary-600">R$ {effectiveTotal.toFixed(2)}</span>
                 </div>
+                {paymentMethod === 'cartao' && selectedInstallmentOption && (
+                  <p className="text-xs text-gray-500 mt-1">{selectedInstallmentOption.label}</p>
+                )}
                 {!selectedShipping && <p className="text-xs text-gray-500 mt-2">Total exibido não inclui frete — o valor final será atualizado na confirmação do pedido.</p>}
 
                 <div className="mt-6 text-xs text-gray-500">

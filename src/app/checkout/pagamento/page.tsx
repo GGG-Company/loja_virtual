@@ -32,6 +32,7 @@ function CheckoutPagamentoContent() {
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [expired, setExpired] = useState<boolean>(false);
   const [loadingPayment, setLoadingPayment] = useState(false);
+  const [maxInstallments, setMaxInstallments] = useState(12);
   const TOTAL_SECONDS = 30;
 
   // Memoizar dados do usuário para evitar re-renderizações
@@ -84,6 +85,13 @@ function CheckoutPagamentoContent() {
       router.push("/auth/login");
     }
   }, [status, router]);
+
+  useEffect(() => {
+    fetch('/api/financial/config')
+      .then((r) => r.ok ? r.json() : null)
+      .then((cfg) => { if (cfg?.maxInstallments) setMaxInstallments(Number(cfg.maxInstallments)); })
+      .catch(() => {});
+  }, []);
 
   // Gerar PIX via Mercado Pago
   useEffect(() => {
@@ -399,7 +407,7 @@ function CheckoutPagamentoContent() {
                     </div>
                     {orderId && amountNumber > 0 ? (
                       <div className="mt-4">
-                        <MercadoPagoPaymentBrick amount={amountNumber} orderId={orderId} userEmail={userEmail} userFirstName={userFirstName} userLastName={userLastName} onPaymentSuccess={handlePaymentSuccess} onPaymentError={handlePaymentError} />
+                        <MercadoPagoPaymentBrick amount={amountNumber} orderId={orderId} userEmail={userEmail} userFirstName={userFirstName} userLastName={userLastName} onPaymentSuccess={handlePaymentSuccess} onPaymentError={handlePaymentError} maxInstallments={maxInstallments} />
                       </div>
                     ) : (
                       <div className="w-full h-32 bg-metallic-100 border border-dashed border-metallic-300 rounded-lg flex items-center justify-center text-gray-500 text-sm">{amountNumber <= 0 ? "Valor do pedido inválido para processamento." : "Carregando checkout do Mercado Pago..."}</div>

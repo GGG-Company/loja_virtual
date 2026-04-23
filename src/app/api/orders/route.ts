@@ -38,12 +38,14 @@ export async function POST(req: NextRequest) {
       entrega,
       paymentMethod,
       shipping: shippingData,
+      installments: installmentsCount,
     } = body as {
       items: Array<{ id: string; price: number; quantity: number; name: string; imageUrl?: string }>;
       dados: { nome: string; email: string; telefone: string; cpf: string };
       entrega: { cep: string; endereco: string; numero: string; complemento?: string; bairro: string; cidade: string; estado: string };
       paymentMethod: string;
       shipping?: { serviceId: string; serviceName: string; price: number; deliveryTime: number } | null;
+      installments?: number;
     };
 
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -121,8 +123,35 @@ export async function POST(req: NextRequest) {
       logger.error(err as Error, "[ORDER_CREATE] Erro ao calcular frete no servidor");
       return NextResponse.json({ error: "Erro ao calcular frete" }, { status: 500 });
     }
+    // Aplicar frete grátis se subtotal atingir o mínimo configurado
+    try {
+      const financialConfig = await prisma.financialConfig.findUnique({ where: { id: 'singleton' } });
+      const freeShippingThreshold = financialConfig ? Number(financialConfig.freeShippingMinValue) : 299;
+      if (freeShippingThreshold > 0 && subtotal >= freeShippingThreshold) {
+        shippingCost = 0;
+        logger.info({ subtotal, freeShippingThreshold }, '[ORDER_CREATE] Frete grátis aplicado');
+      }
+    } catch (e) {
+      logger.warn(e, '[ORDER_CREATE] Erro ao verificar configuração de frete grátis');
+    }
+
     const discount = 0;
-    const total = subtotal + shippingCost - discount;
+    let total = subtotal + shippingCost - discount;
+
+    // Aplicar juros compostos de cartão de crédito se configurado
+    if (paymentMethod === 'cartao' && installmentsCount && installmentsCount > 1) {
+      try {
+        const financialConfig = await prisma.financialConfig.findUnique({ where: { id: 'singleton' } });
+        const interestRate = financialConfig ? Number(financialConfig.creditCardInterestRate) : 0;
+        if (interestRate > 0) {
+          const baseTotal = total;
+          total = baseTotal * Math.pow(1 + interestRate / 100, installmentsCount);
+          logger.info({ baseTotal, interestRate, installmentsCount, total }, '[ORDER_CREATE] Juros de cartão aplicados');
+        }
+      } catch (e) {
+        logger.warn(e, '[ORDER_CREATE] Erro ao verificar taxa de juros');
+      }
+    }
 
     const shippingAddress = {
       name: dados?.nome,
@@ -210,7 +239,7 @@ export async function POST(req: NextRequest) {
           shipping: shippingCost,
           total,
           paymentMethod: paymentMethod === "boleto" ? "BOLETO" : paymentMethod === "cartao" ? "CREDIT_CARD" : "PIX",
-          installments: 1,
+          installments: paymentMethod === 'cartao' ? (installmentsCount || 1) : 1,
           shippingAddress,
           // Dados do Melhor Envio para geração de etiqueta
           shippingServiceId: selectedShippingServiceId,

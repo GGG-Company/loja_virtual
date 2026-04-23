@@ -66,15 +66,17 @@ export async function POST(req: NextRequest) {
   for (const hp of hiperProducts) {
     if (hp.pontoDeSincronizacao > maxSyncPoint) maxSyncPoint = hp.pontoDeSincronizacao;
 
-    // Produto marcado como removido do e-commerce — desativar se existir localmente
+    // Produto marcado como removido — desativar APENAS se estava explicitamente vinculado
     if (hp.removido) {
       try {
+        const hiperIdRemovido = String(hp.id || '');
+        const eanRemovido = String(hp.codigoDeBarras || '');
+        if (!hiperIdRemovido && !eanRemovido) { continue; }
         const found = await prisma.product.findFirst({
           where: {
             OR: [
-              { ean: String(hp.codigoDeBarras || '') },
-              { sku: String(hp.codigoDeBarras || '') },
-              { name: { contains: hp.nome, mode: 'insensitive' } },
+              ...(hiperIdRemovido ? [{ externalIdHiper: hiperIdRemovido }] : []),
+              ...(eanRemovido      ? [{ ean: eanRemovido }]                : []),
             ],
           },
           select: { id: true },
@@ -106,30 +108,32 @@ export async function POST(req: NextRequest) {
       const productInactive = hp.ativo === false;
 
       try {
-        // 1. Localizar produto local por EAN ou SKU
+        // 1. Produto já vinculado explicitamente a este ID do Hiper
         let product = await prisma.product.findFirst({
-          where: { OR: [{ ean: eanHiper }, { sku: eanHiper }] },
+          where: { externalIdHiper: hiperId },
           select: { id: true, sku: true, stock: true, imageUrl: true, description: true },
         });
 
-        // 2. Fallback: nome do produto pai
-        if (!product) {
+        // 2. Match por EAN exato (identificador único de produto)
+        if (!product && eanHiper) {
           product = await prisma.product.findFirst({
-            where: { name: { contains: hp.nome, mode: 'insensitive' } },
+            where: { OR: [{ ean: eanHiper }, { sku: eanHiper }] },
             select: { id: true, sku: true, stock: true, imageUrl: true, description: true },
           });
         }
 
+        // Sem match seguro: não tocar em produtos da loja criados manualmente
         if (!product) {
           unmatched++;
           continue;
         }
 
         // Se produto ou variação está inativo no Hiper, desativar localmente
+        // (só chegamos aqui se o produto foi encontrado por vínculo explícito ou EAN)
         if (productInactive || variantInactive) {
           await prisma.product.update({
             where: { id: product.id },
-            data: { isActive: false },
+            data: { isActive: false, externalIdHiper: null },
           });
           deactivated++;
           continue;

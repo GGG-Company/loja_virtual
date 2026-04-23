@@ -1,105 +1,88 @@
 'use client';
 
-import logger from "@/lib/logger";
 import { useEffect, useState, useMemo } from 'react';
-import { apiClient } from '@/lib/api-client';
+import type { InstallmentOption } from '@/app/api/payments/mercadopago/installments/route';
 
-interface FinancialConfig {
-  creditCardInterestRate: number;
-  maxInstallments: number;
-  minInstallmentValue: number;
-}
-
-interface InstallmentOption {
+export interface PriceInstallment {
   installments: number;
   installmentValue: number;
   total: number;
   interestFree: boolean;
 }
 
-// ── Module-level singleton cache ───────────────────────────────────────────
-// Shared across all usePrice() calls — only one API request per page load.
-let configCache: FinancialConfig | null = null;
-let configPromise: Promise<FinancialConfig> | null = null;
+// Cache em memória por sessão — evita múltiplas chamadas para o mesmo valor
+const sessionCache = new Map<number, InstallmentOption[]>();
 
-const DEFAULT_CONFIG: FinancialConfig = {
-  creditCardInterestRate: 1.99,
-  maxInstallments: 12,
-  minInstallmentValue: 50,
-};
+async function fetchInstallments(amount: number): Promise<InstallmentOption[]> {
+  const amountCents = Math.round(amount * 100);
 
-async function fetchConfig(): Promise<FinancialConfig> {
-  if (configCache) return configCache;
-  if (!configPromise) {
-    configPromise = apiClient
-      .get<FinancialConfig>('/api/financial/config')
-      .then((r) => {
-        configCache = r.data;
-        return r.data;
-      })
-      .catch((err) => {
-        logger.error(err, 'Erro ao carregar configuração financeira — usando fallback');
-        configCache = DEFAULT_CONFIG;
-        return DEFAULT_CONFIG;
-      });
+  const hit = sessionCache.get(amountCents);
+  if (hit) return hit;
+
+  try {
+    const res = await fetch(`/api/payments/mercadopago/installments?amount=${amount}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    const list: InstallmentOption[] = data.installments ?? [];
+    sessionCache.set(amountCents, list);
+    return list;
+  } catch {
+    return [];
   }
-  return configPromise;
 }
 
-/**
- * Hook para cálculo de preços e parcelamento.
- *
- * A configuração financeira é buscada UMA única vez por sessão de página
- * (cache em memória de módulo) e compartilhada entre todos os cards de produto.
- */
 export function usePrice(basePrice: number) {
-  const [config, setConfig] = useState<FinancialConfig | null>(configCache);
-  const [loading, setLoading] = useState(!configCache);
+  const [mpInstallments, setMpInstallments] = useState<InstallmentOption[]>(() =>
+    sessionCache.get(Math.round(basePrice * 100)) ?? [],
+  );
+  const [loading, setLoading] = useState(mpInstallments.length === 0 && basePrice > 0);
 
   useEffect(() => {
-    if (configCache) {
-      setConfig(configCache);
+    if (basePrice <= 0) {
+      setMpInstallments([]);
       setLoading(false);
       return;
     }
+
+    // Se já temos no cache, não busca novamente
+    const cached = sessionCache.get(Math.round(basePrice * 100));
+    if (cached) {
+      setMpInstallments(cached);
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
-    fetchConfig().then((cfg) => {
+    setLoading(true);
+
+    fetchInstallments(basePrice).then((list) => {
       if (!cancelled) {
-        setConfig(cfg);
+        setMpInstallments(list);
         setLoading(false);
       }
     });
+
     return () => { cancelled = true; };
-  }, []);
+  }, [basePrice]);
 
-  const installmentOptions = useMemo((): InstallmentOption[] => {
-    if (!config) return [];
-    const opts: InstallmentOption[] = [];
-    const rate = config.creditCardInterestRate / 100;
+  // Converte para o formato interno (compatível com os componentes existentes)
+  const installmentOptions = useMemo((): PriceInstallment[] =>
+    mpInstallments.map((c) => ({
+      installments: c.installments,
+      installmentValue: c.installmentAmount,
+      total: c.totalAmount,
+      interestFree: c.interestFree,
+    })),
+    [mpInstallments],
+  );
 
-    for (let i = 1; i <= config.maxInstallments; i++) {
-      let total = basePrice;
-      let installmentValue = basePrice / i;
-
-      if (i >= 3) {
-        total = basePrice * Math.pow(1 + rate, i);
-        installmentValue = total / i;
-      }
-
-      if (installmentValue < config.minInstallmentValue) break;
-
-      opts.push({ installments: i, installmentValue, total, interestFree: i < 3 });
-    }
-    return opts;
-  }, [config, basePrice]);
+  const bestInstallment = useMemo(
+    () => installmentOptions.length > 0 ? installmentOptions[installmentOptions.length - 1] : null,
+    [installmentOptions],
+  );
 
   const formatPrice = (value: number): string =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-
-  const bestInstallment = useMemo(
-    () => (installmentOptions.length > 0 ? installmentOptions[installmentOptions.length - 1] : null),
-    [installmentOptions]
-  );
 
   const bestInstallmentText = (): string => {
     if (!bestInstallment) return '';
@@ -110,10 +93,9 @@ export function usePrice(basePrice: number) {
 
   return {
     installmentOptions,
-    formatPrice,
-    bestInstallmentText,
     bestInstallment,
+    bestInstallmentText,
+    formatPrice,
     loading,
-    config,
   };
 }
