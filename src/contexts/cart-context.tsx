@@ -61,6 +61,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!hydrated) return;
     writeToStorage(items);
+    // Sync to DB (fire-and-forget) para detecção de carrinho abandonado
+    fetch('/api/cart/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: items.map(i => ({ id: i.id, quantity: i.quantity })) }),
+    }).catch(() => {});
   }, [items, hydrated]);
 
   const addItem = useCallback((incoming: Omit<CartItem, 'quantity'> & { quantity?: number }) => {

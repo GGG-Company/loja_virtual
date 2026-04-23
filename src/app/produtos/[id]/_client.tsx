@@ -20,6 +20,7 @@ import { ProductReviews } from "@/components/product-reviews";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { RelatedProducts } from "@/components/related-products";
 import { useRecentlyViewed } from "@/hooks/use-recently-viewed";
+import { useWishlist } from "@/hooks/use-wishlist";
 
 type ProductVariant = {
   id: string;
@@ -71,6 +72,10 @@ function ProductDetailContent() {
 
   const { addItem } = useCart();
   const { addProduct } = useRecentlyViewed();
+  const { ids: wishlistIds, toggle: toggleWishlist } = useWishlist();
+  const [stockAlertEmail, setStockAlertEmail] = useState('');
+  const [stockAlertSent, setStockAlertSent] = useState(false);
+  const [stockAlertLoading, setStockAlertLoading] = useState(false);
 
   const fetchProduct = useCallback(async () => {
     try {
@@ -162,58 +167,47 @@ function ProductDetailContent() {
     );
   }
 
-  // Structured Data seguro — sanitiza valores para evitar XSS via JSON-LD
-  const structuredData = product ? JSON.stringify({
+  const jsonLd = JSON.stringify({
     "@context": "https://schema.org/",
     "@type": "Product",
     name: product.name,
-    image: product.imageUrl || product.images?.[0]?.url || undefined,
-    description: product.description,
-    sku: product.sku,
-    gtin13: product.ean,
-    productID: product.id,
-    category: product.category?.name,
-    brand: "Feira das Ferramentas",
+    image: [
+      product.imageUrl,
+      ...(product.images?.map(i => i.url) ?? []),
+    ].filter(Boolean),
+    description: product.description ?? undefined,
+    sku: product.sku ?? undefined,
+    gtin13: product.ean ?? undefined,
+    brand: { "@type": "Brand", name: "Feira das Ferramentas" },
+    category: product.category?.name ?? undefined,
+    ...(reviewStats && reviewStats.totalReviews > 0 ? {
+      aggregateRating: {
+        "@type": "AggregateRating",
+        ratingValue: reviewStats.averageRating.toFixed(1),
+        reviewCount: reviewStats.totalReviews,
+        bestRating: "5",
+        worstRating: "1",
+      },
+    } : {}),
     offers: {
       "@type": "Offer",
       priceCurrency: "BRL",
-      price: displayPrice,
-      availability: (product.stock ?? 0) > 0 ? "http://schema.org/InStock" : "http://schema.org/OutOfStock",
+      price: displayPrice.toFixed(2),
+      availability: (product.stock ?? 0) > 0
+        ? "https://schema.org/InStock"
+        : "https://schema.org/OutOfStock",
+      seller: { "@type": "Organization", name: "Feira das Ferramentas" },
     },
-  }).replace(/</g, '\\u003c') : null;
+  }).replace(/</g, '\\u003c');
 
   return (
     <>
-      {structuredData && (
-        <Script
-          id="product-structured-data"
-          type="application/ld+json"
-          strategy="afterInteractive"
-          //dangerouslySetInnerHTML={{ __html: structuredData }}
-          //strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org/",
-              "@type": "Product",
-              name: product.name,
-              image: product.imageUrl || product.images?.[0]?.url || undefined,
-              description: product.description,
-              sku: product.sku,
-              gtin13: product.ean,
-              productID: product.id,
-              category: product.category?.name,
-              brand: "Feira das Ferramentas",
-              offers: {
-                "@type": "Offer",
-                priceCurrency: "BRL",
-                price: displayPrice,
-                availability: (product.stock ?? 0) > 0 ? "http://schema.org/InStock" : "http://schema.org/OutOfStock",
-                url: typeof window !== "undefined" ? window.location.href : undefined,
-              },
-            }),
-          }}
-        />
-      )}
+      <Script
+        id="product-structured-data"
+        type="application/ld+json"
+        strategy="beforeInteractive"
+        dangerouslySetInnerHTML={{ __html: jsonLd }}
+      />
       {!searchParams.get("embed") && <Header />}
       <main className="min-h-screen bg-white py-12">
         <div className="container mx-auto px-4">
@@ -387,6 +381,48 @@ function ProductDetailContent() {
                 </div>
               )}
 
+              {/* Aviso de estoque */}
+              {product.stock === 0 && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  {stockAlertSent ? (
+                    <p className="text-sm text-green-700 font-medium">✓ Avisaremos você assim que o produto voltar ao estoque!</p>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium text-gray-700 mb-2">Avise-me quando voltar ao estoque</p>
+                      <div className="flex gap-2">
+                        <input
+                          type="email"
+                          placeholder="Seu e-mail"
+                          value={stockAlertEmail}
+                          onChange={e => setStockAlertEmail(e.target.value)}
+                          className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        />
+                        <Button
+                          size="sm"
+                          disabled={stockAlertLoading || !stockAlertEmail}
+                          onClick={async () => {
+                            setStockAlertLoading(true);
+                            try {
+                              const res = await fetch(`/api/products/${product.id}/stock-alert`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ email: stockAlertEmail }),
+                              });
+                              if (res.ok) setStockAlertSent(true);
+                              else toast.error('Erro ao registrar alerta');
+                            } finally {
+                              setStockAlertLoading(false);
+                            }
+                          }}
+                        >
+                          {stockAlertLoading ? '...' : 'Avisar'}
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
               {/* CTA Buttons */}
               <div className="flex gap-3">
                 <Button
@@ -398,8 +434,14 @@ function ProductDetailContent() {
                   <ShoppingCart className="mr-2 h-5 w-5" />
                   {product.stock === 0 ? "Indisponível" : "Adicionar ao Carrinho"}
                 </Button>
-                <Button size="lg" variant="outline" className="h-14 px-6" aria-label="Adicionar aos favoritos">
-                  <Heart className="h-5 w-5" />
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className={`h-14 px-6 transition-colors ${wishlistIds.has(product.id) ? 'text-red-500 border-red-300 hover:bg-red-50' : 'hover:text-red-500 hover:border-red-300'}`}
+                  aria-label={wishlistIds.has(product.id) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                  onClick={() => toggleWishlist(product.id, product.name)}
+                >
+                  <Heart className={`h-5 w-5 ${wishlistIds.has(product.id) ? 'fill-red-500' : ''}`} />
                 </Button>
               </div>
 

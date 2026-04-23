@@ -42,6 +42,8 @@ model User {
   supportChats        SupportChat[]   @relation("UserChats")
   attendantChats      SupportChat[]   @relation("AttendantChats")
   conversations       Conversation[]
+  wishlistItems       WishlistItem[]
+  stockAlerts         StockAlert[]
 
   @@index([email])
   @@map("users")
@@ -158,6 +160,8 @@ model Product {
   brand            Brand?           @relation(fields: [brandId], references: [id])
   reviews          Review[]
   stockLogs        StockLog[]
+  wishlistItems    WishlistItem[]
+  stockAlerts      StockAlert[]
 
   searchVector Unsupported("tsvector")?
 
@@ -200,16 +204,19 @@ model ProductImage {
 }
 
 model Cart {
-  id        String     @id @default(cuid())
-  userId    String?    @unique
-  sessionId String?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  items     CartItem[]
-  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                   String     @id @default(cuid())
+  userId               String?    @unique
+  sessionId            String?
+  lastSeenAt           DateTime   @default(now())
+  abandonedEmailSentAt DateTime?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+  items                CartItem[]
+  user                 User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([sessionId])
+  @@index([lastSeenAt])
   @@map("carts")
 }
 
@@ -614,6 +621,36 @@ enum NotificationType {
   RETURN_STATUS
   PAYMENT
   PROMO
+  STOCK_ALERT
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@map("wishlist_items")
+}
+
+model StockAlert {
+  id         String    @id @default(cuid())
+  productId  String
+  email      String
+  userId     String?
+  notifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([productId, email])
+  @@index([productId])
+  @@index([notifiedAt])
+  @@map("stock_alerts")
 }
 
 model SupportChat {

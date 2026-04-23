@@ -11,6 +11,7 @@ import { Resend } from 'resend';
 import logger from '@/lib/logger';
 import type { OrderConfirmationProps } from '@/emails/OrderConfirmation';
 import type { AbandonedCartProps } from '@/emails/AbandonedCart';
+import type { StockAlertProps } from '@/emails/StockAlert';
 
 // Lazy-init — evita erro se RESEND_API_KEY não estiver definida em dev
 let _resend: Resend | null = null;
@@ -68,4 +69,9 @@ export async function sendAbandonedCartEmail(
     'Você deixou itens no carrinho 🛒',
     AbandonedCart(props) as React.ReactElement,
   );
+}
+
+export async function sendStockAlertEmail(to: string, props: StockAlertProps) {
+  const { StockAlert } = await import('@/emails/StockAlert');
+  return send(to, `${props.productName} voltou ao estoque!`, StockAlert(props) as React.ReactElement);
 }
