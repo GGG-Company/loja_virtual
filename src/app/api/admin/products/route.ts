@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import logger from "@/lib/logger";
 import { toNum } from '@/lib/decimal-helpers';
 
@@ -182,7 +183,7 @@ export async function POST(request: Request) {
         weight: weight ?? null,
         dimensions: (height || width || length)
           ? { height: height ?? 0, width: width ?? 0, length: length ?? 0 }
-          : null,
+          : Prisma.JsonNull,
       },
     });
 
