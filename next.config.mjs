@@ -4,7 +4,11 @@ const isDev = process.env.NODE_ENV === 'development';
 
 const cspConnectSrc = [
   "'self'",
-  'https://api.mercadopago.com',
+  'https://*.mercadopago.com',
+  'https://*.mlstatic.com',
+  'https://*.mercadolibre.com',
+  'https://*.mercadolivre.com',
+  'https://viacep.com.br',
   'https://loja.azura.dev.br',
 ].join(' ');
 
@@ -84,9 +88,9 @@ const nextConfig = {
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.mercadopago.com https://http2.mlstatic.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
-              "img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.s3.amazonaws.com https://http2.mlstatic.com",
+              "img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.s3.amazonaws.com https://*.mlstatic.com https://*.mercadolibre.com https://*.mercadolivre.com",
               `connect-src ${cspConnectSrc}`,
-              "frame-src 'self' https://sdk.mercadopago.com",
+              "frame-src 'self' https://*.mercadopago.com https://*.mlstatic.com https://*.mercadolibre.com https://*.mercadolivre.com",
               "object-src 'none'",
               "base-uri 'self'",
               "form-action 'self'",

@@ -11,63 +11,109 @@ export interface InstallmentOption {
   label: string;
 }
 
-export const installmentsCache = new Map<number, { data: InstallmentOption[]; expiresAt: number }>();
+const installmentsCache = new Map<number, { data: InstallmentOption[]; expiresAt: number }>();
 const CACHE_TTL_MS = 10 * 60 * 1000;
 
-const DEFAULT = { maxInstallments: 12, freeInstallments: 12, interestRate: 0, minInstallmentValue: 5 };
+// BINs dos cartões de teste oficiais do Mercado Pago
+const TEST_CARDS = [
+  { bin: '503143', paymentMethodId: 'master' }, // Mastercard aprovado (5031 4332 1540 6351)
+  { bin: '450995', paymentMethodId: 'visa' },    // Visa aprovado (4509 9535 6623 3704)
+  { bin: '503175', paymentMethodId: 'master' },  // Mastercard alternativo
+];
 
-async function getFinancialConfig() {
-  try {
-    const config = await prisma.financialConfig.findUnique({ where: { id: 'singleton' } });
-    if (!config) return DEFAULT;
-    const maxInstallments = Number(config.maxInstallments) || 12;
-    const interestRate = Number(config.creditCardInterestRate) || 0;
-    // Se houver taxa de juros, nenhuma parcela é sem juros; caso contrário, todas são
-    const freeInstallments = interestRate > 0 ? 0 : maxInstallments;
+function parseCosts(payerCosts: any[]): InstallmentOption[] {
+  return payerCosts.map((cost: any) => {
+    const n: number = cost.installments;
+    const installmentAmount: number = Number(cost.installment_amount);
+    const totalAmount: number = Number(cost.total_amount);
+    const isInterestFree: boolean = Number(cost.installment_rate) === 0;
+    const installmentFmt = installmentAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const totalFmt = totalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     return {
-      maxInstallments,
-      freeInstallments,
-      interestRate,
-      minInstallmentValue: Number(config.minInstallmentValue) || 5,
-    };
-  } catch {
-    return DEFAULT;
-  }
-}
-
-function buildInstallments(
-  amount: number,
-  maxInstallments: number,
-  freeInstallments: number,
-  interestRate: number,
-  minInstallmentValue: number,
-): InstallmentOption[] {
-  const options: InstallmentOption[] = [];
-
-  for (let i = 1; i <= maxInstallments; i++) {
-    const isFree = i <= freeInstallments;
-    let installmentAmount: number;
-    let totalAmount: number;
-
-    if (isFree) {
-      installmentAmount = amount / i;
-      totalAmount = amount;
-    } else {
-      const rate = interestRate / 100;
-      totalAmount = amount * Math.pow(1 + rate, i);
-      installmentAmount = totalAmount / i;
-    }
-
-    if (installmentAmount < minInstallmentValue) break;
-
-    options.push({
-      installments: i,
+      installments: n,
       installmentAmount,
       totalAmount,
-      interestFree: isFree,
-      label: isFree
-        ? `${i}x de R$ ${installmentAmount.toFixed(2)} sem juros`
-        : `${i}x de R$ ${installmentAmount.toFixed(2)} (total R$ ${totalAmount.toFixed(2)})`,
+      interestFree: isInterestFree,
+      label: isInterestFree
+        ? `${n}x de R$ ${installmentFmt} sem juros`
+        : `${n}x de R$ ${installmentFmt} (total R$ ${totalFmt})`,
+    };
+  });
+}
+
+async function fetchFromMercadoPago(amount: number): Promise<InstallmentOption[] | null> {
+  const publicKey = (process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY || '').replace(/['"]/g, '').trim();
+  if (!publicKey || publicKey.length < 10) return null;
+
+  // Tenta cada BIN de teste até encontrar um que retorne múltiplas parcelas
+  for (const card of TEST_CARDS) {
+    try {
+      const url = `https://api.mercadopago.com/v1/payment_methods/installments?payment_method_id=${card.paymentMethodId}&amount=${amount.toFixed(2)}&bin=${card.bin}&public_key=${publicKey}`;
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) continue;
+
+      const data = await res.json();
+      const payerCosts: any[] = data?.[0]?.payer_costs;
+      if (!Array.isArray(payerCosts) || payerCosts.length <= 1) continue;
+
+      return parseCosts(payerCosts);
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}
+
+async function calculateFallbackInstallments(amount: number): Promise<InstallmentOption[]> {
+  let maxInstallments = 12;
+  let interestRate = 0;
+  let minValue = 5;
+
+  try {
+    const config = await prisma.financialConfig.findUnique({
+      where: { id: 'singleton' },
+      select: { maxInstallments: true, creditCardInterestRate: true, minInstallmentValue: true },
+    });
+    if (config) {
+      maxInstallments = config.maxInstallments;
+      interestRate = Number(config.creditCardInterestRate);
+      minValue = Number(config.minInstallmentValue);
+    }
+  } catch { }
+
+  const options: InstallmentOption[] = [];
+
+  for (let n = 1; n <= maxInstallments; n++) {
+    let installmentAmount: number;
+    let totalAmount: number;
+    let isInterestFree: boolean;
+
+    if (interestRate === 0 || n === 1) {
+      installmentAmount = amount / n;
+      totalAmount = amount;
+      isInterestFree = true;
+    } else {
+      // PMT com juros compostos: PV * r / (1 - (1+r)^-n)
+      const r = interestRate / 100;
+      installmentAmount = (amount * r) / (1 - Math.pow(1 + r, -n));
+      totalAmount = installmentAmount * n;
+      isInterestFree = false;
+    }
+
+    if (n > 1 && installmentAmount < minValue) break;
+
+    const installmentFmt = installmentAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const totalFmt = totalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    options.push({
+      installments: n,
+      installmentAmount,
+      totalAmount,
+      interestFree: isInterestFree,
+      label: isInterestFree
+        ? `${n}x de R$ ${installmentFmt} sem juros`
+        : `${n}x de R$ ${installmentFmt} (total R$ ${totalFmt})`,
     });
   }
 
@@ -84,14 +130,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ installments: cached.data });
   }
 
-  const config = await getFinancialConfig();
-  const installments = buildInstallments(
-    amount,
-    config.maxInstallments,
-    config.freeInstallments,
-    config.interestRate,
-    config.minInstallmentValue,
-  );
+  let installments = await fetchFromMercadoPago(amount);
+
+  // Fallback para config financeira quando MP não retorna múltiplas opções (sandbox / sem config)
+  if (!installments || installments.length <= 1) {
+    installments = await calculateFallbackInstallments(amount);
+  }
+
+  if (!installments || installments.length === 0) {
+    return NextResponse.json({ installments: [] });
+  }
 
   installmentsCache.set(amountCents, { data: installments, expiresAt: Date.now() + CACHE_TTL_MS });
   return NextResponse.json({ installments });

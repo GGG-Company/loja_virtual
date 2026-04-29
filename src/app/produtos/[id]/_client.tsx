@@ -311,10 +311,13 @@ function ProductDetailContent() {
                             {installmentOptions.map((opt) => (
                               <tr key={opt.installments} className="border-t border-gray-100 hover:bg-gray-50">
                                 <td className="px-3 py-2 font-semibold text-metallic-900 w-16">
-                                  {opt.installments}x
+                                  {opt.installments === 1 ? 'À Vista' : `${opt.installments}x`}
                                 </td>
                                 <td className="px-3 py-2 text-metallic-700">
                                   R$ {toMoney(opt.installmentValue)}
+                                </td>
+                                <td className="px-3 py-2 text-right text-xs text-metallic-500">
+                                  R$ {toMoney(opt.total)}
                                 </td>
                                 <td className="px-3 py-2 text-right">
                                   {opt.interestFree ? (
@@ -322,8 +325,8 @@ function ProductDetailContent() {
                                       sem juros
                                     </span>
                                   ) : (
-                                    <span className="text-xs text-metallic-400">
-                                      total R$ {toMoney(opt.total)}
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-bold bg-orange-100 text-orange-700">
+                                      com juros
                                     </span>
                                   )}
                                 </td>

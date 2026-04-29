@@ -61,9 +61,12 @@ export async function PUT(
     const {
       name,
       description,
+      shortDescription,
       price,
       promotionalPrice,
+      cost,
       stock,
+      minStock,
       status,
       imageUrl,
       isFeatured,
@@ -72,6 +75,12 @@ export async function PUT(
       categoryId,
       brandId,
       ean,
+      ncm,
+      origin,
+      weight,
+      height,
+      width,
+      length,
     } = body;
 
     // Garante que o produto existe e captura categoryId atual para fallback
@@ -103,17 +112,26 @@ export async function PUT(
     const updateData: any = {
       name,
       description,
+      shortDescription: shortDescription?.trim() || null,
       price,
       promotionalPrice: promotionalPrice || null,
+      cost: cost != null ? cost : null,
       isFeatured: isFeatured ?? false,
       isPromo: isPromo ?? false,
       stock,
+      minStock: minStock != null ? minStock : 5,
       isActive: status === 'ACTIVE' ? true : status === 'INACTIVE' ? false : existing.isActive,
       stockLocation: stockLocation?.trim() || null,
       categoryId: validCategoryId,
       brandId: brandId || null,
       ean: ean?.trim() || null,
+      ncm: ncm?.trim() || null,
+      origin: origin?.trim() || null,
       ...(imageUrl !== undefined && { imageUrl: normalizedImage }),
+      weight: weight != null ? weight : null,
+      dimensions: (height || width || length)
+        ? { height: height ?? 0, width: width ?? 0, length: length ?? 0 }
+        : null,
     };
 
     const product = await prisma.product.update({

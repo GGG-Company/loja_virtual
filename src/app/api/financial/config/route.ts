@@ -2,7 +2,6 @@ import logger from "@/lib/logger";
 import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
-import { installmentsCache } from '@/app/api/payments/mercadopago/installments/route';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,8 +60,6 @@ export async function PUT(req: NextRequest) {
       create: { id: 'singleton', maxInstallments, creditCardInterestRate, minInstallmentValue, freeShippingMinValue },
     });
 
-    // Invalida o cache de parcelas para que o novo config seja aplicado imediatamente
-    installmentsCache.clear();
 
     return NextResponse.json(config);
   } catch (error) {

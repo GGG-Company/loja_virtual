@@ -28,7 +28,9 @@
       "Bash(find /c/Users/Kauan/Desktop/Docs/loja_virtual/src/app -name error.tsx -o -name *error* -type f)",
       "Bash(grep -E \"\\\\.ts$|\\\\.tsx$\")",
       "Bash(npx prisma *)",
-      "Bash(npx next *)"
+      "Bash(npx next *)",
+      "Bash(node -e \"const pkg = require\\('./node_modules/@mercadopago/sdk-react/package.json'\\); console.log\\(pkg.version\\)\")",
+      "Bash(npm info *)"
     ]
   }
 }

@@ -40,6 +40,7 @@ export async function GET(
           shipping: true,
           total: true,
           paymentMethod: true,
+          installments: true,
           shippingAddress: true,
           trackingCode: true,
           trackingUrl: true,

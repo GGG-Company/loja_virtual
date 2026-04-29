@@ -81,7 +81,9 @@ export async function POST(req: NextRequest) {
       },
       date_of_expiration: dueDate.toISOString(),
       external_reference: orderId,
-      notification_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/mercadopago/webhook`,
+      ...(process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes('localhost')
+        ? { notification_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/mercadopago/webhook` }
+        : {}),
     };
 
     const response = await payment.create({ body: paymentData });

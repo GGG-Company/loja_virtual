@@ -61,7 +61,7 @@ export default function CheckoutEntregaPage() {
     if (digits.length !== 8) return;
     setCepLoading(true);
     try {
-      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+      const res = await fetch(`/api/cep/${digits}`);
       const data = await res.json();
       if (data.erro) {
         toast.error('CEP não encontrado. Verifique o número e tente novamente.');
@@ -295,8 +295,21 @@ export default function CheckoutEntregaPage() {
                 )}
 
                 {!loadingShipping && shippingOptions.length === 0 && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-sm p-4 text-sm text-amber-800">
-                    Digite um CEP válido para calcular as opções de frete automaticamente.
+                  <div className="space-y-3">
+                    <div className="bg-amber-50 border border-amber-200 rounded-sm p-4 text-sm text-amber-800">
+                      {formData.cep.replace(/\D/g, '').length === 8
+                        ? 'Nenhuma opção de frete disponível. Verifique o CEP ou tente novamente.'
+                        : 'Digite um CEP válido para calcular as opções de frete automaticamente.'}
+                    </div>
+                    {formData.cep.replace(/\D/g, '').length === 8 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => calculateShipping(formData.cep.replace(/\D/g, ''))}
+                      >
+                        Recalcular Frete
+                      </Button>
+                    )}
                   </div>
                 )}
 

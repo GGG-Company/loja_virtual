@@ -303,7 +303,7 @@ export default function MyAccountPage() {
     if (digits.length !== 8) return;
     try {
       setCepLoading(true);
-      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+      const res = await fetch(`/api/cep/${digits}`);
       const data = await res.json();
       if (data.erro) {
         toast.error('CEP não encontrado');

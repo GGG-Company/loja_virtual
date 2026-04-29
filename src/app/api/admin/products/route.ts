@@ -8,16 +8,25 @@ import { toNum } from '@/lib/decimal-helpers';
 const CreateProductSchema = z.object({
   name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres'),
   description: z.string().optional(),
+  shortDescription: z.string().optional().nullable(),
   price: z.number().positive('Preço deve ser positivo'),
   promotionalPrice: z.number().positive('Preço promocional deve ser positivo').optional().nullable(),
+  cost: z.number().positive().optional().nullable(),
   stock: z.number().int().min(0, 'Estoque não pode ser negativo').optional(),
+  minStock: z.number().int().min(0).optional(),
   categoryId: z.string().min(1, 'Categoria é obrigatória'),
   brandId: z.string().optional().nullable(),
   ean: z.string().optional().nullable(),
+  ncm: z.string().optional().nullable(),
+  origin: z.string().optional().nullable(),
   imageUrl: z.string().url('URL de imagem inválida').optional().nullable(),
   isFeatured: z.boolean().optional(),
   isPromo: z.boolean().optional(),
   stockLocation: z.string().optional().nullable(),
+  weight: z.number().positive().optional().nullable(),
+  height: z.number().positive().optional().nullable(),
+  width: z.number().positive().optional().nullable(),
+  length: z.number().positive().optional().nullable(),
 });
 
 export const dynamic = 'force-dynamic';
@@ -116,16 +125,25 @@ export async function POST(request: Request) {
     const {
       name,
       description,
+      shortDescription,
       price,
       promotionalPrice,
+      cost,
       stock,
+      minStock,
       categoryId,
       brandId,
       ean,
+      ncm,
+      origin,
       imageUrl,
       isFeatured,
       isPromo,
-      stockLocation
+      stockLocation,
+      weight,
+      height,
+      width,
+      length,
     } = parsed.data;
 
     const slugBase = generateSlug(name);
@@ -146,16 +164,25 @@ export async function POST(request: Request) {
         sku,
         ean: ean || null,
         description,
+        shortDescription: shortDescription || null,
         price,
         promotionalPrice: promotionalPrice ?? null,
+        cost: cost ?? null,
         stock: stock ?? 0,
+        minStock: minStock ?? 5,
         categoryId,
         brandId: brandId || null,
         imageUrl: imageUrl || null,
         isFeatured: isFeatured ?? false,
         isPromo: isPromo ?? false,
         stockLocation: stockLocation || null,
+        ncm: ncm || null,
+        origin: origin || null,
         isActive: true,
+        weight: weight ?? null,
+        dimensions: (height || width || length)
+          ? { height: height ?? 0, width: width ?? 0, length: length ?? 0 }
+          : null,
       },
     });
 

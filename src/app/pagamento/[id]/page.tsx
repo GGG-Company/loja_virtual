@@ -1,16 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CreditCard, Smartphone, Barcode } from 'lucide-react';
+import { ArrowLeft, CreditCard, Smartphone, Barcode, Copy, ExternalLink, CheckCircle2, Clock } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
-import { buildPixCode, generateQrDataUrl } from '@/lib/pix';
 import Image from "next/image";
+import { MercadoPagoProvider } from '@/components/mercadopago-provider';
+import { MercadoPagoPaymentBrick } from '@/components/mercadopago-payment-brick';
 
 type Order = {
   id: string;
@@ -18,164 +18,145 @@ type Order = {
   total: number;
   status: string;
   createdAt: string;
+  paymentMethod?: string | null;
+  installments?: number | null;
+  shippingAddress?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    cpf?: string;
+  } | null;
 };
 
-type PaymentInfo = {
-  method: string;
-  qrcode?: string;
-  expiresAt?: string;
-  linhaDigitavel?: string;
-  pdfUrl?: string;
+const paymentMethodInfo: Record<string, { label: string; Icon: React.ElementType; description: string }> = {
+  PIX:         { label: "PIX",               Icon: Smartphone, description: "Aprovação imediata" },
+  CREDIT_CARD: { label: "Cartão de Crédito", Icon: CreditCard, description: "Em até 12x" },
+  BOLETO:      { label: "Boleto Bancário",   Icon: Barcode,    description: "Vence em 3 dias úteis" },
 };
-
-const paymentMethods = [
-  { id: "CREDIT_CARD", label: "Cartão de Crédito", icon: CreditCard },
-  { id: "PIX", label: "PIX", icon: Smartphone },
-  { id: "BOLETO", label: "Boleto Bancário", icon: Barcode },
-];
 
 export default function PagamentoPage() {
   const params = useParams();
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<string>("PIX");
-  const [paymentInfo, setPaymentInfo] = useState<PaymentInfo | null>(null);
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
-  const [pixCode, setPixCode] = useState<string>("");
-  const [timeLeft, setTimeLeft] = useState<number>(0); // seconds
-  const [expired, setExpired] = useState<boolean>(false);
-  const TOTAL_SECONDS = 30;
+
+  // PIX
+  const [pixQrCode, setPixQrCode] = useState("");
+  const [pixQrBase64, setPixQrBase64] = useState("");
+  const [pixLoading, setPixLoading] = useState(false);
+  const [pixGenerated, setPixGenerated] = useState(false);
+
+  // Boleto
+  const [boletoUrl, setBoletoUrl] = useState("");
+  const [boletoBarcode, setBoletoBarcode] = useState("");
+  const [boletoLoading, setBoletoLoading] = useState(false);
+  const [boletoGenerated, setBoletoGenerated] = useState(false);
 
   useEffect(() => {
     const fetchOrder = async () => {
       try {
         const response = await apiClient.get<Order>(`/api/user/orders/${params.id}`);
-
-        // Verificar se o pedido está pendente
         if (response.data.status !== "PENDING") {
           toast.error("Este pedido já foi pago ou não pode ser pago");
           router.push("/minha-conta");
           return;
         }
-
         setOrder(response.data);
-        // Inicializa contagem: 2 minutos a partir de createdAt
-        const created = new Date(response.data.createdAt).getTime();
-        const expiresAt = created + 120 * 1000;
-        const now = Date.now();
-        const initial = Math.max(0, Math.floor((expiresAt - now) / 1000));
-        setTimeLeft(initial);
-        setExpired(initial <= 0);
-      } catch (error) {
-        console.error("Erro ao carregar pedido:", error);
+
+        // Usar o método de pagamento escolhido no checkout como padrão
+        const pm = response.data.paymentMethod;
+        if (pm === 'pix' || pm === 'PIX') setSelectedMethod('PIX');
+        else if (pm === 'cartao' || pm === 'CREDIT_CARD') setSelectedMethod('CREDIT_CARD');
+        else if (pm === 'boleto' || pm === 'BOLETO') setSelectedMethod('BOLETO');
+      } catch {
         toast.error("Erro ao carregar pedido");
         router.push("/minha-conta");
       } finally {
         setIsLoading(false);
       }
     };
-
-    if (params.id) {
-      fetchOrder();
-    }
+    if (params.id) fetchOrder();
   }, [params.id, router]);
 
-  // Timer de contagem regressiva
-  useEffect(() => {
+
+  const handleGeneratePix = async () => {
     if (!order) return;
-    const interval = setInterval(async () => {
-      setTimeLeft((prev) => {
-        const next = prev - 1;
-        if (next <= 0) {
-          clearInterval(interval);
-          setExpired(true);
-        }
-        return Math.max(0, next);
+    setPixLoading(true);
+    try {
+      const addr = order.shippingAddress || {};
+      const response = await fetch('/api/payments/mercadopago/pix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: order.id,
+          amount: order.total,
+          userEmail: addr.email || '',
+          userName: addr.name || '',
+        }),
       });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [order]);
-
-  // Ao expirar, recarregar o pedido para refletir cancelamento automático
-  useEffect(() => {
-    const refreshOnExpire = async () => {
-      if (expired && order) {
-        try {
-          const response = await apiClient.get<Order>(`/api/user/orders/${params.id}`);
-          setOrder(response.data);
-          toast.error("Tempo de pagamento expirado. Pedido cancelado.");
-          // Redirecionar em seguida
-          setTimeout(() => router.push("/minha-conta"), 1500);
-        } catch {}
-      }
-    };
-    refreshOnExpire();
-  }, [expired, order, params.id, router]);
-
-  const formatMMSS = (s: number) => {
-    const m = Math.floor(s / 60)
-      .toString()
-      .padStart(2, "0");
-    const ss = Math.floor(s % 60)
-      .toString()
-      .padStart(2, "0");
-    return `${m}:${ss}`;
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Erro ao gerar PIX');
+      setPixQrCode(data.qrCode || '');
+      setPixQrBase64(data.qrCodeBase64 ? `data:image/png;base64,${data.qrCodeBase64}` : '');
+      clearCart();
+      setPixGenerated(true);
+      toast.success('PIX gerado! Escaneie o QR code para pagar.');
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao gerar PIX');
+    } finally {
+      setPixLoading(false);
+    }
   };
 
-  // Gerar QR Code prévio para PIX (simulado) quando método selecionado for PIX
-  useEffect(() => {
-    const genPix = async () => {
-      if (selectedMethod !== "PIX") {
-        setQrDataUrl(null);
-        setPixCode("");
-        return;
-      }
-      const code = buildPixCode(order ? Math.round(order.total * 100) : 0);
-      setPixCode(code);
-      try {
-        const dataUrl = await generateQrDataUrl(code, 256);
-        setQrDataUrl(dataUrl);
-      } catch (e) {
-        console.error("Falha ao gerar QR local:", e);
-        setQrDataUrl(null);
-      }
-    };
-    genPix();
-  }, [selectedMethod, order]);
-
-  const handlePayment = async () => {
-    if (!selectedMethod) {
-      toast.error("Selecione uma forma de pagamento");
-      return;
-    }
-
-    setIsProcessing(true);
+  const handleGenerateBoleto = async () => {
+    if (!order) return;
+    setBoletoLoading(true);
     try {
-      const response = await apiClient.post<{ payment?: PaymentInfo }>(`/api/orders/${params.id}/payment`, {
-        paymentMethod: selectedMethod,
+      const addr = order.shippingAddress || {};
+      const response = await fetch('/api/payments/mercadopago/boleto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: order.id,
+          amount: order.total,
+          userEmail: addr.email || '',
+          userName: addr.name || '',
+          userCpf: addr.cpf || '',
+        }),
       });
-
-      setPaymentInfo(response.data.payment || null);
-      if (response.data.payment?.method === "PIX" && response.data.payment.qrcode) {
-        const dataUrl = await generateQrDataUrl(response.data.payment.qrcode, 256);
-        setQrDataUrl(dataUrl);
-      } else {
-        setQrDataUrl(null);
-      }
-      toast.success("Pagamento processado com sucesso!");
-
-      // Para cartão confirmamos e encaminhamos direto
-      if ((response.data.payment?.method || selectedMethod) === "CREDIT_CARD") {
-        router.push(`/minha-conta/pedidos/${params.id}`);
-      }
-    } catch (error) {
-      console.error("Erro ao processar pagamento:", error);
-      toast.error("Erro ao processar pagamento");
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Erro ao gerar Boleto');
+      setBoletoUrl(data.boletoUrl || '');
+      setBoletoBarcode(data.barcode || '');
+      clearCart();
+      setBoletoGenerated(true);
+      toast.success('Boleto gerado! Pague até a data de vencimento.');
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao gerar Boleto');
     } finally {
-      setIsProcessing(false);
+      setBoletoLoading(false);
     }
+  };
+
+  const handleCardSuccess = (_paymentId: string) => {
+    clearCart();
+    toast.success('Pagamento aprovado!');
+    router.push(`/minha-conta/pedidos/${params.id}`);
+  };
+
+  const handleCardError = (_error: any) => {
+    toast.error('Pagamento recusado. Verifique os dados e tente novamente.');
+  };
+
+  const clearCart = () => {
+    localStorage.removeItem('cart');
+    window.dispatchEvent(new Event('cartUpdated'));
+  };
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copiado!`);
   };
 
   if (isLoading) {
@@ -183,213 +164,187 @@ export default function PagamentoPage() {
       <>
         <Header />
         <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600" />
         </div>
         <Footer />
       </>
     );
   }
 
-  if (!order) {
-    return null;
-  }
+  if (!order) return null;
 
   return (
-    <>
+    <MercadoPagoProvider>
       <Header />
       <main className="min-h-screen bg-gray-50 py-8">
-        <div className="container mx-auto px-4 max-w-2xl">
-          <button onClick={() => router.back()} className="flex items-center text-metallic-600 hover:text-metallic-900 mb-6">
+        <div className="container mx-auto px-4 max-w-xl">
+          <button onClick={() => router.push('/checkout')} className="flex items-center text-gray-600 hover:text-gray-900 mb-6 text-sm">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
+            Voltar ao checkout
           </button>
 
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg shadow-lg p-6 space-y-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             {/* Cabeçalho */}
-            <div className="border-b border-metallic-200 pb-4">
-              <h1 className="text-3xl font-bold text-metallic-900">Finalizar Pagamento</h1>
-              <p className="text-metallic-600 mt-1">Pedido {order.orderNumber}</p>
-              <div className="mt-3 flex flex-wrap gap-2 items-center">
-                <span className="text-sm text-metallic-700">Tempo para pagar:</span>
-                <span className={`px-2 py-1 rounded text-sm font-semibold ${expired ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"}`}>{expired ? "Expirado" : formatMMSS(timeLeft)}</span>
-                {!expired && order && <span className="text-xs text-metallic-600">Expira às {new Date(new Date(order.createdAt).getTime() + 30 * 1000).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>}
-                {!expired && (
-                  <div className="w-full mt-2">
-                    <div className="h-2 w-full bg-metallic-100 rounded">
-                      <div className="h-2 bg-yellow-500 rounded" style={{ width: `${Math.max(0, Math.min(100, (timeLeft / TOTAL_SECONDS) * 100))}%` }} />
+            <div className="bg-primary-600 text-white p-6">
+              <h1 className="text-2xl font-bold">Finalizar Pagamento</h1>
+              <p className="text-primary-100 text-sm mt-1">Pedido {order.orderNumber}</p>
+              <p className="text-3xl font-bold mt-3">
+                R$ {Number(order.total).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Método escolhido no checkout */}
+              {(() => {
+                const info = paymentMethodInfo[selectedMethod];
+                if (!info) return null;
+                const Icon = info.Icon;
+                return (
+                  <div className="flex items-center gap-3 p-3 rounded-lg border-2 border-primary-600 bg-primary-50">
+                    <Icon className="h-5 w-5 text-primary-600 shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-primary-700">{info.label}</p>
+                      <p className="text-xs text-gray-500">{info.description}</p>
                     </div>
                   </div>
-                )}
-              </div>
-            </div>
+                );
+              })()}
 
-            {/* Resumo do Pedido */}
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="flex justify-between items-center">
-                <span className="text-lg font-semibold text-metallic-900">Total a Pagar:</span>
-                <span className="text-2xl font-bold text-primary-600">R$ {Number(order.total).toFixed(2)}</span>
-              </div>
-            </div>
-
-            {/* Métodos de Pagamento */}
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold text-metallic-900">Forma de Pagamento</h2>
-
-              <div className="space-y-3">
-                {paymentMethods.map((method) => {
-                  const Icon = method.icon;
-                  return (
-                    <button key={method.id} onClick={() => setSelectedMethod(method.id)} className={`w-full flex items-center gap-4 p-4 border-2 rounded-lg transition-all ${selectedMethod === method.id ? "border-primary-600 bg-primary-50" : "border-metallic-200 hover:border-metallic-300"}`}>
-                      <div className={`p-3 rounded-lg ${selectedMethod === method.id ? "bg-primary-100 text-primary-600" : "bg-metallic-100 text-metallic-600"}`}>
-                        <Icon className="h-6 w-6" />
+              {/* PIX */}
+              {selectedMethod === 'PIX' && (
+                <div className="space-y-4">
+                  {!pixGenerated ? (
+                    <>
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+                        Após gerar o QR code, abra o app do seu banco e escaneie para pagar. A confirmação é instantânea.
                       </div>
-                      <div className="flex-1 text-left">
-                        <p className="font-semibold text-metallic-900">{method.label}</p>
-                      </div>
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedMethod === method.id ? "border-primary-600 bg-primary-600" : "border-metallic-300"}`}>{selectedMethod === method.id && <div className="w-2 h-2 bg-white rounded-full" />}</div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Informações sobre o método selecionado */}
-            {selectedMethod === "PIX" && !paymentInfo && (
-              <div className="space-y-4">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="text-sm text-blue-800">ℹ️ QR Code PIX de simulação gerado abaixo. Após clicar em “Pagar Agora”, o pedido será confirmado localmente.</p>
-                </div>
-                <div className="bg-white rounded-lg border border-metallic-200 p-4">
-                  <p className="text-sm font-semibold text-metallic-900 mb-2">QR Code do gateway PIX (simulado)</p>
-                  {qrDataUrl ? (
-                    <div className="flex justify-center">
-                      <Image src={qrDataUrl} alt="QR Code PIX" width={192} height={192} className="border rounded-lg bg-white p-2" />
-                    </div>
+                      <Button className="w-full h-12" onClick={handleGeneratePix} disabled={pixLoading}>
+                        {pixLoading ? 'Gerando PIX...' : 'Gerar QR Code PIX'}
+                      </Button>
+                    </>
                   ) : (
-                    <div className="w-full h-48 flex items-center justify-center border-2 border-dashed rounded-lg text-metallic-500">QR Code do gateway PIX</div>
-                  )}
-                  <div className="mt-3 bg-gray-50 border border-metallic-200 rounded-lg p-3">
-                    <p className="font-mono text-xs break-all text-metallic-900">{pixCode || "Código PIX não disponível"}</p>
-                  </div>
-                  <div className="mt-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        if (pixCode) {
-                          navigator.clipboard.writeText(pixCode);
-                          toast.success("Código PIX copiado");
-                        }
-                      }}
-                      disabled={expired}
-                    >
-                      Copiar código PIX
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg p-3">
+                        <Clock className="h-4 w-4 shrink-0" />
+                        Aguardando pagamento. O pedido é confirmado automaticamente ao pagar.
+                      </div>
 
-            {selectedMethod === "BOLETO" && !paymentInfo && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                <p className="text-sm text-amber-800">ℹ️ Vamos gerar um boleto fictício (linha digitável e link). O pagamento é confirmado automaticamente.</p>
-              </div>
-            )}
-
-            {/* Botão de Pagamento */}
-            {!paymentInfo && (
-              <>
-                <Button size="lg" className="w-full h-14 text-lg" onClick={handlePayment} disabled={isProcessing || !selectedMethod || expired}>
-                  {expired ? "Prazo expirado" : isProcessing ? "Processando..." : "Pagar Agora"}
-                </Button>
-
-                <p className="text-xs text-center text-metallic-600">{expired ? "O prazo de pagamento terminou. O pedido será cancelado." : 'Ao clicar em "Pagar Agora", você concorda com nossos termos e condições.'}</p>
-                {expired && (
-                  <div className="mt-3">
-                    <Button variant="outline" className="w-full" onClick={() => router.push("/produtos")}>
-                      Refazer pedido
-                    </Button>
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Resultado da simulação de pagamento */}
-            {paymentInfo && (
-              <div className="space-y-4">
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <p className="text-sm text-green-800 font-semibold mb-2">Pagamento confirmado localmente.</p>
-                  {paymentInfo.method === "PIX" && (
-                    <div className="space-y-3">
-                      <p className="text-sm text-green-800">Escaneie o QR Code abaixo ou copie o código para simular o pagamento.</p>
-                      {qrDataUrl && (
+                      {pixQrBase64 ? (
                         <div className="flex justify-center">
-                          <Image src={qrDataUrl} alt="QR Code PIX" width={192} height={192} className="border border-green-100 rounded-lg bg-white p-2" />
+                          <Image src={pixQrBase64} alt="QR Code PIX" width={200} height={200} className="border rounded-lg bg-white p-2" />
+                        </div>
+                      ) : (
+                        <div className="h-48 flex items-center justify-center border-2 border-dashed rounded-lg text-gray-400 text-sm">
+                          QR Code indisponível — use o código abaixo
                         </div>
                       )}
-                      <div className="bg-white border border-green-100 rounded-lg p-4">
-                        <p className="font-mono text-xs break-all text-green-900">{paymentInfo.qrcode}</p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            if (paymentInfo.qrcode) {
-                              navigator.clipboard.writeText(paymentInfo.qrcode);
-                              toast.success("Código PIX copiado");
-                            }
-                          }}
-                        >
-                          Copiar código
-                        </Button>
-                        {paymentInfo.expiresAt && <span className="text-xs text-green-900">Expira em: {new Date(paymentInfo.expiresAt).toLocaleTimeString("pt-BR")}</span>}
-                      </div>
-                    </div>
-                  )}
 
-                  {paymentInfo.method === "BOLETO" && (
-                    <div className="space-y-3">
-                      <p className="text-sm text-green-800">Use a linha digitável abaixo ou faça o download fictício do boleto.</p>
-                      <div className="bg-white border border-green-100 rounded-lg p-4">
-                        <p className="font-mono text-sm text-green-900 break-all">{paymentInfo.linhaDigitavel}</p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {paymentInfo.linhaDigitavel && (
+                      {pixQrCode && (
+                        <div>
+                          <p className="text-xs font-medium text-gray-600 mb-1">Código PIX copia e cola</p>
+                          <div className="bg-gray-50 rounded-lg p-3 border">
+                            <p className="font-mono text-xs break-all text-gray-700 leading-relaxed">{pixQrCode}</p>
+                          </div>
                           <Button
                             variant="outline"
-                            onClick={() => {
-                              navigator.clipboard.writeText(paymentInfo.linhaDigitavel as string);
-                              toast.success("Linha digitável copiada");
-                            }}
+                            size="sm"
+                            className="mt-2 gap-2"
+                            onClick={() => copyToClipboard(pixQrCode, 'Código PIX')}
                           >
-                            Copiar linha digitável
+                            <Copy className="h-3.5 w-3.5" />
+                            Copiar código
                           </Button>
-                        )}
-                        {paymentInfo.pdfUrl && (
-                          <a href={paymentInfo.pdfUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary-700 underline">
-                            Abrir boleto (simulado)
-                          </a>
-                        )}
-                      </div>
+                        </div>
+                      )}
+
+                      <Button variant="outline" className="w-full" onClick={() => router.push('/minha-conta')}>
+                        Ver meus pedidos
+                      </Button>
                     </div>
                   )}
-
-                  {paymentInfo.method === "CREDIT_CARD" && <p className="text-sm text-green-800">Cartão aprovado automaticamente no ambiente local.</p>}
                 </div>
+              )}
 
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Button className="flex-1" onClick={() => router.push(`/minha-conta/pedidos/${params.id}`)}>
-                    Ver detalhes do pedido
-                  </Button>
-                  <Button className="flex-1" variant="outline" onClick={() => router.push("/minha-conta")}>
-                    Ir para Meus Pedidos
-                  </Button>
+              {/* Boleto */}
+              {selectedMethod === 'BOLETO' && (
+                <div className="space-y-4">
+                  {!boletoGenerated ? (
+                    <>
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
+                        O boleto vence em 3 dias úteis. Após o pagamento, a confirmação pode levar até 3 dias úteis.
+                      </div>
+                      <Button className="w-full h-12" onClick={handleGenerateBoleto} disabled={boletoLoading}>
+                        {boletoLoading ? 'Gerando Boleto...' : 'Gerar Boleto'}
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg p-3">
+                        <CheckCircle2 className="h-4 w-4 shrink-0" />
+                        Boleto gerado! Pague antes do vencimento.
+                      </div>
+
+                      {boletoBarcode && (
+                        <div>
+                          <p className="text-xs font-medium text-gray-600 mb-1">Código de barras</p>
+                          <div className="bg-gray-50 rounded-lg p-3 border">
+                            <p className="font-mono text-xs break-all text-gray-700 leading-relaxed">{boletoBarcode}</p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-2 gap-2"
+                            onClick={() => copyToClipboard(boletoBarcode, 'Código de barras')}
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                            Copiar código
+                          </Button>
+                        </div>
+                      )}
+
+                      {boletoUrl && (
+                        <a
+                          href={boletoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center gap-2 w-full h-10 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Abrir / Imprimir Boleto
+                        </a>
+                      )}
+
+                      <Button variant="outline" className="w-full" onClick={() => router.push('/minha-conta')}>
+                        Ver meus pedidos
+                      </Button>
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
-          </motion.div>
+              )}
+
+              {/* Cartão — Payment Brick do Mercado Pago */}
+              {selectedMethod === 'CREDIT_CARD' && (
+                <div className="space-y-3">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
+                    Seus dados de cartão são processados com segurança pelo Mercado Pago.
+                  </div>
+                  <MercadoPagoPaymentBrick
+                    amount={order.total}
+                    orderId={order.id}
+                    onPaymentSuccess={handleCardSuccess}
+                    onPaymentError={handleCardError}
+                    userEmail={order.shippingAddress?.email || ''}
+                    userFirstName={order.shippingAddress?.name?.split(' ')[0] || ''}
+                    userLastName={order.shippingAddress?.name?.split(' ').slice(1).join(' ') || ''}
+                    maxInstallments={order.installments || 12}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </main>
       <Footer />
-    </>
+    </MercadoPagoProvider>
   );
 }

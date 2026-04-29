@@ -21,17 +21,26 @@ export default function NewProductPage() {
   const [imagePreview, setImagePreview] = useState<string>("/placeholder.svg");
   const [formData, setFormData] = useState({
     name: "",
+    shortDescription: "",
     description: "",
     price: "",
     promotionalPrice: "",
+    cost: "",
     stock: "",
+    minStock: "5",
+    ean: "",
+    ncm: "",
+    origin: "",
+    stockLocation: "",
     categoryId: "",
     brandId: "",
-    ean: "",
     imageUrl: "",
     isFeatured: false,
     isPromo: false,
-    stockLocation: "",
+    weight: "",
+    height: "",
+    width: "",
+    length: "",
   });
 
   useEffect(() => {
@@ -56,10 +65,19 @@ export default function NewProductPage() {
           ...formData,
           price: parseFloat(formData.price),
           promotionalPrice: formData.promotionalPrice ? parseFloat(formData.promotionalPrice) : null,
+          cost: formData.cost ? parseFloat(formData.cost) : null,
           stock: parseInt(formData.stock),
+          minStock: formData.minStock ? parseInt(formData.minStock) : 5,
           stockLocation: formData.stockLocation || null,
           brandId: formData.brandId || null,
           ean: formData.ean || null,
+          ncm: formData.ncm || null,
+          origin: formData.origin || null,
+          shortDescription: formData.shortDescription || null,
+          weight: formData.weight ? parseFloat(formData.weight) : null,
+          height: formData.height ? parseFloat(formData.height) : null,
+          width: formData.width ? parseFloat(formData.width) : null,
+          length: formData.length ? parseFloat(formData.length) : null,
         }),
       });
       if (!res.ok) throw new Error("Erro ao criar produto");
@@ -143,53 +161,94 @@ export default function NewProductPage() {
             </div>
           </div>
 
-          {/* Nome */}
-          <div>
-            <Label htmlFor="name">Nome do Produto *</Label>
-            <Input id="name" name="name" value={formData.name} onChange={handleChange} required placeholder="Ex: Furadeira Bosch GSB 550" />
-          </div>
-
-          {/* Descrição */}
-          <div>
-            <Label htmlFor="description">Descrição *</Label>
-            <textarea id="description" name="description" value={formData.description} onChange={handleChange} required rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="Descrição detalhada do produto" />
+          {/* Identificação */}
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="name">Nome do Produto *</Label>
+              <Input id="name" name="name" value={formData.name} onChange={handleChange} required placeholder="Ex: Furadeira Bosch GSB 550" />
+            </div>
+            <div>
+              <Label htmlFor="shortDescription">Descrição Curta</Label>
+              <Input id="shortDescription" name="shortDescription" value={formData.shortDescription} onChange={handleChange} placeholder="Resumo em até 1 linha para listagem" />
+            </div>
+            <div>
+              <Label htmlFor="description">Descrição Completa *</Label>
+              <textarea id="description" name="description" value={formData.description} onChange={handleChange} required rows={4}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                placeholder="Descrição detalhada do produto" />
+            </div>
           </div>
 
           {/* Preços */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="price">Preço Normal (R$) *</Label>
-              <Input id="price" name="price" type="number" step="0.01" value={formData.price} onChange={handleChange} required placeholder="0.00" />
+          <div className="border rounded-lg p-4 space-y-3">
+            <Label className="text-base font-semibold">Preços</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="price">Preço de Venda (R$) *</Label>
+                <Input id="price" name="price" type="number" step="0.01" value={formData.price} onChange={handleChange} required placeholder="0,00" />
+              </div>
+              <div>
+                <Label htmlFor="promotionalPrice">Preço Promocional (R$)</Label>
+                <Input id="promotionalPrice" name="promotionalPrice" type="number" step="0.01" value={formData.promotionalPrice} onChange={handleChange} placeholder="Opcional" />
+              </div>
             </div>
-            <div>
-              <Label htmlFor="promotionalPrice">Preço Promocional (R$)</Label>
-              <Input id="promotionalPrice" name="promotionalPrice" type="number" step="0.01" value={formData.promotionalPrice} onChange={handleChange} placeholder="Opcional" />
-              <p className="text-xs text-gray-500 mt-1">Deixe vazio se não houver promoção</p>
-            </div>
-          </div>
-
-          {/* Estoque + EAN */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="stock">Estoque Inicial *</Label>
-              <Input id="stock" name="stock" type="number" value={formData.stock} onChange={handleChange} required placeholder="0" />
-            </div>
-            <div>
-              <Label htmlFor="ean">EAN / Código de Barras</Label>
-              <Input id="ean" name="ean" value={formData.ean} onChange={handleChange} placeholder="Ex: 7891234567890" />
-              <p className="text-xs text-gray-500 mt-1">Usado para vincular com o Hiper</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="cost">Custo (R$)</Label>
+                <Input id="cost" name="cost" type="number" step="0.01" value={formData.cost} onChange={handleChange} placeholder="Preço de custo" />
+                <p className="text-xs text-gray-500 mt-1">Não é exibido para o cliente</p>
+              </div>
             </div>
           </div>
 
-          {/* Localização */}
-          <div>
-            <Label htmlFor="stockLocation">Localização no Estoque</Label>
-            <Input id="stockLocation" name="stockLocation" value={formData.stockLocation} onChange={handleChange} placeholder="Ex.: Corredor B - Prateleira 4" />
+          {/* Estoque */}
+          <div className="border rounded-lg p-4 space-y-3">
+            <Label className="text-base font-semibold">Estoque</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="stock">Estoque Inicial *</Label>
+                <Input id="stock" name="stock" type="number" value={formData.stock} onChange={handleChange} required placeholder="0" />
+              </div>
+              <div>
+                <Label htmlFor="minStock">Estoque Mínimo</Label>
+                <Input id="minStock" name="minStock" type="number" value={formData.minStock} onChange={handleChange} placeholder="5" />
+                <p className="text-xs text-gray-500 mt-1">Alerta quando abaixo deste valor</p>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="stockLocation">Localização no Estoque</Label>
+              <Input id="stockLocation" name="stockLocation" value={formData.stockLocation} onChange={handleChange} placeholder="Ex.: Corredor B - Prateleira 4" />
+            </div>
           </div>
 
-          {/* Categoria + Marca */}
+          {/* Fiscal */}
+          <div className="border rounded-lg p-4 space-y-3">
+            <Label className="text-base font-semibold">Dados Fiscais</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="ean">EAN / Código de Barras</Label>
+                <Input id="ean" name="ean" value={formData.ean} onChange={handleChange} placeholder="Ex: 7891234567890" />
+                <p className="text-xs text-gray-500 mt-1">Usado para vincular com o Hiper</p>
+              </div>
+              <div>
+                <Label htmlFor="ncm">NCM</Label>
+                <Input id="ncm" name="ncm" value={formData.ncm} onChange={handleChange} placeholder="Ex: 8467.21.00" />
+                <p className="text-xs text-gray-500 mt-1">Código da Nomenclatura Comum do Mercosul</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="origin">Origem</Label>
+                <select id="origin" name="origin" value={formData.origin} onChange={handleChange} className={selectClass}>
+                  <option value="">Não informado</option>
+                  <option value="nacional">Nacional</option>
+                  <option value="importado">Importado</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Categorização */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="categoryId">Categoria *</Label>
@@ -222,6 +281,32 @@ export default function NewProductPage() {
                   {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                 </select>
               )}
+            </div>
+          </div>
+
+          {/* Frete / Dimensões */}
+          <div className="border rounded-lg p-4 space-y-3">
+            <Label className="text-base font-semibold">Frete — Peso e Dimensões</Label>
+            <p className="text-xs text-gray-500">Usado pelo Melhor Envio para calcular o frete. Sem preenchimento usa padrão: 1 kg · 12×18×24 cm.</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="weight">Peso (kg)</Label>
+                <Input id="weight" name="weight" type="number" step="0.001" min="0" value={formData.weight} onChange={handleChange} placeholder="Ex: 0.500" />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="height">Altura (cm)</Label>
+                <Input id="height" name="height" type="number" step="0.1" min="0" value={formData.height} onChange={handleChange} placeholder="Ex: 12" />
+              </div>
+              <div>
+                <Label htmlFor="width">Largura (cm)</Label>
+                <Input id="width" name="width" type="number" step="0.1" min="0" value={formData.width} onChange={handleChange} placeholder="Ex: 18" />
+              </div>
+              <div>
+                <Label htmlFor="length">Comprimento (cm)</Label>
+                <Input id="length" name="length" type="number" step="0.1" min="0" value={formData.length} onChange={handleChange} placeholder="Ex: 24" />
+              </div>
             </div>
           </div>
 
