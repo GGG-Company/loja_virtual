@@ -199,7 +199,7 @@ export function CookieConsent() {
                 <Button
                   onClick={acceptEssentialOnly}
                   variant="outline"
-                  className="border-white/20 text-white hover:bg-white/10 font-display uppercase text-sm"
+                  className="border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white font-display uppercase text-sm"
                 >
                   Apenas Essenciais
                 </Button>

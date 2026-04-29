@@ -40,8 +40,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       shortDescription: true,
       description: true,
       imageUrl: true,
+      images: { select: { url: true } },
       price: true,
       promotionalPrice: true,
+      sku: true,
+      ean: true,
+      stock: true,
+      category: { select: { name: true } },
     },
   }).catch(() => null);
 
@@ -71,6 +76,58 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default function Page({ params }: Props) {
-  return <ProductDetailPage />;
+export default async function Page({ params }: Props) {
+  const { id } = await params;
+
+  const product = await prisma.product.findUnique({
+    where: { id },
+    select: {
+      name: true,
+      description: true,
+      imageUrl: true,
+      images: { select: { url: true } },
+      price: true,
+      promotionalPrice: true,
+      sku: true,
+      ean: true,
+      stock: true,
+      category: { select: { name: true } },
+    },
+  }).catch(() => null);
+
+  const jsonLd = product
+    ? JSON.stringify({
+        '@context': 'https://schema.org/',
+        '@type': 'Product',
+        name: product.name,
+        image: [product.imageUrl, ...(product.images?.map((i) => i.url) ?? [])].filter(Boolean),
+        description: product.description ?? undefined,
+        sku: product.sku ?? undefined,
+        gtin13: product.ean ?? undefined,
+        brand: { '@type': 'Brand', name: 'Feira das Ferramentas' },
+        category: product.category?.name ?? undefined,
+        offers: {
+          '@type': 'Offer',
+          priceCurrency: 'BRL',
+          price: Number(product.promotionalPrice ?? product.price).toFixed(2),
+          availability:
+            (product.stock ?? 0) > 0
+              ? 'https://schema.org/InStock'
+              : 'https://schema.org/OutOfStock',
+          seller: { '@type': 'Organization', name: 'Feira das Ferramentas' },
+        },
+      }).replace(/</g, '\\u003c')
+    : null;
+
+  return (
+    <>
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLd }}
+        />
+      )}
+      <ProductDetailPage />
+    </>
+  );
 }

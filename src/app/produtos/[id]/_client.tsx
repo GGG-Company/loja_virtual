@@ -15,7 +15,6 @@ import { usePrice } from "@/hooks/use-price";
 import { useCart } from "@/contexts/cart-context";
 import Image from "next/image";
 // Não exigimos sessão para adicionar ao carrinho — usamos cache local
-import Script from "next/script";
 import { ProductReviews } from "@/components/product-reviews";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { RelatedProducts } from "@/components/related-products";
@@ -173,47 +172,8 @@ function ProductDetailContent() {
     );
   }
 
-  const jsonLd = JSON.stringify({
-    "@context": "https://schema.org/",
-    "@type": "Product",
-    name: product.name,
-    image: [
-      product.imageUrl,
-      ...(product.images?.map(i => i.url) ?? []),
-    ].filter(Boolean),
-    description: product.description ?? undefined,
-    sku: product.sku ?? undefined,
-    gtin13: product.ean ?? undefined,
-    brand: { "@type": "Brand", name: "Feira das Ferramentas" },
-    category: product.category?.name ?? undefined,
-    ...(reviewStats && reviewStats.totalReviews > 0 ? {
-      aggregateRating: {
-        "@type": "AggregateRating",
-        ratingValue: reviewStats.averageRating.toFixed(1),
-        reviewCount: reviewStats.totalReviews,
-        bestRating: "5",
-        worstRating: "1",
-      },
-    } : {}),
-    offers: {
-      "@type": "Offer",
-      priceCurrency: "BRL",
-      price: displayPrice.toFixed(2),
-      availability: (product.stock ?? 0) > 0
-        ? "https://schema.org/InStock"
-        : "https://schema.org/OutOfStock",
-      seller: { "@type": "Organization", name: "Feira das Ferramentas" },
-    },
-  }).replace(/</g, '\\u003c');
-
   return (
     <>
-      <Script
-        id="product-structured-data"
-        type="application/ld+json"
-        strategy="beforeInteractive"
-        dangerouslySetInnerHTML={{ __html: jsonLd }}
-      />
       {!searchParams.get("embed") && <Header />}
       <main className="min-h-screen bg-white py-12">
         <div className="container mx-auto px-4">

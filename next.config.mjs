@@ -41,34 +41,34 @@ const nextConfig = {
   },
   async headers() {
     return [
-      // ── Static assets — cache agressivo no CDN ─────────────────────────
-      {
+      // ── Static assets — cache agressivo no CDN (só produção) ──────────
+      ...(!isDev ? [{
         source: '/_next/static/(.*)',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
-      },
-      // ── Imagens públicas ───────────────────────────────────────────────
-      {
+      }] : []),
+      // ── Imagens públicas (só produção) ─────────────────────────────────
+      ...(!isDev ? [{
         source: '/(.*)\\.(jpg|jpeg|png|webp|avif|svg|ico|gif)',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=3600' },
         ],
-      },
-      // ── Páginas ISR (catálogo, produto) ────────────────────────────────
-      {
+      }] : []),
+      // ── Páginas ISR (catálogo, produto) — só produção ──────────────────
+      ...(!isDev ? [{
         source: '/produtos(.*)',
         headers: [
           { key: 'Cache-Control', value: 'public, s-maxage=3600, stale-while-revalidate=300' },
         ],
-      },
-      // ── Homepage ───────────────────────────────────────────────────────
-      {
+      }] : []),
+      // ── Homepage — só produção ─────────────────────────────────────────
+      ...(!isDev ? [{
         source: '/',
         headers: [
           { key: 'Cache-Control', value: 'public, s-maxage=600, stale-while-revalidate=60' },
         ],
-      },
+      }] : []),
       // ── Segurança global ───────────────────────────────────────────────
       {
         source: '/(.*)',
