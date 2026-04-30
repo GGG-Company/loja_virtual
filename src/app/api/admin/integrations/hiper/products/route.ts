@@ -42,5 +42,12 @@ export async function GET() {
     }
   }
 
-  return NextResponse.json({ products: flat });
+  const seen = new Set<string>();
+  const deduped = flat.filter(p => {
+    if (seen.has(p.id)) return false;
+    seen.add(p.id);
+    return true;
+  });
+
+  return NextResponse.json({ products: deduped });
 }

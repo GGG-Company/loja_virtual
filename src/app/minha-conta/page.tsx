@@ -874,26 +874,6 @@ export default function MyAccountPage() {
                           </Button>
                         </>
                       )}
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-3">
-                          <div className="w-1 h-6 bg-[#CC1020] rounded-full" />
-                          <h2 className="font-display text-xl font-bold text-[#1A1A1A] uppercase">
-                            Endereços de Entrega
-                          </h2>
-                        </div>
-                        <Button size="sm">Adicionar Endereço</Button>
-                      </div>
-                      <div className="text-center py-12">
-                        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <MapPin className="h-10 w-10 text-gray-400" />
-                        </div>
-                        <p className="font-display text-lg font-bold text-[#1A1A1A] uppercase mb-1">
-                          Nenhum endereço cadastrado
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Adicione um endereço para agilizar futuros pedidos.
-                        </p>
-                      </div>
                     </div>
                   )}
 

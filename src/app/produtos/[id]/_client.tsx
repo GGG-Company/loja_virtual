@@ -118,10 +118,11 @@ function ProductDetailContent() {
       .catch(() => {});
   }, []);
 
-  // Track this product as recently viewed
+  // Track this product as recently viewed + incrementa viewCount
   useEffect(() => {
     if (product?.id) {
       addProduct(product.id);
+      fetch(`/api/products/${product.id}/view`, { method: 'POST' }).catch(() => {});
     }
   }, [product?.id]);
   const handleAddToCart = () => {

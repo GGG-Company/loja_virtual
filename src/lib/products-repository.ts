@@ -36,10 +36,20 @@ function bestWordSimilarity(text: string, search: string): number {
 // ── Fuzzy threshold — 0.18 catches multi-letter typos ("maquita"→"makita") ──
 const FUZZY_THRESHOLD = 0.18;
 
+function dedup<T extends { id: unknown }>(items: T[]): T[] {
+  const seen = new Set<unknown>();
+  return items.filter(item => {
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+}
+
 export type ListProductsParams = {
   featured?: boolean;
   promo?: boolean;
   categorySlug?: string | null;
+  grupoSlug?: string | null;
   limit?: number | null;
   search?: string | null;
 };
@@ -78,7 +88,7 @@ function mapExternalProduct(p: any) {
 }
 
 export async function listProducts(params: ListProductsParams) {
-  const { featured, promo, categorySlug, limit, search } = params;
+  const { featured, promo, categorySlug, grupoSlug, limit, search } = params;
 
   if (isExternalEnabled()) {
     try {
@@ -87,6 +97,7 @@ export async function listProducts(params: ListProductsParams) {
       if (featured) url.searchParams.set('featured', 'true');
       if (promo) url.searchParams.set('promo', 'true');
       if (categorySlug) url.searchParams.set('category', categorySlug);
+      if (grupoSlug) url.searchParams.set('grupo', grupoSlug);
       if (limit) url.searchParams.set('limit', String(limit));
       if (search) url.searchParams.set('search', search);
 
@@ -98,7 +109,7 @@ export async function listProducts(params: ListProductsParams) {
       if (!res.ok) throw new Error('External products API error');
       const data = await res.json();
       const arr = Array.isArray(data?.products) ? data.products : (Array.isArray(data) ? data : []);
-      return arr.map(mapExternalProduct);
+      return dedup(arr.map(mapExternalProduct));
     } catch (e) {
       console.warn('[products-repository] external list failed, falling back to local:', e);
     }
@@ -109,6 +120,7 @@ export async function listProducts(params: ListProductsParams) {
   if (featured) where.isFeatured = true;
   if (promo) where.isPromo = true;
   if (categorySlug) where.category = { slug: categorySlug };
+  if (grupoSlug) where.grupo = grupoSlug;
 
   if (search) {
     const cap = limit ?? 40;
@@ -145,7 +157,7 @@ export async function listProducts(params: ListProductsParams) {
         LIMIT ${cap}
       `;
 
-      if (ftsResults.length > 0) return ftsResults;
+      if (ftsResults.length > 0) return dedup(ftsResults);
     } catch (e: any) {
       // Código 42703 = coluna inexistente; qualquer outro erro de DB também cai aqui
       if (process.env.NODE_ENV !== 'production') {
@@ -172,7 +184,7 @@ export async function listProducts(params: ListProductsParams) {
       orderBy: { createdAt: 'desc' },
     });
 
-    if (ilikeResults.length > 0) return ilikeResults;
+    if (ilikeResults.length > 0) return dedup(ilikeResults);
 
     // Step 3 — Fuzzy (trigram JS) — catches typos like "furadira" → "furadeira"
     // Fetch a broad candidate set (name + sku only) and rank in-process
@@ -210,7 +222,7 @@ export async function listProducts(params: ListProductsParams) {
       .sort((a, b) => b._score - a._score)
       .slice(0, cap);
 
-    return scored;
+    return dedup(scored);
   }
 
   return prisma.product.findMany({

@@ -79,8 +79,9 @@ function ProductsContent() {
   const [isLoading,   setIsLoading]   = useState(true);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Only re-fetch when categoria or search changes — NOT when filter params change
+  // Only re-fetch when categoria/grupo or search changes — NOT when filter params change
   const categoria = searchParams?.get('categoria') ?? null;
+  const grupo     = searchParams?.get('grupo')     ?? null;
   const search    = searchParams?.get('search')    ?? null;
 
   const fetchProducts = useCallback(async () => {
@@ -88,6 +89,7 @@ function ProductsContent() {
     try {
       const params = new URLSearchParams();
       if (categoria) params.set('categoria', categoria);
+      if (grupo)     params.set('grupo', grupo);
       if (search)    params.set('search', search);
       const url = params.toString() ? `/api/products?${params}` : '/api/products';
       const res = await apiClient.get<{ products: ProductListItem[] }>(url);
@@ -97,7 +99,7 @@ function ProductsContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [categoria, search]);
+  }, [categoria, grupo, search]);
 
   useEffect(() => {
     fetchProducts();

@@ -50,45 +50,26 @@ export default function AdminSettingsPage() {
   const [testAllSending, setTestAllSending] = useState(false);
   const [testAllSummary, setTestAllSummary] = useState<string | null>(null);
 
-  const [financialForm, setFinancialForm] = useState({
-    maxInstallments: '12',
-    creditCardInterestRate: '0',
-    minInstallmentValue: '5',
-    freeShippingMinValue: '299',
-  });
-  const [financialLoading, setFinancialLoading] = useState(false);
-  const [financialSaved, setFinancialSaved] = useState(false);
-
-  // Carregar config financeira
-  useEffect(() => {
-    fetch('/api/financial/config')
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.maxInstallments) setFinancialForm({
-          maxInstallments:      String(d.maxInstallments),
-          creditCardInterestRate: String(d.creditCardInterestRate ?? 0),
-          minInstallmentValue:  String(d.minInstallmentValue ?? 5),
-          freeShippingMinValue: String(d.freeShippingMinValue ?? 299),
-        });
-      })
-      .catch(() => {});
-  }, []);
-
-  const handleSaveFinancial = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFinancialLoading(true);
-    setFinancialSaved(false);
-    try {
-      const res = await fetch('/api/financial/config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(financialForm),
-      });
-      if (res.ok) { setFinancialSaved(true); setTimeout(() => setFinancialSaved(false), 3000); }
-      else alert('Erro ao salvar');
-    } catch { alert('Erro ao salvar'); }
-    finally { setFinancialLoading(false); }
+  type HiperConfig = {
+    webhookEnabled: boolean;
+    cronEnabled: boolean;
+    cronIntervalMin: number;
+    lastSyncAt: string | null;
+    lastSyncStock: number;
+    lastSyncErrors: number;
   };
+  const [hiperConfig, setHiperConfig] = useState<HiperConfig>({
+    webhookEnabled: true,
+    cronEnabled: false,
+    cronIntervalMin: 30,
+    lastSyncAt: null,
+    lastSyncStock: 0,
+    lastSyncErrors: 0,
+  });
+  const [hiperLoading, setHiperLoading] = useState(false);
+  const [hiperSaved, setHiperSaved] = useState(false);
+  const [hiperSyncing, setHiperSyncing] = useState(false);
+  const [hiperSyncResult, setHiperSyncResult] = useState<string | null>(null);
 
   // Carregar status das integrações
   useEffect(() => {
@@ -197,6 +178,61 @@ export default function AdminSettingsPage() {
     } finally {
       setTestAllSending(false);
     }
+  };
+
+  // Carregar config Hiper
+  useEffect(() => {
+    fetch('/api/admin/integrations/hiper/sync-config')
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d) setHiperConfig(d); })
+      .catch(() => {});
+  }, []);
+
+  const handleSaveHiper = async () => {
+    setHiperLoading(true);
+    setHiperSaved(false);
+    try {
+      const res = await fetch('/api/admin/integrations/hiper/sync-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          webhookEnabled: hiperConfig.webhookEnabled,
+          cronEnabled: hiperConfig.cronEnabled,
+          cronIntervalMin: Number(hiperConfig.cronIntervalMin),
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setHiperConfig(data);
+        setHiperSaved(true);
+        setTimeout(() => setHiperSaved(false), 3000);
+      } else {
+        alert('Erro ao salvar configuração Hiper');
+      }
+    } catch { alert('Erro ao salvar configuração Hiper'); }
+    finally { setHiperLoading(false); }
+  };
+
+  const handleHiperManualSync = async () => {
+    setHiperSyncing(true);
+    setHiperSyncResult(null);
+    try {
+      const res = await fetch('/api/cron/hiper-sync', { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (data.skipped) {
+        setHiperSyncResult(`Ignorado: ${data.reason}`);
+      } else if (data.ok) {
+        setHiperSyncResult(`Concluído — ${data.stockUpdated} produtos atualizados${data.errors ? `, ${data.errors} erros` : ''}`);
+        // Recarregar config para atualizar lastSyncAt
+        fetch('/api/admin/integrations/hiper/sync-config')
+          .then((r) => r.ok ? r.json() : null)
+          .then((d) => { if (d) setHiperConfig(d); })
+          .catch(() => {});
+      } else {
+        setHiperSyncResult(`Erro: ${data.error || 'falha desconhecida'}`);
+      }
+    } catch { setHiperSyncResult('Erro de rede'); }
+    finally { setHiperSyncing(false); }
   };
 
   return (
@@ -311,78 +347,6 @@ export default function AdminSettingsPage() {
           </div>
         </div>
 
-        {/* Parcelamento */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-1">Parcelamento</h2>
-          <p className="text-sm text-gray-500 mb-4">
-            Define como as parcelas são exibidas nas páginas de produto. Configure de acordo com o que você oferece no Mercado Pago.
-          </p>
-          <form onSubmit={handleSaveFinancial} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Máximo de parcelas
-              </label>
-              <input
-                type="number" min="1" max="24"
-                value={financialForm.maxInstallments}
-                onChange={(e) => setFinancialForm({ ...financialForm, maxInstallments: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-              />
-              <p className="text-xs text-gray-400 mt-1">Ex: 12 para oferecer até 12x</p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Taxa de juros a partir da 2ª parcela (% ao mês)
-              </label>
-              <input
-                type="number" min="0" step="0.01"
-                value={financialForm.creditCardInterestRate}
-                onChange={(e) => setFinancialForm({ ...financialForm, creditCardInterestRate: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-              />
-              <p className="text-xs text-gray-400 mt-1">0 = todas sem juros. Ex: 1.99 para 1,99% a.m.</p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Valor mínimo por parcela (R$)
-              </label>
-              <input
-                type="number" min="1" step="0.01"
-                value={financialForm.minInstallmentValue}
-                onChange={(e) => setFinancialForm({ ...financialForm, minInstallmentValue: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-              />
-              <p className="text-xs text-gray-400 mt-1">Parcelas menores que este valor não são exibidas</p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Frete grátis acima de (R$)
-              </label>
-              <input
-                type="number" min="0" step="0.01"
-                value={financialForm.freeShippingMinValue}
-                onChange={(e) => setFinancialForm({ ...financialForm, freeShippingMinValue: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-              />
-              <p className="text-xs text-gray-400 mt-1">0 = sem frete grátis por valor</p>
-            </div>
-
-            <div className="sm:col-span-2 flex items-center gap-3">
-              <button
-                type="submit"
-                disabled={financialLoading}
-                className="px-4 py-2 bg-primary-600 text-white rounded-md text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
-              >
-                {financialLoading ? 'Salvando…' : 'Salvar Parcelamento'}
-              </button>
-              {financialSaved && <span className="text-sm text-green-600 font-medium">✓ Salvo com sucesso</span>}
-            </div>
-          </form>
-        </div>
-
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between mb-1">
             <h2 className="text-xl font-semibold">Webhooks</h2>
@@ -452,6 +416,98 @@ export default function AdminSettingsPage() {
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        {/* Hiper — Sincronização de Estoque */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold mb-1">Hiper — Sincronização de Estoque</h2>
+          <p className="text-sm text-gray-500 mb-5">Configure o webhook (Hiper notifica em tempo real) e/ou o sync automático periódico.</p>
+
+          <div className="space-y-5">
+            {/* Webhook */}
+            <div className="flex items-center justify-between border border-gray-200 rounded-lg px-4 py-3">
+              <div>
+                <p className="font-medium text-sm">Webhook em tempo real</p>
+                <p className="text-xs text-gray-500 mt-0.5">Hiper envia uma notificação a cada venda na loja física</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setHiperConfig((c) => ({ ...c, webhookEnabled: !c.webhookEnabled }))}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${hiperConfig.webhookEnabled ? 'bg-green-500' : 'bg-gray-300'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${hiperConfig.webhookEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+
+            {/* Cron */}
+            <div className="flex items-center justify-between border border-gray-200 rounded-lg px-4 py-3">
+              <div>
+                <p className="font-medium text-sm">Sync automático (cron)</p>
+                <p className="text-xs text-gray-500 mt-0.5">Consulta o Hiper periodicamente e atualiza estoques</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setHiperConfig((c) => ({ ...c, cronEnabled: !c.cronEnabled }))}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${hiperConfig.cronEnabled ? 'bg-green-500' : 'bg-gray-300'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${hiperConfig.cronEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+
+            {/* Intervalo */}
+            <div className="flex items-center gap-4">
+              <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Intervalo do cron (minutos)</label>
+              <input
+                type="number"
+                min={5}
+                max={1440}
+                value={hiperConfig.cronIntervalMin}
+                onChange={(e) => setHiperConfig((c) => ({ ...c, cronIntervalMin: Number(e.target.value) }))}
+                className="w-24 px-3 py-1.5 border border-gray-300 rounded-md text-sm"
+              />
+            </div>
+
+            {/* Último sync */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm bg-gray-50 rounded-lg p-3">
+              <div>
+                <p className="text-gray-500">Último sync</p>
+                <p className="font-medium">{hiperConfig.lastSyncAt ? new Date(hiperConfig.lastSyncAt).toLocaleString('pt-BR') : '—'}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Produtos atualizados</p>
+                <p className="font-medium">{hiperConfig.lastSyncStock}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Erros</p>
+                <p className={`font-medium ${hiperConfig.lastSyncErrors > 0 ? 'text-red-600' : ''}`}>{hiperConfig.lastSyncErrors}</p>
+              </div>
+            </div>
+
+            {hiperSyncResult && (
+              <p className={`text-sm font-medium ${hiperSyncResult.startsWith('Concluído') ? 'text-green-600' : 'text-red-600'}`}>
+                {hiperSyncResult}
+              </p>
+            )}
+
+            <div className="flex gap-3 pt-1">
+              <button
+                type="button"
+                onClick={handleSaveHiper}
+                disabled={hiperLoading}
+                className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 text-sm"
+              >
+                {hiperLoading ? 'Salvando…' : hiperSaved ? 'Salvo!' : 'Salvar configuração'}
+              </button>
+              <button
+                type="button"
+                onClick={handleHiperManualSync}
+                disabled={hiperSyncing}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 disabled:opacity-50 text-sm"
+              >
+                {hiperSyncing ? 'Sincronizando…' : 'Sincronizar agora'}
+              </button>
+            </div>
           </div>
         </div>
 

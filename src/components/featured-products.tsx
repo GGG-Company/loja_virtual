@@ -27,7 +27,7 @@ export function FeaturedProducts() {
   useEffect(() => {
     async function fetchProducts() {
       try {
-        const response = await apiClient.get<{ products: Product[] }>('/api/products?featured=true&limit=4');
+        const response = await apiClient.get<{ products: Product[] }>('/api/products/trending');
         const normalized = response.data.products.map((product) => ({
           ...product,
           imageUrl: product.imageUrl || product.images?.[0]?.url || null,

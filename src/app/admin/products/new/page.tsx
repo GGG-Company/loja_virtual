@@ -34,6 +34,7 @@ export default function NewProductPage() {
     stockLocation: "",
     categoryId: "",
     brandId: "",
+    grupo: "",
     imageUrl: "",
     isFeatured: false,
     isPromo: false,
@@ -255,6 +256,17 @@ export default function NewProductPage() {
               <select id="categoryId" name="categoryId" value={formData.categoryId} onChange={handleChange} required className={selectClass}>
                 <option value="">Selecione uma categoria</option>
                 {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="grupo">Grupo</Label>
+              <select id="grupo" name="grupo" value={formData.grupo} onChange={handleChange} className={selectClass}>
+                <option value="">Sem grupo</option>
+                <option value="ferramentas-eletricas">Ferramentas Elétricas</option>
+                <option value="ferramentas-manuais">Ferramentas Manuais</option>
+                <option value="jardinagem">Jardinagem</option>
+                <option value="casa">Casa</option>
+                <option value="epis">EPIs</option>
               </select>
             </div>
             <div>

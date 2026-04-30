@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
     const featured = searchParams.get('featured');
     const promo = searchParams.get('promo');
     const category = searchParams.get('categoria');
+    const grupo = searchParams.get('grupo');
     const limit = searchParams.get('limit');
     const search = searchParams.get('search');
 
@@ -30,6 +31,7 @@ export async function GET(request: NextRequest) {
       featured: featured === 'true',
       promo: promo === 'true',
       categorySlug: category,
+      grupoSlug: grupo,
       limit: limit ? parseInt(limit) : null,
       search: search || null,
     });

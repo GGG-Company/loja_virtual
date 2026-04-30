@@ -92,7 +92,7 @@ export function CategoriesGrid() {
             return (
               <motion.div key={category.slug} variants={item}>
                 <Link
-                  href={`/produtos?categoria=${category.slug}`}
+                  href={`/produtos?grupo=${category.slug}`}
                   className="block group"
                 >
                   <motion.div

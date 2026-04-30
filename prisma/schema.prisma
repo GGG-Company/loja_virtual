@@ -144,6 +144,8 @@ model Product {
   specs            Json?
   weight           Float?
   dimensions       Json?
+  grupo            String?
+  viewCount        Int              @default(0)
   isFeatured       Boolean          @default(false)
   isPromo          Boolean          @default(false)
   isActive         Boolean          @default(true)
@@ -170,6 +172,7 @@ model Product {
   @@index([categoryId])
   @@index([brandId])
   @@index([isFeatured])
+  @@index([grupo])
   @@map("products")
 }
 
@@ -713,6 +716,19 @@ model SiteConfig {
   updatedAt     DateTime @updatedAt
 
   @@map("site_config")
+}
+
+model HiperSyncConfig {
+  id              String    @id @default("singleton")
+  webhookEnabled  Boolean   @default(true)
+  cronEnabled     Boolean   @default(false)
+  cronIntervalMin Int       @default(30)
+  lastSyncAt      DateTime?
+  lastSyncStock   Int       @default(0)
+  lastSyncErrors  Int       @default(0)
+  updatedAt       DateTime  @updatedAt
+
+  @@map("hiper_sync_config")
 }
 
 /// LGPD Art. 7 — Registro auditável de consentimento de cookies.

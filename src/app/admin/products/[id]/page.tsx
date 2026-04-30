@@ -33,6 +33,7 @@ interface Product {
   ean?: string | null;
   ncm?: string | null;
   origin?: string | null;
+  grupo?: string | null;
   status: string;
   isFeatured: boolean;
   isPromo: boolean;
@@ -79,6 +80,7 @@ export default function EditProductPage() {
     minStock: "5",
     categoryId: "",
     brandId: "",
+    grupo: "",
     ean: "",
     ncm: "",
     origin: "",
@@ -130,6 +132,7 @@ export default function EditProductPage() {
             minStock: data.minStock != null ? String(data.minStock) : "5",
             categoryId: data.categoryId,
             brandId: data.brand?.id || data.brandId || "",
+            grupo: data.grupo || "",
             ean: data.ean || "",
             ncm: data.ncm || "",
             origin: data.origin || "",
@@ -484,6 +487,17 @@ export default function EditProductPage() {
                   <select id="categoryId" name="categoryId" value={formData.categoryId} onChange={handleChange} required className={`mt-1 ${selectClass}`}>
                     <option value="">Selecione...</option>
                     {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="grupo">Grupo</Label>
+                  <select id="grupo" name="grupo" value={formData.grupo} onChange={handleChange} className={`mt-1 ${selectClass}`}>
+                    <option value="">Sem grupo</option>
+                    <option value="ferramentas-eletricas">Ferramentas Elétricas</option>
+                    <option value="ferramentas-manuais">Ferramentas Manuais</option>
+                    <option value="jardinagem">Jardinagem</option>
+                    <option value="casa">Casa</option>
+                    <option value="epis">EPIs</option>
                   </select>
                 </div>
                 <div>

@@ -180,31 +180,31 @@ export function Header() {
               Todos os Produtos
             </Link>
             <Link
-              href="/produtos?categoria=ferramentas-eletricas"
+              href="/produtos?grupo=ferramentas-eletricas"
               className="px-4 py-3 text-sm font-display font-bold text-white hover:bg-[#CC1020] transition-colors tracking-wide uppercase"
             >
               Elétricas
             </Link>
             <Link
-              href="/produtos?categoria=ferramentas-manuais"
+              href="/produtos?grupo=ferramentas-manuais"
               className="px-4 py-3 text-sm font-display font-bold text-white hover:bg-[#CC1020] transition-colors tracking-wide uppercase"
             >
               Manuais
             </Link>
             <Link
-              href="/produtos?categoria=jardinagem"
+              href="/produtos?grupo=jardinagem"
               className="px-4 py-3 text-sm font-display font-bold text-white hover:bg-[#CC1020] transition-colors tracking-wide uppercase"
             >
               Jardinagem
             </Link>
             <Link
-              href="/produtos?categoria=casa"
+              href="/produtos?grupo=casa"
               className="px-4 py-3 text-sm font-display font-bold text-white hover:bg-[#CC1020] transition-colors tracking-wide uppercase"
             >
               Casa
             </Link>
             <Link
-              href="/produtos?categoria=epis"
+              href="/produtos?grupo=epis"
               className="px-4 py-3 text-sm font-display font-bold text-white hover:bg-[#CC1020] transition-colors tracking-wide uppercase"
             >
               EPIs
