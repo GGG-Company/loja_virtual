@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { getHiperProducts, invalidateHiperProductsCache } from '@/lib/hiper';
 import logger from '@/lib/logger';
 
@@ -193,9 +194,9 @@ export async function POST(req: NextRequest) {
   // Creates NÃO podem ser paralelos: dois produtos com mesmo nome/código fariam
   // findUnique simultâneo, ambos veriam slug/sku livre, e um deles falharia com P2002.
 
-  const stockLogQueue: Parameters<typeof prisma.stockLog.create>[0]['data'][] = [];
+  const stockLogQueue: Prisma.StockLogCreateManyInput[] = [];
 
-  type MatchedRow = { row: VariantRow; product: (typeof byHiperId)[0] };
+  type MatchedRow = { row: VariantRow; product: (typeof byHiperId)[0] | (typeof byEanSku)[0] };
   const toUpdate: MatchedRow[] = [];
   const toCreate: VariantRow[] = [];
 
