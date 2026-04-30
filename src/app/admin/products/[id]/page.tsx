@@ -333,7 +333,7 @@ export default function EditProductPage() {
               </div>
               <div>
                 <Label htmlFor="description">Descrição Completa *</Label>
-                <textarea id="description" name="description" value={formData.description} onChange={handleChange}
+                <textarea id="description" name="description" value={formData.description ?? ''} onChange={handleChange}
                   required rows={6} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
                 <div className="flex justify-end mt-1.5">
                   <Button type="button" variant="outline" size="sm" onClick={() => setShowPreview(true)}>

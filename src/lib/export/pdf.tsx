@@ -1,7 +1,7 @@
 /**
- * PDF Report — Feira das Ferramentas
+ * PDF Reports — Feira das Ferramentas
  * Gerado server-side com @react-pdf/renderer.
- * Retorna Buffer consumido pelo API route.
+ * Exporta: generateFinancialReportPdf, generatePickingReportPdf
  */
 import React from 'react';
 import path from 'path';
@@ -18,6 +18,7 @@ import {
 import type { FinancialReportSummary } from '@/types/financial-report';
 import { statusToPt } from '@/lib/i18n';
 
+// ── Logo ──────────────────────────────────────────────────────────────────
 function loadLogoBase64(): string | null {
   try {
     const logoPath = path.join(process.cwd(), 'public', 'logo_shopping_das_ferramentas.jpg');
@@ -28,23 +29,26 @@ function loadLogoBase64(): string | null {
   }
 }
 
-// ── Paleta de cores (brand) ───────────────────────────────────────────────
+// ── Paleta ────────────────────────────────────────────────────────────────
 const C = {
-  red:        '#CC1020',   // primary brand
-  redLight:   '#FFF0F1',   // primary-50
-  redMid:     '#F85555',   // primary-400
-  dark:       '#1A1A1A',   // brand.black
-  navy:       '#0F172A',   // metallic-900
-  slate:      '#334155',   // metallic-700
-  slateLight: '#64748B',   // metallic-500
-  bg:         '#F8FAFC',   // metallic-50
-  border:     '#E2E8F0',   // metallic-200
+  red:        '#CC1020',
+  redLight:   '#FFF0F1',
+  redMid:     '#F85555',
+  dark:       '#1A1A1A',
+  navy:       '#0F172A',
+  slate:      '#334155',
+  slateLight: '#64748B',
+  bg:         '#F8FAFC',
+  border:     '#E2E8F0',
   white:      '#FFFFFF',
   greenBg:    '#ECFDF5',
   greenText:  '#065F46',
   greenBorder:'#A7F3D0',
-  text:       '#1E293B',   // metallic-800
-  textMuted:  '#64748B',   // metallic-500
+  text:       '#1E293B',
+  textMuted:  '#64748B',
+  infoBg:     '#EFF6FF',
+  infoBorder: '#BFDBFE',
+  infoText:   '#1E40AF',
 } as const;
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -53,18 +57,14 @@ const currency = (v: number) =>
 
 const fmtDate = (s?: string) => {
   if (!s) return '—';
-  // Already pt-BR formatted (e.g. "01/10/2025")
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
-  // ISO or YYYY-MM-DD
   const d = new Date(s.includes('T') ? s : s + 'T12:00:00');
   return isNaN(d.getTime()) ? s : d.toLocaleDateString('pt-BR');
 };
 
 const fmtMonth = (key: string) => {
-  // key = "2026-03"
   const [year, month] = key.split('-');
-  const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
-                  'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+  const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const m = parseInt(month, 10) - 1;
   return `${MONTHS[m] ?? month}/${year.slice(2)}`;
 };
@@ -73,7 +73,7 @@ const filterStatusPt = (s?: string) =>
   ({ ALL: 'Todos', COMPLETED: 'Concluídos', PENDING: 'Pendentes', REFUNDED: 'Reembolsados' }
     [s ?? 'ALL'] ?? 'Todos');
 
-// ── Estilos ───────────────────────────────────────────────────────────────
+// ── Estilos compartilhados ────────────────────────────────────────────────
 const S = StyleSheet.create({
   page: {
     fontSize:          9,
@@ -85,10 +85,10 @@ const S = StyleSheet.create({
     backgroundColor:   C.bg,
   },
 
-  // Header fixo
+  // ── Header fixo ──────────────────────────────────────────────────────────
   header: {
     position:          'absolute',
-    top:               0, left: 0, right: 0,
+    top: 0, left: 0, right: 0,
     height:            58,
     backgroundColor:   C.dark,
     flexDirection:     'row',
@@ -104,42 +104,24 @@ const S = StyleSheet.create({
     backgroundColor: C.red,
   },
   headerLogo: {
-    height:       36,
-    width:        130,
-    marginRight:  10,
-    objectFit:    'contain' as any,
+    height: 36, width: 130,
+    marginRight: 10,
+    objectFit: 'contain' as any,
   },
-  headerLogoWrap: {
-    flexDirection: 'row',
-    alignItems:    'center',
-  },
+  headerLogoWrap: { flexDirection: 'row', alignItems: 'center' },
   headerCompany: {
-    fontSize:   13,
-    fontFamily: 'Helvetica-Bold',
-    color:      C.white,
-    letterSpacing: 0.3,
+    fontSize: 13, fontFamily: 'Helvetica-Bold',
+    color: C.white, letterSpacing: 0.3,
   },
-  headerSub: {
-    fontSize:  7.5,
-    color:     '#94A3B8',
-    marginTop: 3,
-  },
-  headerRight: { alignItems: 'flex-end' },
-  headerPeriod: {
-    fontSize:   9,
-    fontFamily: 'Helvetica-Bold',
-    color:      '#E2E8F0',
-  },
-  headerGenDate: {
-    fontSize:  7.5,
-    color:     '#64748B',
-    marginTop: 3,
-  },
+  headerSub:    { fontSize: 7.5, color: '#94A3B8', marginTop: 3 },
+  headerRight:  { alignItems: 'flex-end' },
+  headerPeriod: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#E2E8F0' },
+  headerGenDate:{ fontSize: 7.5, color: '#64748B', marginTop: 3 },
 
-  // Footer fixo
+  // ── Footer fixo ──────────────────────────────────────────────────────────
   footer: {
     position:          'absolute',
-    bottom:            0, left: 0, right: 0,
+    bottom: 0, left: 0, right: 0,
     height:            28,
     flexDirection:     'row',
     alignItems:        'center',
@@ -152,145 +134,117 @@ const S = StyleSheet.create({
   footerText: { fontSize: 7.5, color: C.slateLight },
   footerPage: { fontSize: 7.5, color: C.slate, fontFamily: 'Helvetica-Bold' },
 
-  // KPI grid
-  kpiGrid: {
-    flexDirection: 'row',
-    gap:           8,
-    marginBottom:  16,
-  },
+  // ── KPI grid ─────────────────────────────────────────────────────────────
+  kpiGrid:  { flexDirection: 'row', gap: 8, marginBottom: 14 },
   kpiCard: {
-    flex:            1,
+    flex: 1,
     backgroundColor: C.white,
-    borderWidth:     1,
-    borderColor:     C.border,
-    borderRadius:    6,
-    padding:         10,
-    borderLeftWidth: 3,
-    borderLeftColor: C.red,
+    borderWidth: 1, borderColor: C.border,
+    borderRadius: 6, padding: 10,
+    borderLeftWidth: 3, borderLeftColor: C.red,
   },
-  kpiCardDark: {
-    borderLeftColor: C.slate,
-  },
+  kpiCardDark: { borderLeftColor: C.slate },
   kpiLabel: {
-    fontSize:      7,
-    fontFamily:    'Helvetica-Bold',
-    color:         C.slateLight,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    marginBottom:  5,
+    fontSize: 7, fontFamily: 'Helvetica-Bold',
+    color: C.slateLight, textTransform: 'uppercase',
+    letterSpacing: 0.6, marginBottom: 4,
   },
   kpiValue: {
-    fontSize:   13,
-    fontFamily: 'Helvetica-Bold',
-    color:      C.dark,
-    lineHeight: 1,
+    fontSize: 13, fontFamily: 'Helvetica-Bold',
+    color: C.dark, lineHeight: 1,
   },
+  kpiSub: { fontSize: 7, color: C.textMuted, marginTop: 3 },
 
-  // Section
-  section: { marginBottom: 16 },
-  sectionHeader: {
+  // ── Info box (filtros) ────────────────────────────────────────────────────
+  infoBox: {
+    flexDirection:  'row',
+    flexWrap:       'wrap',
+    gap:            6,
+    marginBottom:   12,
+    padding:        8,
+    backgroundColor: C.infoBg,
+    borderWidth:    1, borderColor: C.infoBorder,
+    borderRadius:   5,
+  },
+  infoItem: {
     flexDirection:  'row',
     alignItems:     'center',
-    marginBottom:   8,
-    gap:            6,
+    gap:            4,
   },
-  sectionAccent: {
-    width:           3,
-    height:          14,
-    backgroundColor: C.red,
-    borderRadius:    2,
+  infoLabel: {
+    fontSize:   7, fontFamily: 'Helvetica-Bold',
+    color:      C.infoText, textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
-  sectionTitle: {
-    fontSize:      10,
-    fontFamily:    'Helvetica-Bold',
-    color:         C.dark,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
+  infoValue: { fontSize: 7.5, color: C.slate },
+  infoDot: {
+    width: 3, height: 3,
+    borderRadius: 2,
+    backgroundColor: C.infoBorder,
+    marginHorizontal: 2,
   },
 
-  // Table
+  // ── Seção ─────────────────────────────────────────────────────────────────
+  section:       { marginBottom: 14 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 6 },
+  sectionAccent: { width: 3, height: 14, backgroundColor: C.red, borderRadius: 2 },
+  sectionTitle:  {
+    fontSize: 9, fontFamily: 'Helvetica-Bold',
+    color: C.dark, textTransform: 'uppercase', letterSpacing: 0.6,
+  },
+
+  // ── Tabela ────────────────────────────────────────────────────────────────
   table: {
-    width:        '100%',
-    borderWidth:  1,
-    borderColor:  C.border,
-    borderRadius: 5,
-    overflow:     'hidden',
+    width: '100%',
+    borderWidth: 1, borderColor: C.border,
+    borderRadius: 5, overflow: 'hidden',
     backgroundColor: C.white,
   },
-  tHead: {
-    flexDirection:   'row',
-    backgroundColor: C.red,
-    minHeight:       22,
-  },
-  tRow: { flexDirection: 'row', minHeight: 20 },
-  tRowEven: { backgroundColor: C.white },
-  tRowOdd:  { backgroundColor: C.bg },
+  tHead:     { flexDirection: 'row', backgroundColor: C.red, minHeight: 22 },
+  tRow:      { flexDirection: 'row', minHeight: 20 },
+  tRowEven:  { backgroundColor: C.white },
+  tRowOdd:   { backgroundColor: C.bg },
   tRowTotal: {
     backgroundColor: C.greenBg,
-    borderTopWidth:  1,
-    borderTopColor:  C.greenBorder,
+    borderTopWidth: 1, borderTopColor: C.greenBorder,
   },
   cell: {
-    flex:              1,
-    paddingHorizontal: 8,
-    paddingVertical:   5,
-    borderRightWidth:  1,
-    borderRightColor:  C.border,
-    justifyContent:    'center',
+    flex: 1,
+    paddingHorizontal: 8, paddingVertical: 5,
+    borderRightWidth: 1, borderRightColor: C.border,
+    justifyContent: 'center',
   },
-  cellLast: { borderRightWidth: 0 },
-  cellTh: {
-    fontSize:   8,
-    fontFamily: 'Helvetica-Bold',
-    color:      C.white,
-  },
-  cellThCenter: { textAlign: 'center' },
-  cellTd: { fontSize: 8.5, color: C.text },
-  cellRight: { textAlign: 'right' },
-  cellBold: { fontFamily: 'Helvetica-Bold' },
-  cellTotal: {
-    fontSize:   8.5,
-    fontFamily: 'Helvetica-Bold',
-    color:      C.greenText,
-  },
-  cellTotalRight: { textAlign: 'right' },
+  cellLast:      { borderRightWidth: 0 },
+  cellTh:        { fontSize: 8, fontFamily: 'Helvetica-Bold', color: C.white },
+  cellThCenter:  { textAlign: 'center' },
+  cellTd:        { fontSize: 8, color: C.text },
+  cellRight:     { textAlign: 'right' },
+  cellBold:      { fontFamily: 'Helvetica-Bold' },
+  cellTotal:     { fontSize: 8, fontFamily: 'Helvetica-Bold', color: C.greenText },
+  cellTotalRight:{ textAlign: 'right' },
 
-  // Stock summary row
-  stockRow: {
-    flexDirection: 'row',
-    gap:           8,
-    marginBottom:  10,
-  },
+  // ── Stock ─────────────────────────────────────────────────────────────────
+  stockRow:  { flexDirection: 'row', gap: 8, marginBottom: 10 },
   stockCard: {
-    flex:            1,
-    backgroundColor: C.white,
-    borderWidth:     1,
-    borderColor:     C.border,
-    borderRadius:    6,
-    padding:         8,
+    flex: 1, backgroundColor: C.white,
+    borderWidth: 1, borderColor: C.border,
+    borderRadius: 6, padding: 8,
   },
   stockLabel: {
-    fontSize:      7,
-    fontFamily:    'Helvetica-Bold',
-    color:         C.slateLight,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom:  4,
+    fontSize: 7, fontFamily: 'Helvetica-Bold',
+    color: C.slateLight, textTransform: 'uppercase',
+    letterSpacing: 0.5, marginBottom: 4,
   },
-  stockValue: {
-    fontSize:   12,
-    fontFamily: 'Helvetica-Bold',
-    color:      C.dark,
-  },
+  stockValue:     { fontSize: 12, fontFamily: 'Helvetica-Bold', color: C.dark },
   stockValueWarn: { color: C.red },
 });
 
 // ── Componentes ───────────────────────────────────────────────────────────
 interface ColDef {
-  label: string;
-  flex?: number;
-  right?: boolean;
-  bold?: boolean;
+  label:   string;
+  flex?:   number;
+  right?:  boolean;
+  bold?:   boolean;
   center?: boolean;
 }
 
@@ -301,7 +255,6 @@ function Table({ cols, rows, totals }: {
 }) {
   return (
     <View style={S.table}>
-      {/* Header */}
       <View style={S.tHead} wrap={false}>
         {cols.map((col, i) => (
           <View
@@ -312,14 +265,13 @@ function Table({ cols, rows, totals }: {
               i === cols.length - 1 ? S.cellLast : {},
             ]}
           >
-            <Text style={[S.cellTh, col.center || col.right ? S.cellThCenter : {}]}>
+            <Text style={[S.cellTh, (col.center || col.right) ? S.cellThCenter : {}]}>
               {col.label}
             </Text>
           </View>
         ))}
       </View>
 
-      {/* Rows */}
       {rows.map((row, ri) => (
         <View
           key={ri}
@@ -337,8 +289,8 @@ function Table({ cols, rows, totals }: {
             >
               <Text style={[
                 S.cellTd,
-                col.right  ? S.cellRight : {},
-                col.bold   ? S.cellBold  : {},
+                col.right ? S.cellRight : {},
+                col.bold  ? S.cellBold  : {},
               ]}>
                 {String(row[ci] ?? '—')}
               </Text>
@@ -347,7 +299,6 @@ function Table({ cols, rows, totals }: {
         </View>
       ))}
 
-      {/* Totals */}
       {totals && (
         <View style={[S.tRow, S.tRowTotal]} wrap={false}>
           {cols.map((col, ci) => (
@@ -381,7 +332,50 @@ function SectionTitle({ children }: { children: string }) {
   );
 }
 
-// ── Documento ─────────────────────────────────────────────────────────────
+function PageHeader({
+  logoSrc,
+  subtitle,
+  periodLine,
+  genDate,
+}: {
+  logoSrc:    string | null;
+  subtitle:   string;
+  periodLine: string;
+  genDate:    string;
+}) {
+  return (
+    <View style={S.header} fixed>
+      <View style={S.headerAccent} />
+      <View style={S.headerLogoWrap}>
+        {logoSrc && <Image src={logoSrc} style={S.headerLogo} />}
+        <View>
+          <Text style={S.headerCompany}>Feira das Ferramentas</Text>
+          <Text style={S.headerSub}>{subtitle}</Text>
+        </View>
+      </View>
+      <View style={S.headerRight}>
+        <Text style={S.headerPeriod}>{periodLine}</Text>
+        <Text style={S.headerGenDate}>Gerado em {genDate}</Text>
+      </View>
+    </View>
+  );
+}
+
+function PageFooter({ label }: { label: string }) {
+  return (
+    <View style={S.footer} fixed>
+      <Text style={S.footerText}>{label}</Text>
+      <Text
+        style={S.footerPage}
+        render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`}
+      />
+    </View>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Relatório Financeiro
+// ═══════════════════════════════════════════════════════════════════════════
 export function FinancialReportDocument({ summary }: { summary: FinancialReportSummary }) {
   const logoSrc  = loadLogoBase64();
   const period   = `${fmtDate(summary.filters?.startDate)} a ${fmtDate(summary.filters?.endDate)}`;
@@ -416,56 +410,65 @@ export function FinancialReportDocument({ summary }: { summary: FinancialReportS
   const statusRows = summary.statusBreakdown
     ? Object.entries(summary.statusBreakdown).map(([s, v]) => [statusToPt(s), v])
     : [];
-
   const statusTotal = statusRows.reduce((sum, r) => sum + (Number(r[1]) || 0), 0);
+
+  // Filtros aplicados para exibição
+  const filterTags: { label: string; value: string }[] = [
+    { label: 'Período', value: period },
+    { label: 'Status',  value: statusPt },
+    ...(summary.filters?.minTotal != null
+      ? [{ label: 'Mínimo', value: currency(Number(summary.filters.minTotal)) }]
+      : []),
+    ...(summary.filters?.maxTotal != null
+      ? [{ label: 'Máximo', value: currency(Number(summary.filters.maxTotal)) }]
+      : []),
+    ...(summary.filters?.productQuery
+      ? [{ label: 'Produto', value: summary.filters.productQuery }]
+      : []),
+  ];
 
   return (
     <Document title="Relatório Financeiro" author="Feira das Ferramentas">
       <Page size="A4" style={S.page}>
 
-        {/* ── Header fixo ─────────────────────────────────────────────── */}
-        <View style={S.header} fixed>
-          <View style={S.headerAccent} />
-          <View style={S.headerLogoWrap}>
-            {logoSrc && <Image src={logoSrc} style={S.headerLogo} />}
-            <View>
-              <Text style={S.headerCompany}>Feira das Ferramentas</Text>
-              <Text style={S.headerSub}>Relatório Financeiro  ·  Status: {statusPt}</Text>
+        <PageHeader
+          logoSrc={logoSrc}
+          subtitle={`Relatório Financeiro  ·  Status: ${statusPt}`}
+          periodLine={period}
+          genDate={genDate}
+        />
+        <PageFooter label="Feira das Ferramentas — Confidencial" />
+
+        {/* Filtros aplicados */}
+        <View style={S.infoBox}>
+          {filterTags.map((f, i) => (
+            <View key={i} style={S.infoItem}>
+              {i > 0 && <View style={S.infoDot} />}
+              <Text style={S.infoLabel}>{f.label}: </Text>
+              <Text style={S.infoValue}>{f.value}</Text>
             </View>
-          </View>
-          <View style={S.headerRight}>
-            <Text style={S.headerPeriod}>{period}</Text>
-            <Text style={S.headerGenDate}>Gerado em {genDate}</Text>
-          </View>
+          ))}
         </View>
 
-        {/* ── Footer fixo ─────────────────────────────────────────────── */}
-        <View style={S.footer} fixed>
-          <Text style={S.footerText}>Feira das Ferramentas — Confidencial</Text>
-          <Text
-            style={S.footerPage}
-            render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`}
-          />
-        </View>
-
-        {/* ── KPIs ────────────────────────────────────────────────────── */}
+        {/* KPIs */}
         {includeOrders && (
           <View style={S.kpiGrid}>
             {[
-              { label: 'Receita Total',    value: currency(summary.totalRevenue ?? 0), dark: false },
-              { label: 'Ticket Médio',     value: currency(summary.avgTicket    ?? 0), dark: false },
-              { label: 'Total de Pedidos', value: String(summary.ordersCount    ?? 0), dark: true  },
-              { label: 'Taxa de Conversão',value: `${conversion.toFixed(1)}%`,         dark: true  },
+              { label: 'Receita Total',     value: currency(summary.totalRevenue ?? 0), sub: 'no período',             dark: false },
+              { label: 'Ticket Médio',      value: currency(summary.avgTicket    ?? 0), sub: 'por pedido',             dark: false },
+              { label: 'Total de Pedidos',  value: String(summary.ordersCount    ?? 0), sub: 'no período',             dark: true  },
+              { label: 'Taxa de Conversão', value: `${conversion.toFixed(1)}%`,         sub: 'concluídos / total',     dark: true  },
             ].map((kpi, i) => (
               <View key={i} style={[S.kpiCard, kpi.dark ? S.kpiCardDark : {}]}>
                 <Text style={S.kpiLabel}>{kpi.label}</Text>
                 <Text style={S.kpiValue}>{kpi.value}</Text>
+                <Text style={S.kpiSub}>{kpi.sub}</Text>
               </View>
             ))}
           </View>
         )}
 
-        {/* ── Faturamento Mensal ───────────────────────────────────────── */}
+        {/* Faturamento Mensal */}
         {includeOrders && monthlyRows.length > 0 && (
           <View style={S.section}>
             <SectionTitle>Faturamento Mensal</SectionTitle>
@@ -481,15 +484,15 @@ export function FinancialReportDocument({ summary }: { summary: FinancialReportS
           </View>
         )}
 
-        {/* ── Top Produtos ─────────────────────────────────────────────── */}
+        {/* Top Produtos */}
         {includeOrders && productRows.length > 0 && (
-          <View style={S.section}>
+          <View style={S.section} break>
             <SectionTitle>Top Produtos por Receita</SectionTitle>
             <Table
               cols={[
-                { label: 'Produto',  flex: 5 },
-                { label: 'Qtd',      flex: 1, right: true },
-                { label: 'Receita',  flex: 2, right: true },
+                { label: 'Produto', flex: 5 },
+                { label: 'Qtd',     flex: 1, right: true },
+                { label: 'Receita', flex: 2, right: true },
               ]}
               rows={productRows}
               totals={productTotals}
@@ -497,7 +500,7 @@ export function FinancialReportDocument({ summary }: { summary: FinancialReportS
           </View>
         )}
 
-        {/* ── Status dos Pedidos ───────────────────────────────────────── */}
+        {/* Status dos Pedidos */}
         {statusRows.length > 0 && (
           <View style={S.section}>
             <SectionTitle>Status dos Pedidos</SectionTitle>
@@ -512,18 +515,17 @@ export function FinancialReportDocument({ summary }: { summary: FinancialReportS
           </View>
         )}
 
-        {/* ── Saúde do Estoque ─────────────────────────────────────────── */}
+        {/* Saúde do Estoque */}
         {summary.stockSummary && (
-          <View style={S.section}>
+          <View style={S.section} break>
             <SectionTitle>Saúde do Estoque</SectionTitle>
 
-            {/* Cards de resumo */}
             <View style={S.stockRow}>
               {[
-                { label: 'Total de Itens',       value: String(summary.stockSummary.totalItems),       warn: false },
-                { label: 'Baixo Estoque',         value: String(summary.stockSummary.lowStockCount),    warn: summary.stockSummary.lowStockCount > 0 },
-                { label: 'Zerados',               value: String(summary.stockSummary.zeroStockCount),   warn: summary.stockSummary.zeroStockCount > 0 },
-                { label: 'Valor Potencial',        value: currency(summary.stockSummary.totalStockValue), warn: false },
+                { label: 'Total de Itens',  value: String(summary.stockSummary.totalItems),        warn: false },
+                { label: 'Baixo Estoque',   value: String(summary.stockSummary.lowStockCount),     warn: summary.stockSummary.lowStockCount > 0 },
+                { label: 'Zerados',         value: String(summary.stockSummary.zeroStockCount),    warn: summary.stockSummary.zeroStockCount > 0 },
+                { label: 'Valor Potencial', value: currency(summary.stockSummary.totalStockValue), warn: false },
               ].map((card, i) => (
                 <View key={i} style={S.stockCard}>
                   <Text style={S.stockLabel}>{card.label}</Text>
@@ -534,7 +536,6 @@ export function FinancialReportDocument({ summary }: { summary: FinancialReportS
               ))}
             </View>
 
-            {/* Itens críticos */}
             {summary.lowStockItems && summary.lowStockItems.length > 0 && (
               <View>
                 <View style={[S.sectionHeader, { marginTop: 4, marginBottom: 6 }]}>
@@ -548,11 +549,9 @@ export function FinancialReportDocument({ summary }: { summary: FinancialReportS
                     { label: 'Produto', flex: 4 },
                     { label: 'SKU',     flex: 2 },
                     { label: 'Estoque', flex: 1, right: true },
-                    { label: 'Mínimo', flex: 1, right: true },
+                    { label: 'Mínimo',  flex: 1, right: true },
                   ]}
-                  rows={summary.lowStockItems.map(p => [
-                    p.name, p.sku ?? '—', p.stock, p.minStock,
-                  ])}
+                  rows={summary.lowStockItems.map(p => [p.name, p.sku ?? '—', p.stock, p.minStock])}
                 />
               </View>
             )}
@@ -564,10 +563,88 @@ export function FinancialReportDocument({ summary }: { summary: FinancialReportS
   );
 }
 
-/** Gera o PDF server-side e retorna um Buffer (consumido pelo API route). */
 export async function generateFinancialReportPdf(summary: FinancialReportSummary): Promise<Buffer> {
-  const buffer = await renderToBuffer(
-    <FinancialReportDocument summary={summary} />
+  const buffer = await renderToBuffer(<FinancialReportDocument summary={summary} />);
+  return Buffer.from(buffer);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Relatório de Picking
+// ═══════════════════════════════════════════════════════════════════════════
+export interface PickingPdfItem {
+  id:       string;
+  name:     string;
+  sku?:     string | null;
+  location: string;
+  quantity: number;
+}
+
+export function PickingReportDocument({ items }: { items: PickingPdfItem[] }) {
+  const logoSrc = loadLogoBase64();
+  const genDate = new Date().toLocaleString('pt-BR');
+
+  const totalUnits    = items.reduce((s, i) => s + i.quantity, 0);
+  const withLocation  = items.filter(i => i.location !== 'Sem localização cadastrada').length;
+  const missingLoc    = items.length - withLocation;
+
+  const tableRows = items.map(i => [i.name, i.sku || '—', i.location, i.quantity]);
+  const tableTotals: (string | number | null)[] = ['TOTAL', null, null, totalUnits];
+
+  return (
+    <Document title="Relatório de Picking" author="Feira das Ferramentas">
+      <Page size="A4" style={S.page}>
+
+        <PageHeader
+          logoSrc={logoSrc}
+          subtitle="Relatório de Picking  ·  Separação de Pedidos"
+          periodLine={`${items.length} produto(s)  ·  ${totalUnits} unidade(s)`}
+          genDate={genDate}
+        />
+        <PageFooter label="Feira das Ferramentas — Picking" />
+
+        {/* KPIs */}
+        <View style={S.kpiGrid}>
+          {[
+            { label: 'Produtos Únicos',   value: String(items.length),   sub: 'a separar',              dark: false },
+            { label: 'Unidades Totais',   value: String(totalUnits),     sub: 'soma de quantidades',    dark: false },
+            { label: 'Com Localização',   value: String(withLocation),   sub: `de ${items.length} itens`, dark: true },
+            { label: 'Sem Localização',   value: String(missingLoc),     sub: 'verificar endereço',     dark: true  },
+          ].map((kpi, i) => (
+            <View key={i} style={[
+              S.kpiCard,
+              kpi.dark ? S.kpiCardDark : {},
+              i === 3 && missingLoc > 0 ? { borderLeftColor: C.red } : {},
+            ]}>
+              <Text style={S.kpiLabel}>{kpi.label}</Text>
+              <Text style={[S.kpiValue, i === 3 && missingLoc > 0 ? { color: C.red } : {}]}>
+                {kpi.value}
+              </Text>
+              <Text style={S.kpiSub}>{kpi.sub}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Itens para separar */}
+        <View style={S.section}>
+          <SectionTitle>Itens para Separar</SectionTitle>
+          <Table
+            cols={[
+              { label: 'Produto',              flex: 4 },
+              { label: 'SKU',                  flex: 1.5 },
+              { label: 'Endereço no Estoque',  flex: 2.5 },
+              { label: 'Qtd',                  flex: 0.8, right: true },
+            ]}
+            rows={tableRows}
+            totals={tableTotals}
+          />
+        </View>
+
+      </Page>
+    </Document>
   );
+}
+
+export async function generatePickingReportPdf(items: PickingPdfItem[]): Promise<Buffer> {
+  const buffer = await renderToBuffer(<PickingReportDocument items={items} />);
   return Buffer.from(buffer);
 }

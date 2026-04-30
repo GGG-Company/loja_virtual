@@ -218,50 +218,22 @@ export default function AdminPickingPage() {
   const exportPdf = async () => {
     if (pickingReport.length === 0) return;
     try {
-      const { pdf, Document, Page, Text, View, StyleSheet } = await import('@react-pdf/renderer');
-      const styles = StyleSheet.create({
-        page: { padding: 24, fontSize: 9, color: '#111' },
-        title: { fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
-        subtitle: { fontSize: 9, color: '#555', marginBottom: 12 },
-        header: { flexDirection: 'row', borderBottomWidth: 1, borderColor: '#333', paddingBottom: 6, marginBottom: 6, backgroundColor: '#f5f5f5' },
-        row: { flexDirection: 'row', paddingVertical: 5, borderBottomWidth: 0.5, borderColor: '#ddd', minHeight: 20 },
-        colName: { width: '40%', paddingRight: 8 },
-        colSku: { width: '18%', paddingRight: 8 },
-        colLocation: { width: '32%', paddingRight: 8 },
-        colQty: { width: '10%', textAlign: 'right' },
-        bold: { fontWeight: 'bold' },
+      const res = await fetch('/api/admin/picking/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: pickingReport }),
       });
-      const generatedAt = new Date().toLocaleString('pt-BR');
-      const doc = (
-        <Document>
-          <Page size="A4" orientation="landscape" style={styles.page}>
-            <Text style={styles.title}>Relatório de Picking</Text>
-            <Text style={styles.subtitle}>Gerado em {generatedAt}</Text>
-            <View style={styles.header}>
-              <Text style={[styles.colName, styles.bold]}>Produto</Text>
-              <Text style={[styles.colSku, styles.bold]}>SKU</Text>
-              <Text style={[styles.colLocation, styles.bold]}>Endereço</Text>
-              <Text style={[styles.colQty, styles.bold]}>Qtd</Text>
-            </View>
-            {pickingReport.map((item) => (
-              <View key={`${item.id}-${item.location}`} style={styles.row} wrap={false}>
-                <Text style={styles.colName}>{item.name}</Text>
-                <Text style={styles.colSku}>{item.sku || '-'}</Text>
-                <Text style={styles.colLocation}>{item.location}</Text>
-                <Text style={styles.colQty}>{item.quantity}</Text>
-              </View>
-            ))}
-          </Page>
-        </Document>
-      );
-      const blob = await pdf(doc).toBlob();
-      const url = URL.createObjectURL(blob);
+      if (!res.ok) throw new Error('Servidor retornou erro');
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `picking-report-${Date.now()}.pdf`;
+      const disp = res.headers.get('Content-Disposition') ?? '';
+      const match = disp.match(/filename="([^"]+)"/);
+      link.download = match ? match[1] : `picking-${Date.now()}.pdf`;
       link.click();
       URL.revokeObjectURL(url);
-      toast.success('PDF gerado');
+      toast.success('PDF gerado com sucesso');
     } catch (error) {
       console.error('Erro ao gerar PDF', error);
       toast.error('Não foi possível gerar o PDF');

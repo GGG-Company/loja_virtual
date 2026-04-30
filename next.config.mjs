@@ -55,18 +55,17 @@ const nextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=3600' },
         ],
       }] : []),
-      // ── Páginas ISR (catálogo, produto) — só produção ──────────────────
+      // ── Páginas HTML — cache curto para não travar clientes após deploy ──
       ...(!isDev ? [{
         source: '/produtos(.*)',
         headers: [
-          { key: 'Cache-Control', value: 'public, s-maxage=3600, stale-while-revalidate=300' },
+          { key: 'Cache-Control', value: 'public, max-age=300, stale-while-revalidate=60' },
         ],
-      }] : []),
-      // ── Homepage — só produção ─────────────────────────────────────────
-      ...(!isDev ? [{
+      },
+      {
         source: '/',
         headers: [
-          { key: 'Cache-Control', value: 'public, s-maxage=600, stale-while-revalidate=60' },
+          { key: 'Cache-Control', value: 'public, max-age=120, stale-while-revalidate=60' },
         ],
       }] : []),
       // ── Segurança global ───────────────────────────────────────────────

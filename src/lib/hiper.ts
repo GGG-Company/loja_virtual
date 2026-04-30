@@ -73,8 +73,27 @@ async function getIbge(cep: string): Promise<number> {
 }
 
 // ── Produtos ──────────────────────────────────────────────────────────────────
+// Cache server-side: evita rebuscar 22k produtos a cada batch do sync.
+// TTL de 20 min — suficiente para completar uma sincronização completa.
+
+let _productsCache: { pds: number; data: any[]; expiresAt: number } | null = null;
+const PRODUCTS_CACHE_TTL_MS = 20 * 60 * 1000; // 20 minutos
+
+export function invalidateHiperProductsCache() {
+  _productsCache = null;
+}
 
 export async function getHiperProducts(pontoDeSincronizacao = 0): Promise<any[] | null> {
+  // Retorna do cache se o ponto de sincronização for o mesmo e ainda válido
+  if (
+    _productsCache &&
+    _productsCache.pds === pontoDeSincronizacao &&
+    Date.now() < _productsCache.expiresAt
+  ) {
+    logger.info('[HIPER] Produtos retornados do cache (%d itens)', _productsCache.data.length);
+    return _productsCache.data;
+  }
+
   const token = await getToken();
   if (!token) return null;
 
@@ -98,7 +117,11 @@ export async function getHiperProducts(pontoDeSincronizacao = 0): Promise<any[] 
     }
 
     const produtos = data.produtos ?? data.data ?? data;
-    return Array.isArray(produtos) ? produtos : [];
+    const lista = Array.isArray(produtos) ? produtos : [];
+
+    _productsCache = { pds: pontoDeSincronizacao, data: lista, expiresAt: Date.now() + PRODUCTS_CACHE_TTL_MS };
+    logger.info('[HIPER] %d produtos buscados e cacheados por 20 min', lista.length);
+    return lista;
   } catch (err) {
     logger.error(err as Error, '[HIPER] Exceção ao buscar produtos');
     return null;
