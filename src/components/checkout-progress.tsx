@@ -23,7 +23,7 @@ export function CheckoutProgress({ currentStep }: CheckoutProgressProps) {
       animate={{ opacity: 1, y: 0 }}
       className="mb-10"
     >
-      <div className="flex items-center justify-center gap-1 overflow-x-auto pb-2">
+      <div className="flex items-center justify-center gap-0.5 sm:gap-1 overflow-x-auto pb-2">
         {STEPS.map((step, index) => {
           const Icon = step.icon;
           const isDone = index < currentStep;
@@ -37,18 +37,18 @@ export function CheckoutProgress({ currentStep }: CheckoutProgressProps) {
                 className="flex flex-col items-center"
               >
                 <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 shadow-sm ${
+                  className={`w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-300 shadow-sm ${
                     isActive
-                      ? 'bg-[#CC1020] text-white shadow-red-200 shadow-md ring-4 ring-red-100'
+                      ? 'bg-[#CC1020] text-white shadow-red-200 shadow-md ring-2 sm:ring-4 ring-red-100'
                       : isDone
                       ? 'bg-[#1A1A1A] text-white'
                       : 'bg-gray-200 text-gray-400'
                   }`}
                 >
-                  {isDone ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                  {isDone ? <Check className="h-3 w-3 sm:h-4 sm:w-4" /> : <Icon className="h-3 w-3 sm:h-4 sm:w-4" />}
                 </div>
                 <span
-                  className={`text-[11px] mt-1.5 font-medium whitespace-nowrap ${
+                  className={`text-[9px] sm:text-[11px] mt-1 sm:mt-1.5 font-medium whitespace-nowrap ${
                     isActive
                       ? 'text-[#CC1020] font-bold'
                       : isDone
@@ -62,7 +62,7 @@ export function CheckoutProgress({ currentStep }: CheckoutProgressProps) {
 
               {index < STEPS.length - 1 && (
                 <div
-                  className={`h-0.5 w-8 mx-1.5 mt-[-18px] transition-colors duration-300 ${
+                  className={`h-0.5 w-4 sm:w-8 mx-0.5 sm:mx-1.5 mt-[-14px] sm:mt-[-18px] transition-colors duration-300 ${
                     isDone ? 'bg-[#1A1A1A]' : 'bg-gray-200'
                   }`}
                 />

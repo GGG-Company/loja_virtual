@@ -169,35 +169,35 @@ export const ProductCard = memo(function ProductCard({ product, className, prior
         </div>
 
         {/* ── Content ───────────────────────────────────── */}
-        <div className="p-4 space-y-2">
-          <h3 className="font-body font-semibold text-sm text-[#1A1A1A] line-clamp-2 min-h-[2.8rem] leading-snug">
+        <div className="p-2.5 sm:p-4 space-y-1.5 sm:space-y-2">
+          <h3 className="font-body font-semibold text-xs sm:text-sm text-[#1A1A1A] line-clamp-2 min-h-[2.4rem] sm:min-h-[2.8rem] leading-snug">
             {product.name}
           </h3>
 
           <div className="space-y-0.5">
             {product.promotionalPrice && product.promotionalPrice < product.price && (
-              <p className="text-xs text-gray-400 line-through font-body">
+              <p className="text-[10px] sm:text-xs text-gray-400 line-through font-body">
                 {formatPrice(product.price)}
               </p>
             )}
-            <p className="text-xl font-display font-bold text-[#CC1020]">
+            <p className="text-base sm:text-xl font-display font-bold text-[#CC1020]">
               {formatPrice(finalPrice)}
             </p>
-            <p className="text-[11px] text-gray-500 font-body">
+            <p className="text-[10px] sm:text-[11px] text-gray-500 font-body">
               {bestInstallmentText()}
             </p>
           </div>
 
           <button
-            className="cart-icon-bounce btn-fill w-full mt-2 bg-[#1A1A1A] text-white font-display font-bold text-sm tracking-wide uppercase py-2.5 transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-70"
+            className="cart-icon-bounce btn-fill w-full mt-1.5 sm:mt-2 bg-[#1A1A1A] text-white font-display font-bold text-[11px] sm:text-sm tracking-wide uppercase py-2 sm:py-2.5 transition-colors duration-200 flex items-center justify-center gap-1.5 sm:gap-2 disabled:opacity-70"
             onClick={handleAddToCart}
             disabled={isAdding}
             aria-label={`Adicionar ${product.name} ao carrinho`}
           >
             {isAdding ? (
-              <><Loader2 className="h-4 w-4 animate-spin" /> Adicionando...</>
+              <><Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" /> Adicionando...</>
             ) : (
-              'Adicionar ao Carrinho'
+              'Adicionar'
             )}
           </button>
         </div>

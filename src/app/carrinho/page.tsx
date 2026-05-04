@@ -255,13 +255,13 @@ export default function CartPage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-gray-50 py-12">
+      <main className="min-h-screen bg-gray-50 py-6 sm:py-12">
         <div className="container mx-auto px-4">
           <CheckoutProgress currentStep={0} />
 
           {/* Cart Items */}
           {cartItems.length > 0 && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-8">
               <div className="lg:col-span-2 space-y-4">
                 {/* Clear cart */}
                 <div className="flex justify-end">
@@ -275,18 +275,18 @@ export default function CartPage() {
                 </div>
 
                 {cartItems.map((item) => (
-                  <motion.div key={item.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="bg-white rounded-sm shadow-sm border border-gray-100 border-t-2 border-t-[#CC1020] p-4 flex gap-4">
-                    <div className="relative w-24 h-24 flex-shrink-0">
+                  <motion.div key={item.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="bg-white rounded-sm shadow-sm border border-gray-100 border-t-2 border-t-[#CC1020] p-3 sm:p-4 flex gap-3 sm:gap-4">
+                    <div className="relative w-16 h-16 sm:w-24 sm:h-24 flex-shrink-0">
                       <Image src={item.imageUrl || "/placeholder.svg"} alt={item.name} fill className="object-cover rounded" unoptimized />
                     </div>
 
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg">{item.name}</h3>
-                      {item.selectedVoltage && <p className="text-sm text-gray-600">Voltagem: {item.selectedVoltage}</p>}
-                      <p className="text-primary-600 font-bold mt-2">R$ {item.price.toFixed(2)}</p>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-sm sm:text-base leading-snug line-clamp-2">{item.name}</h3>
+                      {item.selectedVoltage && <p className="text-xs sm:text-sm text-gray-600">Voltagem: {item.selectedVoltage}</p>}
+                      <p className="text-primary-600 font-bold mt-1 sm:mt-2 text-sm sm:text-base">R$ {item.price.toFixed(2)}</p>
                     </div>
 
-                    <div className="flex flex-col items-end justify-between">
+                    <div className="flex flex-col items-end justify-between shrink-0">
                       <button
                         onClick={() => setRemoveTarget(item.id)}
                         className="text-red-500 hover:text-[#CC1020] transition-colors"

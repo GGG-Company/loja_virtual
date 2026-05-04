@@ -201,7 +201,7 @@ export function ProductFilters({
   const voltageList = Object.entries(voltageCounts).sort((a, b) => b[1] - a[1]);
 
   return (
-    <div className="bg-white rounded-sm shadow-md border-t-4 border-[#CC1020] p-4 sticky top-24">
+    <div className="bg-white rounded-sm shadow-md border-t-4 border-[#CC1020] p-3 sm:p-4 lg:sticky lg:top-24 max-h-[80vh] lg:max-h-[calc(100vh-7rem)] overflow-y-auto">
       {/* ── Header ── */}
       <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-1">
         <div className="flex items-center gap-2">

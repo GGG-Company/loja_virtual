@@ -67,7 +67,30 @@ export default function AdminOrdersPage() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
           </div>
         )}
-        <div className="overflow-x-auto">
+
+        {/* Mobile cards — visível só em telas pequenas */}
+        <div className="sm:hidden divide-y divide-gray-200">
+          {orders.map((order) => (
+            <div key={order.id} className="p-4 flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <Link href={`/admin/orders/${order.id}`} className="text-primary-600 hover:underline font-semibold text-sm">
+                  {order.orderNumber}
+                </Link>
+                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusBadgeClass(order.status)}`}>
+                  {statusToPt(order.status)}
+                </span>
+              </div>
+              <p className="text-sm text-gray-700 truncate">{order.user.name || order.user.email}</p>
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <span>{new Date(order.createdAt).toLocaleDateString('pt-BR')}</span>
+                <span className="font-semibold text-gray-900 text-sm">R$ {Number(order.total).toFixed(2)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop table — oculto em mobile */}
+        <div className="hidden sm:block overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>

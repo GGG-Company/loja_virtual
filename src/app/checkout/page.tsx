@@ -548,8 +548,8 @@ export default function CheckoutPage() {
       <main className="min-h-screen bg-gray-50 py-12">
         <div className="container mx-auto px-4 max-w-6xl">
           {/* Steps Indicator */}
-          <div className="mb-12">
-            <div className="flex items-center justify-center gap-4 overflow-x-auto pb-4">
+          <div className="mb-8 sm:mb-12">
+            <div className="flex items-center justify-center gap-1 sm:gap-4 overflow-x-auto pb-4">
               {steps.map((step, index) => {
                 const Icon = step.icon;
                 const isActive = currentStep === step.id;
@@ -558,10 +558,10 @@ export default function CheckoutPage() {
                 return (
                   <div key={step.id} className="flex items-center">
                     <div className={`flex flex-col items-center ${isActive ? "text-primary-600" : isCompleted ? "text-green-600" : "text-metallic-400"}`}>
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${isActive ? "bg-primary-600 text-white scale-110" : isCompleted ? "bg-green-500 text-white" : "bg-metallic-200"}`}>{isCompleted ? <Check className="h-6 w-6" /> : <Icon className="h-6 w-6" />}</div>
-                      <span className="text-xs mt-2 font-medium">{step.label}</span>
+                      <div className={`w-8 h-8 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all ${isActive ? "bg-primary-600 text-white scale-110" : isCompleted ? "bg-green-500 text-white" : "bg-metallic-200"}`}>{isCompleted ? <Check className="h-4 w-4 sm:h-6 sm:w-6" /> : <Icon className="h-4 w-4 sm:h-6 sm:w-6" />}</div>
+                      <span className="text-[9px] sm:text-xs mt-1 sm:mt-2 font-medium">{step.label}</span>
                     </div>
-                    {index < steps.length - 1 && <div className={`h-0.5 w-12 mx-2 transition-all ${isCompleted ? "bg-green-500" : "bg-metallic-200"}`} />}
+                    {index < steps.length - 1 && <div className={`h-0.5 w-5 sm:w-12 mx-0.5 sm:mx-2 transition-all ${isCompleted ? "bg-green-500" : "bg-metallic-200"}`} />}
                   </div>
                 );
               })}

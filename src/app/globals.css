@@ -137,6 +137,15 @@
 }
 
 @layer utilities {
+  /* Ocultar scrollbar mantendo o scroll funcional */
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Password mask - works in all browsers without type=password */
   .password-mask {
     -webkit-text-security: disc;

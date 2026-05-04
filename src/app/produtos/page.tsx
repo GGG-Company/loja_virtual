@@ -161,7 +161,7 @@ function ProductsContent() {
       <Header />
       <main className="min-h-screen bg-gray-50">
         {/* Hero */}
-        <div className="relative bg-[#1A1A1A] text-white py-8 lg:py-14 overflow-hidden">
+        <div className="relative bg-[#1A1A1A] text-white py-5 sm:py-8 lg:py-14 overflow-hidden">
           <div
             className="absolute inset-0 opacity-[0.04] pointer-events-none"
             style={{
@@ -170,21 +170,21 @@ function ProductsContent() {
           />
           <div className="absolute top-0 left-0 right-0 h-1 bg-[#CC1020]" />
           <div className="container mx-auto px-4 relative z-10">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-1 h-8 bg-[#CC1020] rounded-full" />
-              <p className="text-xs font-display font-bold text-[#CC1020] tracking-widest uppercase">
+            <div className="flex items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2">
+              <div className="w-1 h-5 sm:h-8 bg-[#CC1020] rounded-full" />
+              <p className="text-[10px] sm:text-xs font-display font-bold text-[#CC1020] tracking-widest uppercase">
                 Catálogo
               </p>
             </div>
-            <h1 className="font-display text-4xl font-bold uppercase mb-1">Nossos Produtos</h1>
-            <p className="text-gray-300 font-body">Encontre as melhores ferramentas profissionais</p>
+            <h1 className="font-display text-2xl sm:text-4xl font-bold uppercase mb-1">Nossos Produtos</h1>
+            <p className="text-gray-300 font-body text-sm sm:text-base">Encontre as melhores ferramentas profissionais</p>
           </div>
         </div>
 
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
           <Breadcrumb items={[{ label: 'Produtos', href: '/produtos' }]} className="mb-6" />
 
-          <div className="grid lg:grid-cols-4 gap-6">
+          <div className="grid lg:grid-cols-4 gap-4 sm:gap-6">
             {/* Sidebar de filtros */}
             <div className={`lg:col-span-1 ${showFilters ? 'block' : 'hidden lg:block'}`}>
               <ProductFilters
@@ -197,17 +197,18 @@ function ProductsContent() {
             {/* Grid de produtos */}
             <div className="lg:col-span-3">
               {/* Toolbar */}
-              <div className="bg-white rounded-lg shadow-md p-4 mb-6 flex items-center justify-between gap-3">
+              <div className="bg-white rounded-lg shadow-md p-3 sm:p-4 mb-4 sm:mb-6 flex items-center justify-between gap-2 sm:gap-3">
                 <Button
                   variant="outline"
+                  size="sm"
                   onClick={() => setShowFilters(!showFilters)}
-                  className="lg:hidden"
+                  className="lg:hidden h-9 px-3 text-sm"
                 >
-                  <SlidersHorizontal className="h-4 w-4 mr-2" />
+                  <SlidersHorizontal className="h-4 w-4 mr-1.5" />
                   Filtros
                 </Button>
 
-                <span className="hidden lg:block text-sm text-gray-500">
+                <span className="text-xs sm:text-sm text-gray-500 hidden sm:block">
                   {isLoading ? (
                     <span className="animate-pulse bg-gray-200 rounded h-4 w-28 inline-block" />
                   ) : pagination.total > 0 ? (
@@ -222,7 +223,7 @@ function ProductsContent() {
                 <select
                   value={currentSort}
                   onChange={(e) => handleSortChange(e.target.value)}
-                  className="ml-auto border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC1020]/30 focus:border-[#CC1020]"
+                  className="ml-auto border border-gray-300 rounded-md px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#CC1020]/30 focus:border-[#CC1020]"
                 >
                   <option value="recent">Mais Recentes</option>
                   <option value="price-asc">Menor Preço</option>
@@ -232,7 +233,7 @@ function ProductsContent() {
               </div>
 
               {/* Grid */}
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
                 {isLoading ? (
                   [...Array(6)].map((_, i) => <SkeletonCard key={i} />)
                 ) : filteredProducts.length > 0 ? (
