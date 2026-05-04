@@ -7,9 +7,9 @@ export const dynamic = 'force-dynamic';
 // O frontend chama isso uma vez por visita de página.
 export async function POST(
   _req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  const { id } = params;
+  const { id } = await params;
   if (!id) return NextResponse.json({ ok: false }, { status: 400 });
 
   try {
