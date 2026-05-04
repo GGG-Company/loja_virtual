@@ -26,7 +26,12 @@ import { toNum, serializeItems } from '@/lib/decimal-helpers';
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch {
+      // body vazio ou inválido (ex: requisição de teste do Melhor Envio)
+    }
 
     logger.info({
       event: body.type,
