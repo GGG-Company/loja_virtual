@@ -67,6 +67,7 @@ export default function AdminOrdersPage() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
           </div>
         )}
+        <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -115,6 +116,7 @@ export default function AdminOrdersPage() {
             ))}
           </tbody>
         </table>
+        </div>
 
         {orders.length === 0 && (
           <div className="text-center py-10 text-metallic-600">Nenhum pedido encontrado</div>

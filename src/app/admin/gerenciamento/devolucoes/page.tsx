@@ -180,7 +180,7 @@ export default function AdminDevolucoesPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
         {statusOptions.slice(1, 7).map((opt) => {
           const count = stats[opt.value] || 0;
           const statusInfo = statusLabels[opt.value];

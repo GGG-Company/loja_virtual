@@ -349,7 +349,7 @@ export default function EditProductPage() {
             {/* Preços */}
             <div className={cardClass}>
               <p className="text-sm font-semibold text-gray-700">Preços</p>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <Label htmlFor="price">Venda (R$) *</Label>
                   <Input id="price" name="price" type="number" step="0.01" value={formData.price} onChange={handleChange} required className="mt-1" />
@@ -369,7 +369,7 @@ export default function EditProductPage() {
             {/* Estoque */}
             <div className={cardClass}>
               <p className="text-sm font-semibold text-gray-700">Estoque</p>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <Label htmlFor="stock">Qtd. Atual</Label>
                   <Input id="stock" name="stock" type="number" value={formData.stock} disabled className="mt-1 bg-gray-100 cursor-not-allowed" />
@@ -388,7 +388,7 @@ export default function EditProductPage() {
             </div>
 
             {/* Fiscal + Frete lado a lado */}
-            <div className="grid grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div className={cardClass}>
                 <p className="text-sm font-semibold text-gray-700">Dados Fiscais</p>
                 <div>
@@ -417,7 +417,7 @@ export default function EditProductPage() {
                   <Label htmlFor="weight">Peso (kg)</Label>
                   <Input id="weight" name="weight" type="number" step="0.001" min="0" value={formData.weight} onChange={handleChange} placeholder="0.500" className="mt-1" />
                 </div>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 sm:grid-cols-3 gap-2">
                   <div>
                     <Label htmlFor="height">Altura</Label>
                     <Input id="height" name="height" type="number" step="0.1" min="0" value={formData.height} onChange={handleChange} placeholder="cm" className="mt-1" />

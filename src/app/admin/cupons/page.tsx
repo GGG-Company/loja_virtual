@@ -104,6 +104,7 @@ export default function CuponsAdminPage() {
 
       {/* Coupons Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-50">
             <tr>
@@ -194,6 +195,7 @@ export default function CuponsAdminPage() {
             ))}
           </tbody>
         </table>
+        </div>
 
         {filteredCoupons.length === 0 && (
           <div className="text-center py-12">

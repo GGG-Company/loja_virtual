@@ -120,7 +120,7 @@ export default function NovoCupomPage() {
         </div>
 
         {/* Tipo e Valor do Desconto */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="discountType">Tipo de Desconto*</Label>
             <select
@@ -202,7 +202,7 @@ export default function NovoCupomPage() {
         )}
 
         {/* Limites */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="minPurchase">Compra Mínima (R$)</Label>
             <input
@@ -230,7 +230,7 @@ export default function NovoCupomPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="usageLimit">Limite de Uso Total</Label>
             <input
@@ -257,7 +257,7 @@ export default function NovoCupomPage() {
         </div>
 
         {/* Validade */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="startDate">Data Início</Label>
             <input

@@ -68,7 +68,7 @@ export function Header() {
                 <div className="font-display text-xl leading-none text-[#1A1A1A]">
                   Ferramentas
                 </div>
-                <p className="text-[9px] font-semibold text-[#CC1020] tracking-widest uppercase mt-0.5">
+                <p className="text-[10px] font-semibold text-[#CC1020] tracking-widest uppercase mt-0.5">
                   Onde você encontra tudo!
                 </p>
               </div>

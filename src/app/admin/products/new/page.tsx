@@ -183,7 +183,7 @@ export default function NewProductPage() {
           {/* Preços */}
           <div className="border rounded-lg p-4 space-y-3">
             <Label className="text-base font-semibold">Preços</Label>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="price">Preço de Venda (R$) *</Label>
                 <Input id="price" name="price" type="number" step="0.01" value={formData.price} onChange={handleChange} required placeholder="0,00" />
@@ -193,7 +193,7 @@ export default function NewProductPage() {
                 <Input id="promotionalPrice" name="promotionalPrice" type="number" step="0.01" value={formData.promotionalPrice} onChange={handleChange} placeholder="Opcional" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="cost">Custo (R$)</Label>
                 <Input id="cost" name="cost" type="number" step="0.01" value={formData.cost} onChange={handleChange} placeholder="Preço de custo" />
@@ -205,7 +205,7 @@ export default function NewProductPage() {
           {/* Estoque */}
           <div className="border rounded-lg p-4 space-y-3">
             <Label className="text-base font-semibold">Estoque</Label>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="stock">Estoque Inicial *</Label>
                 <Input id="stock" name="stock" type="number" value={formData.stock} onChange={handleChange} required placeholder="0" />
@@ -225,7 +225,7 @@ export default function NewProductPage() {
           {/* Fiscal */}
           <div className="border rounded-lg p-4 space-y-3">
             <Label className="text-base font-semibold">Dados Fiscais</Label>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="ean">EAN / Código de Barras</Label>
                 <Input id="ean" name="ean" value={formData.ean} onChange={handleChange} placeholder="Ex: 7891234567890" />
@@ -237,7 +237,7 @@ export default function NewProductPage() {
                 <p className="text-xs text-gray-500 mt-1">Código da Nomenclatura Comum do Mercosul</p>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="origin">Origem</Label>
                 <select id="origin" name="origin" value={formData.origin} onChange={handleChange} className={selectClass}>
@@ -300,7 +300,7 @@ export default function NewProductPage() {
           <div className="border rounded-lg p-4 space-y-3">
             <Label className="text-base font-semibold">Frete — Peso e Dimensões</Label>
             <p className="text-xs text-gray-500">Usado pelo Melhor Envio para calcular o frete. Sem preenchimento usa padrão: 1 kg · 12×18×24 cm.</p>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="weight">Peso (kg)</Label>
                 <Input id="weight" name="weight" type="number" step="0.001" min="0" value={formData.weight} onChange={handleChange} placeholder="Ex: 0.500" />

@@ -574,8 +574,8 @@ export default function CheckoutPage() {
               <AnimatePresence mode="wait">
                 {/* Step 1: Dados Pessoais */}
                 {currentStep === 1 && (
-                  <motion.div key="dados" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="bg-white rounded-lg shadow p-8">
-                    <h2 className="text-2xl font-bold mb-6">Dados Pessoais</h2>
+                  <motion.div key="dados" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="bg-white rounded-lg shadow p-4 sm:p-8">
+                    <h2 className="text-xl sm:text-2xl font-bold mb-6">Dados Pessoais</h2>
                     <form onSubmit={handleNextStep} className="space-y-4">
                       <div>
                         <Label htmlFor="nome">Nome Completo</Label>
@@ -587,7 +587,7 @@ export default function CheckoutPage() {
                         <Input id="email" type="email" autoComplete="email" value={dadosForm.email} onChange={(e) => setDadosForm({ ...dadosForm, email: e.target.value })} required />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor="telefone">Telefone</Label>
                           <Input
@@ -652,8 +652,8 @@ export default function CheckoutPage() {
 
                 {/* Step 2: Endereço de Entrega */}
                 {currentStep === 2 && (
-                  <motion.div key="entrega" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="bg-white rounded-lg shadow p-8">
-                    <h2 className="text-2xl font-bold mb-6">Endereço de Entrega</h2>
+                  <motion.div key="entrega" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="bg-white rounded-lg shadow p-4 sm:p-8">
+                    <h2 className="text-xl sm:text-2xl font-bold mb-6">Endereço de Entrega</h2>
                     <form onSubmit={handleNextStep} className="space-y-4">
                       <div>
                         <Label htmlFor="cep">CEP</Label>
@@ -689,7 +689,7 @@ export default function CheckoutPage() {
                         <Input id="endereco" autoComplete="address-line1" value={entregaForm.endereco} onChange={(e) => setEntregaForm({ ...entregaForm, endereco: e.target.value })} required />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor="numero">Número</Label>
                           <Input
@@ -710,7 +710,7 @@ export default function CheckoutPage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
                           <Label htmlFor="bairro">Bairro</Label>
                           <Input id="bairro" value={entregaForm.bairro} onChange={(e) => setEntregaForm({ ...entregaForm, bairro: e.target.value })} required />
@@ -801,8 +801,8 @@ export default function CheckoutPage() {
 
                 {/* Step 3: Pagamento */}
                 {currentStep === 3 && (
-                  <motion.div key="pagamento" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="bg-white rounded-lg shadow p-8">
-                    <h2 className="text-2xl font-bold mb-6">Forma de Pagamento</h2>
+                  <motion.div key="pagamento" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="bg-white rounded-lg shadow p-4 sm:p-8">
+                    <h2 className="text-xl sm:text-2xl font-bold mb-6">Forma de Pagamento</h2>
                     <div className="space-y-4">
                       <label className={`flex items-center p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${paymentMethod === "pix" ? "border-primary-600 bg-primary-50" : "border-gray-200"}`}>
                         <input type="radio" name="payment" value="pix" checked={paymentMethod === "pix"} onChange={(e) => setPaymentMethod(e.target.value)} className="mr-4" />
@@ -932,8 +932,8 @@ export default function CheckoutPage() {
 
                 {/* Step 4: Confirmação */}
                 {currentStep === 4 && (
-                  <motion.div key="confirmacao" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="bg-white rounded-lg shadow p-8">
-                    <h2 className="text-2xl font-bold mb-6">Confirmar Pedido</h2>
+                  <motion.div key="confirmacao" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="bg-white rounded-lg shadow p-4 sm:p-8">
+                    <h2 className="text-xl sm:text-2xl font-bold mb-6">Confirmar Pedido</h2>
 
                     <div className="space-y-6">
                       {/* Resumo dos Produtos */}
