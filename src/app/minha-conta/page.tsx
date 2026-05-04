@@ -110,7 +110,7 @@ type ProfileForm = {
 export default function MyAccountPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'perfil' | 'pedidos' | 'devolucoes' | 'enderecos' | 'suporte'>('perfil');
+  const [activeTab, setActiveTab] = useState<'perfil' | 'pedidos' | 'devolucoes' | 'enderecos' | 'suporte' | 'favoritos'>('perfil');
 
   // Profile state
   const [profile, setProfile] = useState<ProfileData>({

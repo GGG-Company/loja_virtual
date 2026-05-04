@@ -404,7 +404,7 @@ export async function POST(req: NextRequest) {
       deactivated += disappeared.length;
 
       // Loga a zeragem de estoque para histórico
-      const deactLogs = disappeared
+      const deactLogs: Prisma.StockLogCreateManyInput[] = disappeared
         .filter(p => p.stock > 0)
         .map(p => ({
           productId: p.id,

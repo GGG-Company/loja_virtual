@@ -30,7 +30,7 @@ async function meeFetch(url: string, options: RequestInit, maxRetries = 3): Prom
       logger.warn('[MELHOR_ENVIO] Tentativa %d falhou com status %d — aguardando %dms', attempt + 1, res.status, delays[attempt] ?? 0);
     } catch (err) {
       lastError = err;
-      logger.warn('[MELHOR_ENVIO] Tentativa %d falhou com exceção: %o — aguardando %dms', attempt + 1, err, delays[attempt] ?? 0);
+      logger.warn('[MELHOR_ENVIO] Tentativa %d falhou com exceção: %o — aguardando %dms', attempt + 1, err as object, delays[attempt] ?? 0);
     }
     if (attempt < maxRetries - 1) {
       await new Promise(r => setTimeout(r, delays[attempt]));

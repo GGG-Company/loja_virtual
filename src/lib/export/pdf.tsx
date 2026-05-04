@@ -631,9 +631,7 @@ export function PickingReportDocument({ orders }: { orders: PickingPdfOrder[] })
         {orders.map((order, oi) => (
           <View key={oi} style={S.section}>
             <SectionTitle>
-              {order.orderNumber}
-              {order.customerName ? `  ·  ${order.customerName}` : ''}
-              {order.createdAt ? `  ·  ${order.createdAt}` : ''}
+              {[order.orderNumber, order.customerName, order.createdAt].filter(Boolean).join('  ·  ')}
             </SectionTitle>
             <Table
               cols={[
