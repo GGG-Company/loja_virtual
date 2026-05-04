@@ -32,7 +32,11 @@
       "Bash(node -e \"const pkg = require\\('./node_modules/@mercadopago/sdk-react/package.json'\\); console.log\\(pkg.version\\)\")",
       "Bash(npm info *)",
       "Bash(node -e ' *)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git commit *)"
     ]
   }
 }
