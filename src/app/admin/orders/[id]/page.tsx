@@ -26,6 +26,7 @@ interface OrderDetail {
   melhorEnvioService?: string | null;
   trackingCode?: string | null;
   trackingUrl?: string | null;
+  paymentId?: string | null;
   user: { name: string | null; email: string };
   items: Array<{
     id: string;
