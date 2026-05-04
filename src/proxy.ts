@@ -80,6 +80,7 @@ export async function proxy(request: NextRequest) {
     const publicApiRoutes = [
       '/api/auth',
       '/api/payments/mercadopago/webhook',
+      '/api/payments/mercadopago/installments',
       '/api/integrations/melhor-envio/authorize',
       '/api/integrations/melhor-envio/callback',
       '/api/products',
