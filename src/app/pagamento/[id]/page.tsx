@@ -139,10 +139,14 @@ export default function PagamentoPage() {
     }
   };
 
-  const handleCardSuccess = (_paymentId: string) => {
+  const handleCardSuccess = (_paymentId: string, statusDetail?: string) => {
     clearCart();
-    toast.success('Pagamento aprovado!');
-    router.push(`/minha-conta/pedidos/${params.id}`);
+    if (statusDetail === 'approved' || statusDetail === 'sandbox_auto_approved') {
+      router.push(`/pagamento/sucesso?orderId=${params.id}`);
+    } else {
+      // pending — vai direto para o pedido
+      router.push(`/minha-conta/pedidos/${params.id}`);
+    }
   };
 
   const handleCardError = (_error: any) => {

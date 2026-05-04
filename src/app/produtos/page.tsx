@@ -9,7 +9,7 @@ import { ProductCard } from '@/components/product-card';
 import { SkeletonCard } from '@/components/skeleton-card';
 import { ProductFilters, type FilterCounts } from '@/components/ProductFilters';
 import { Button } from '@/components/ui/button';
-import { SlidersHorizontal, PackageSearch } from 'lucide-react';
+import { SlidersHorizontal, PackageSearch, ChevronLeft, ChevronRight } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { Breadcrumb } from '@/components/breadcrumb';
 import logger from '@/lib/logger';
@@ -28,37 +28,15 @@ type ProductListItem = {
   createdAt?: string;
 };
 
-const VOLTAGE_OPTIONS = ['110V', '220V', 'Bivolt', 'Bateria'];
+type Pagination = { page: number; pages: number; total: number; pageSize: number };
 
-function extractBrand(p: ProductListItem): string | null {
-  if (p.brand?.name) return p.brand.name;
-  const s = String(p.specs?.marca || p.specs?.brand || '').trim();
-  if (s && s !== 'undefined' && s !== 'null') return s;
-  return null;
-}
+const VOLTAGE_OPTIONS = ['110V', '220V', 'Bivolt', 'Bateria'];
 
 function extractVoltages(p: ProductListItem): string[] {
   const s = String(p.specs?.voltagem || p.specs?.voltage || '').trim();
   if (s && s !== 'undefined') return [s];
   const name = (p.name || '').toLowerCase();
   return VOLTAGE_OPTIONS.filter((v) => name.includes(v.toLowerCase()));
-}
-
-// ── Sorting helper ────────────────────────────────────────────────────────────
-function sortProducts(list: ProductListItem[], sortVal: string): ProductListItem[] {
-  return [...list].sort((a, b) => {
-    const pA = a.promotionalPrice ?? a.price ?? 0;
-    const pB = b.promotionalPrice ?? b.price ?? 0;
-    switch (sortVal) {
-      case 'price-asc':  return pA - pB;
-      case 'price-desc': return pB - pA;
-      case 'name':       return (a.name || '').localeCompare(b.name || '');
-      default:
-        if (a.createdAt && b.createdAt)
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        return 0;
-    }
-  });
 }
 
 function parseIntSafe(v: string | null, fallback: number) {
@@ -69,121 +47,114 @@ function parseIntSafe(v: string | null, fallback: number) {
 
 type DbBrand = { id: string; name: string; slug: string; _count: { products: number } };
 
-// ── Page content ──────────────────────────────────────────────────────────────
 function ProductsContent() {
   const searchParams = useSearchParams();
   const router       = useRouter();
 
-  const [allProducts, setAllProducts] = useState<ProductListItem[]>([]);
+  const [products,    setProducts]    = useState<ProductListItem[]>([]);
+  const [pagination,  setPagination]  = useState<Pagination>({ page: 1, pages: 1, total: 0, pageSize: 24 });
   const [dbBrands,    setDbBrands]    = useState<DbBrand[]>([]);
   const [isLoading,   setIsLoading]   = useState(true);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Only re-fetch when categoria/grupo or search changes — NOT when filter params change
-  const categoria = searchParams?.get('categoria') ?? null;
-  const grupo     = searchParams?.get('grupo')     ?? null;
-  const search    = searchParams?.get('search')    ?? null;
+  // Parâmetros da URL — fonte única de verdade
+  const categoria   = searchParams?.get('categoria')  ?? null;
+  const grupo       = searchParams?.get('grupo')       ?? null;
+  const search      = searchParams?.get('search')      ?? null;
+  const currentPage = parseIntSafe(searchParams?.get('page'), 1);
+  const brands      = useMemo(() => (searchParams?.get('brands') ?? '').split(',').filter(Boolean), [searchParams]);
+  const voltages    = useMemo(() => (searchParams?.get('voltages') ?? '').split(',').filter(Boolean), [searchParams]);
+  const minPrice    = parseIntSafe(searchParams?.get('minPrice'), PRICE_MIN);
+  const maxPrice    = parseIntSafe(searchParams?.get('maxPrice'), PRICE_MAX);
+  const currentSort = searchParams?.get('sort') ?? 'recent';
 
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
-      if (categoria) params.set('categoria', categoria);
-      if (grupo)     params.set('grupo', grupo);
-      if (search)    params.set('search', search);
-      const url = params.toString() ? `/api/products?${params}` : '/api/products';
-      const res = await apiClient.get<{ products: ProductListItem[] }>(url);
-      setAllProducts(res.data.products ?? []);
+      if (categoria)       params.set('categoria', categoria);
+      if (grupo)           params.set('grupo', grupo);
+      if (search)          params.set('search', search);
+      if (currentPage > 1) params.set('page', String(currentPage));
+      if (brands.length)   params.set('brands', brands.join(','));
+      if (minPrice > PRICE_MIN) params.set('minPrice', String(minPrice));
+      if (maxPrice < PRICE_MAX) params.set('maxPrice', String(maxPrice));
+      if (currentSort !== 'recent') params.set('sort', currentSort);
+
+      const res = await apiClient.get<{ products: ProductListItem[]; pagination: Pagination }>(
+        `/api/products?${params}`,
+      );
+      setProducts(res.data.products ?? []);
+      if (res.data.pagination) setPagination(res.data.pagination);
     } catch (err) {
       logger.error(err, '[PLP] fetchProducts failed');
+      setProducts([]);
     } finally {
       setIsLoading(false);
     }
-  }, [categoria, grupo, search]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoria, grupo, search, currentPage, brands.join(','), minPrice, maxPrice, currentSort]);
+
+  useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
   useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
-
-  useEffect(() => {
-    fetch('/api/brands')
+    fetch('/api/brands?limit=200')
       .then((r) => r.json())
       .then((d) => setDbBrands(d.brands ?? []))
       .catch(() => {});
   }, []);
 
-  // ── Dynamic filter options from loaded products ───────────────────────────
+  // Voltagem: filtro client-side sobre a página atual (campo não estruturado)
+  const filteredProducts = useMemo(() => {
+    if (voltages.length === 0) return products;
+    return products.filter((p) => {
+      const vol = String(p.specs?.voltagem || p.specs?.voltage || '');
+      return voltages.some(
+        (v) =>
+          p.name?.toLowerCase().includes(v.toLowerCase()) ||
+          vol.toLowerCase().includes(v.toLowerCase()),
+      );
+    });
+  }, [products, voltages]);
+
+  // Counts para o sidebar — marcas: total do banco; voltagens: da página atual
   const brandCounts = useMemo<FilterCounts>(() => {
     const counts: FilterCounts = {};
-    for (const b of dbBrands) counts[b.name] = 0;
-    for (const p of allProducts) {
-      const brandName = p.brand?.name;
-      if (brandName && Object.prototype.hasOwnProperty.call(counts, brandName)) {
-        counts[brandName]++;
-      }
-    }
+    for (const b of dbBrands) counts[b.name] = b._count.products;
     return counts;
-  }, [allProducts, dbBrands]);
+  }, [dbBrands]);
 
   const voltageCounts = useMemo<FilterCounts>(() => {
     const counts: FilterCounts = {};
-    for (const p of allProducts) {
+    for (const p of products) {
       for (const v of extractVoltages(p)) {
         counts[v] = (counts[v] ?? 0) + 1;
       }
     }
     return counts;
-  }, [allProducts]);
+  }, [products]);
 
-  // ── Reactive client-side filtering — URL is the single source of truth ────
-  const filteredProducts = useMemo(() => {
-    const minPrice     = parseIntSafe(searchParams?.get('minPrice'), PRICE_MIN);
-    const maxPrice     = parseIntSafe(searchParams?.get('maxPrice'), PRICE_MAX);
-    const brandFilter  = (searchParams?.get('brands')   ?? '').split(',').filter(Boolean);
-    const voltFilter   = (searchParams?.get('voltages') ?? '').split(',').filter(Boolean);
-    const sortVal      = searchParams?.get('sort') ?? 'recent';
-
-    const filtered = allProducts.filter((p) => {
-      const price = p.promotionalPrice ?? p.price ?? 0;
-      if (price < minPrice || price > maxPrice) return false;
-
-      if (brandFilter.length > 0) {
-        const brandName = extractBrand(p) || '';
-        const ok = brandFilter.some(
-          (b) => brandName.toLowerCase() === b.toLowerCase(),
-        );
-        if (!ok) return false;
-      }
-
-      if (voltFilter.length > 0) {
-        const vol = String(p.specs?.voltagem || p.specs?.voltage || '');
-        const ok = voltFilter.some(
-          (v) =>
-            p.name?.toLowerCase().includes(v.toLowerCase()) ||
-            vol.toLowerCase().includes(v.toLowerCase()),
-        );
-        if (!ok) return false;
-      }
-
-      return true;
-    });
-
-    return sortProducts(filtered, sortVal);
-  }, [allProducts, searchParams]);
-
-  // ── Sort selector (toolbar) — updates URL directly ───────────────────────
-  const currentSort = searchParams?.get('sort') ?? 'recent';
+  function goToPage(p: number) {
+    const next = Math.max(1, Math.min(p, pagination.pages));
+    const params = new URLSearchParams(searchParams?.toString() ?? '');
+    if (next <= 1) params.delete('page');
+    else params.set('page', String(next));
+    router.push(params.toString() ? `/produtos?${params}` : '/produtos', { scroll: true });
+  }
 
   const handleSortChange = useCallback(
     (value: string) => {
       const params = new URLSearchParams(searchParams?.toString() ?? '');
+      params.delete('page');
       if (value === 'recent') params.delete('sort');
       else params.set('sort', value);
-      const str = params.toString();
-      router.replace(str ? `/produtos?${str}` : '/produtos', { scroll: false });
+      router.replace(params.toString() ? `/produtos?${params}` : '/produtos', { scroll: false });
     },
     [router, searchParams],
   );
+
+  const start = (pagination.page - 1) * pagination.pageSize + 1;
+  const end   = Math.min(pagination.page * pagination.pageSize, pagination.total);
 
   return (
     <>
@@ -214,7 +185,7 @@ function ProductsContent() {
           <Breadcrumb items={[{ label: 'Produtos', href: '/produtos' }]} className="mb-6" />
 
           <div className="grid lg:grid-cols-4 gap-6">
-            {/* ── Filter Sidebar ── */}
+            {/* Sidebar de filtros */}
             <div className={`lg:col-span-1 ${showFilters ? 'block' : 'hidden lg:block'}`}>
               <ProductFilters
                 brandCounts={brandCounts}
@@ -223,7 +194,7 @@ function ProductsContent() {
               />
             </div>
 
-            {/* ── Product Grid ── */}
+            {/* Grid de produtos */}
             <div className="lg:col-span-3">
               {/* Toolbar */}
               <div className="bg-white rounded-lg shadow-md p-4 mb-6 flex items-center justify-between gap-3">
@@ -239,8 +210,12 @@ function ProductsContent() {
                 <span className="hidden lg:block text-sm text-gray-500">
                   {isLoading ? (
                     <span className="animate-pulse bg-gray-200 rounded h-4 w-28 inline-block" />
+                  ) : pagination.total > 0 ? (
+                    <>
+                      Mostrando {start}–{end} de {pagination.total} produto{pagination.total !== 1 ? 's' : ''}
+                    </>
                   ) : (
-                    <>{filteredProducts.length} produto{filteredProducts.length !== 1 ? 's' : ''} encontrado{filteredProducts.length !== 1 ? 's' : ''}</>
+                    'Nenhum produto encontrado'
                   )}
                 </span>
 
@@ -290,6 +265,63 @@ function ProductsContent() {
                   </div>
                 )}
               </div>
+
+              {/* Paginação */}
+              {!isLoading && pagination.pages > 1 && (
+                <div className="mt-8 flex flex-col items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => goToPage(1)}
+                      disabled={currentPage === 1}
+                      className="h-7 w-7 flex items-center justify-center rounded border border-gray-200 text-xs text-gray-600 hover:border-[#CC1020] hover:text-[#CC1020] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      «
+                    </button>
+                    <button
+                      onClick={() => goToPage(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="h-7 w-7 flex items-center justify-center rounded border border-gray-200 text-gray-600 hover:border-[#CC1020] hover:text-[#CC1020] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+
+                    {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
+                      const startPage = Math.max(1, Math.min(currentPage - 2, pagination.pages - 4));
+                      return startPage + i;
+                    }).map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => goToPage(p)}
+                        className={`h-7 w-7 flex items-center justify-center rounded border text-xs font-medium transition-colors ${
+                          p === currentPage
+                            ? 'border-[#CC1020] bg-[#CC1020] text-white'
+                            : 'border-gray-200 text-gray-600 hover:border-[#CC1020] hover:text-[#CC1020]'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    ))}
+
+                    <button
+                      onClick={() => goToPage(currentPage + 1)}
+                      disabled={currentPage === pagination.pages}
+                      className="h-7 w-7 flex items-center justify-center rounded border border-gray-200 text-gray-600 hover:border-[#CC1020] hover:text-[#CC1020] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => goToPage(pagination.pages)}
+                      disabled={currentPage === pagination.pages}
+                      className="h-7 w-7 flex items-center justify-center rounded border border-gray-200 text-xs text-gray-600 hover:border-[#CC1020] hover:text-[#CC1020] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      »
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    Página {currentPage} de {pagination.pages}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

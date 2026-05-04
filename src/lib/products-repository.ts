@@ -237,6 +237,81 @@ export async function listProducts(params: ListProductsParams) {
   });
 }
 
+// ── Listagem paginada com filtros server-side ─────────────────────────────────
+export type PaginatedListParams = {
+  categorySlug?: string | null;
+  grupoSlug?: string | null;
+  search?: string | null;
+  page?: number;
+  pageSize?: number;
+  brands?: string[];
+  minPrice?: number | null;
+  maxPrice?: number | null;
+  sortBy?: string | null;
+};
+
+const INCLUDE_LIST = {
+  category: { select: { id: true, name: true, slug: true } },
+  brand:    { select: { id: true, name: true, slug: true } },
+  images:   { take: 1, select: { url: true, alt: true, order: true } },
+} as const;
+
+export async function listProductsPaginated(params: PaginatedListParams) {
+  const {
+    categorySlug, grupoSlug, search,
+    page = 1, pageSize = 24,
+    brands, minPrice, maxPrice, sortBy,
+  } = params;
+
+  const skip = (Math.max(1, page) - 1) * pageSize;
+
+  const where: any = { isActive: true };
+  if (categorySlug) where.category = { slug: categorySlug };
+  if (grupoSlug)    where.grupo     = grupoSlug;
+  if (brands?.length) where.brand   = { name: { in: brands } };
+
+  // Filtro de preço sobre o preço efetivo (promocional > normal)
+  const hasPriceFilter = minPrice != null || maxPrice != null;
+  if (hasPriceFilter) {
+    const pf: any = {};
+    if (minPrice != null) pf.gte = minPrice;
+    if (maxPrice != null) pf.lte = maxPrice;
+    where.AND = [
+      ...(where.AND ?? []),
+      {
+        OR: [
+          { promotionalPrice: { not: null, ...pf } },
+          { AND: [{ promotionalPrice: null }, { price: pf }] },
+        ],
+      },
+    ];
+  }
+
+  if (search) {
+    const searchOr = {
+      OR: [
+        { name:  { contains: search, mode: 'insensitive' as const } },
+        { sku:   { contains: search, mode: 'insensitive' as const } },
+        { brand: { name: { contains: search, mode: 'insensitive' as const } } },
+      ],
+    };
+    where.AND = [...(where.AND ?? []), searchOr];
+  }
+
+  const orderBy =
+    sortBy === 'price-asc'  ? { price: 'asc'  as const } :
+    sortBy === 'price-desc' ? { price: 'desc' as const } :
+    sortBy === 'name'       ? { name:  'asc'  as const } :
+    { createdAt: 'desc' as const };
+
+  const [products, total] = await Promise.all([
+    prisma.product.findMany({ where, include: INCLUDE_LIST, skip, take: pageSize, orderBy }),
+    prisma.product.count({ where }),
+  ]);
+
+  return { products, total, pages: Math.max(1, Math.ceil(total / pageSize)), page, pageSize };
+}
+
 export async function getProduct(idOrSlug: string) {
   if (isExternalEnabled()) {
     try {

@@ -577,18 +577,28 @@ export interface PickingPdfItem {
   sku?:     string | null;
   location: string;
   quantity: number;
+  orders?:  Array<{ orderNumber: string; quantity: number }>;
 }
 
-export function PickingReportDocument({ items }: { items: PickingPdfItem[] }) {
+export interface PickingPdfOrder {
+  orderNumber: string;
+  customerName?: string;
+  createdAt?: string;
+  items: Array<{
+    name: string;
+    sku?: string | null;
+    location: string;
+    quantity: number;
+  }>;
+}
+
+export function PickingReportDocument({ orders }: { orders: PickingPdfOrder[] }) {
   const logoSrc = loadLogoBase64();
   const genDate = new Date().toLocaleString('pt-BR');
 
-  const totalUnits    = items.reduce((s, i) => s + i.quantity, 0);
-  const withLocation  = items.filter(i => i.location !== 'Sem localização cadastrada').length;
-  const missingLoc    = items.length - withLocation;
-
-  const tableRows = items.map(i => [i.name, i.sku || '—', i.location, i.quantity]);
-  const tableTotals: (string | number | null)[] = ['TOTAL', null, null, totalUnits];
+  const totalOrders = orders.length;
+  const totalItems  = orders.reduce((s, o) => s + o.items.length, 0);
+  const totalUnits  = orders.reduce((s, o) => s + o.items.reduce((ss, i) => ss + i.quantity, 0), 0);
 
   return (
     <Document title="Relatório de Picking" author="Feira das Ferramentas">
@@ -597,7 +607,7 @@ export function PickingReportDocument({ items }: { items: PickingPdfItem[] }) {
         <PageHeader
           logoSrc={logoSrc}
           subtitle="Relatório de Picking  ·  Separação de Pedidos"
-          periodLine={`${items.length} produto(s)  ·  ${totalUnits} unidade(s)`}
+          periodLine={`${totalOrders} pedido(s)  ·  ${totalItems} produto(s)  ·  ${totalUnits} unidade(s)`}
           genDate={genDate}
         />
         <PageFooter label="Feira das Ferramentas — Picking" />
@@ -605,46 +615,45 @@ export function PickingReportDocument({ items }: { items: PickingPdfItem[] }) {
         {/* KPIs */}
         <View style={S.kpiGrid}>
           {[
-            { label: 'Produtos Únicos',   value: String(items.length),   sub: 'a separar',              dark: false },
-            { label: 'Unidades Totais',   value: String(totalUnits),     sub: 'soma de quantidades',    dark: false },
-            { label: 'Com Localização',   value: String(withLocation),   sub: `de ${items.length} itens`, dark: true },
-            { label: 'Sem Localização',   value: String(missingLoc),     sub: 'verificar endereço',     dark: true  },
+            { label: 'Pedidos',        value: String(totalOrders), sub: 'para separar',       dark: false },
+            { label: 'Produtos',       value: String(totalItems),  sub: 'linhas de produto',  dark: false },
+            { label: 'Unidades',       value: String(totalUnits),  sub: 'total a separar',    dark: true  },
           ].map((kpi, i) => (
-            <View key={i} style={[
-              S.kpiCard,
-              kpi.dark ? S.kpiCardDark : {},
-              i === 3 && missingLoc > 0 ? { borderLeftColor: C.red } : {},
-            ]}>
+            <View key={i} style={[S.kpiCard, kpi.dark ? S.kpiCardDark : {}]}>
               <Text style={S.kpiLabel}>{kpi.label}</Text>
-              <Text style={[S.kpiValue, i === 3 && missingLoc > 0 ? { color: C.red } : {}]}>
-                {kpi.value}
-              </Text>
+              <Text style={S.kpiValue}>{kpi.value}</Text>
               <Text style={S.kpiSub}>{kpi.sub}</Text>
             </View>
           ))}
         </View>
 
-        {/* Itens para separar */}
-        <View style={S.section}>
-          <SectionTitle>Itens para Separar</SectionTitle>
-          <Table
-            cols={[
-              { label: 'Produto',              flex: 4 },
-              { label: 'SKU',                  flex: 1.5 },
-              { label: 'Endereço no Estoque',  flex: 2.5 },
-              { label: 'Qtd',                  flex: 0.8, right: true },
-            ]}
-            rows={tableRows}
-            totals={tableTotals}
-          />
-        </View>
+        {/* Um bloco por pedido */}
+        {orders.map((order, oi) => (
+          <View key={oi} style={S.section}>
+            <SectionTitle>
+              {order.orderNumber}
+              {order.customerName ? `  ·  ${order.customerName}` : ''}
+              {order.createdAt ? `  ·  ${order.createdAt}` : ''}
+            </SectionTitle>
+            <Table
+              cols={[
+                { label: 'Produto',             flex: 4 },
+                { label: 'SKU',                 flex: 1.5 },
+                { label: 'Endereço no Estoque', flex: 2.5 },
+                { label: 'Qtd',                 flex: 0.8, right: true },
+              ]}
+              rows={order.items.map(i => [i.name, i.sku || '—', i.location, i.quantity])}
+              totals={['TOTAL', null, null, order.items.reduce((s, i) => s + i.quantity, 0)]}
+            />
+          </View>
+        ))}
 
       </Page>
     </Document>
   );
 }
 
-export async function generatePickingReportPdf(items: PickingPdfItem[]): Promise<Buffer> {
-  const buffer = await renderToBuffer(<PickingReportDocument items={items} />);
+export async function generatePickingReportPdf(orders: PickingPdfOrder[]): Promise<Buffer> {
+  const buffer = await renderToBuffer(<PickingReportDocument orders={orders} />);
   return Buffer.from(buffer);
 }

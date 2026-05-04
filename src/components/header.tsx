@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { ShoppingCart, User, Menu, X } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, Heart } from 'lucide-react';
 import { Button } from './ui/button';
 import { NotificationBell } from './notification-bell';
 import { SmartSearchBar } from './SmartSearchBar';
@@ -84,6 +84,12 @@ export function Header() {
               {session ? (
                 <div className="flex items-center gap-2">
                   <NotificationBell />
+
+                  <Link href="/minha-conta/favoritos" aria-label="Meus favoritos">
+                    <Button variant="ghost" size="sm" className="text-[#1A1A1A] hover:text-[#CC1020] hover:bg-red-50 p-2">
+                      <Heart className="h-5 w-5" />
+                    </Button>
+                  </Link>
 
                   <Link href="/minha-conta">
                     <Button

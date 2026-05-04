@@ -13,6 +13,32 @@ function melhorEnvioBaseUrl() {
   return isSandbox ? 'https://sandbox.melhorenvio.com.br' : 'https://melhorenvio.com.br';
 }
 
+/**
+ * fetch com retry exponencial para chamadas ao Melhor Envio.
+ * Só tenta novamente em erros de rede ou 5xx (erros do servidor); 4xx não são retentados.
+ */
+async function meeFetch(url: string, options: RequestInit, maxRetries = 3): Promise<Response> {
+  let lastError: unknown;
+  const delays = [1000, 2000, 4000]; // backoff: 1s, 2s, 4s
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const res = await fetch(url, options);
+      // Não retentar em erros de cliente (4xx)
+      if (res.ok || (res.status >= 400 && res.status < 500)) return res;
+      lastError = new Error(`HTTP ${res.status}`);
+      logger.warn('[MELHOR_ENVIO] Tentativa %d falhou com status %d — aguardando %dms', attempt + 1, res.status, delays[attempt] ?? 0);
+    } catch (err) {
+      lastError = err;
+      logger.warn('[MELHOR_ENVIO] Tentativa %d falhou com exceção: %o — aguardando %dms', attempt + 1, err, delays[attempt] ?? 0);
+    }
+    if (attempt < maxRetries - 1) {
+      await new Promise(r => setTimeout(r, delays[attempt]));
+    }
+  }
+  throw lastError;
+}
+
 export type ShippingLabelInput = {
   orderId: string;
   serviceId: string | number; // ID do serviço (1 = PAC, 2 = SEDEX, etc)
@@ -197,7 +223,7 @@ export async function addToMelhorEnvioCart(input: ShippingLabelInput): Promise<M
   try {
     logger.info('[MELHOR_ENVIO] Request body: %j', body);
 
-    const res = await fetch(`${baseUrl}/api/v2/me/cart`, {
+    const res = await meeFetch(`${baseUrl}/api/v2/me/cart`, {
       method: 'POST',
       headers: { ...commonHeaders(), Authorization: `Bearer ${token}` },
       body: JSON.stringify(body),
@@ -418,7 +444,7 @@ export async function addReverseToMelhorEnvioCart(input: ReverseShippingInput): 
   try {
     logger.info('[MELHOR_ENVIO_REVERSE] Request body: %j', body);
 
-    const res = await fetch(`${baseUrl}/api/v2/me/cart/reverse`, {
+    const res = await meeFetch(`${baseUrl}/api/v2/me/cart/reverse`, {
       method: 'POST',
       headers: { ...commonHeaders(), Authorization: `Bearer ${token}` },
       body: JSON.stringify(body),
@@ -609,7 +635,7 @@ export async function checkoutMelhorEnvio(orderIds: string[]): Promise<MelhorEnv
   logger.info('[MELHOR_ENVIO] Realizando checkout para: %o', orderIds);
 
   try {
-    const res = await fetch(`${baseUrl}/api/v2/me/shipment/checkout`, {
+    const res = await meeFetch(`${baseUrl}/api/v2/me/shipment/checkout`, {
       method: 'POST',
       headers: { ...commonHeaders(), Authorization: `Bearer ${token}` },
       body: JSON.stringify({ orders: orderIds }),
@@ -670,7 +696,7 @@ export async function generateMelhorEnvioLabel(orderIds: string[]): Promise<Melh
   logger.info('[MELHOR_ENVIO] Gerando etiqueta para: %o', orderIds);
 
   try {
-    const res = await fetch(`${baseUrl}/api/v2/me/shipment/generate`, {
+    const res = await meeFetch(`${baseUrl}/api/v2/me/shipment/generate`, {
       method: 'POST',
       headers: { ...commonHeaders(), Authorization: `Bearer ${token}` },
       body: JSON.stringify({ orders: orderIds }),
@@ -724,7 +750,7 @@ export async function printMelhorEnvioLabel(orderIds: string[], mode: 'private' 
   logger.info('[MELHOR_ENVIO] Obtendo URL de impressão para: %o modo: %s', orderIds, mode);
 
   try {
-    const res = await fetch(`${baseUrl}/api/v2/me/shipment/print`, {
+    const res = await meeFetch(`${baseUrl}/api/v2/me/shipment/print`, {
       method: 'POST',
       headers: { ...commonHeaders(), Authorization: `Bearer ${token}` },
       body: JSON.stringify({ mode, orders: orderIds }),
@@ -764,7 +790,7 @@ export async function previewMelhorEnvioLabel(orderIds: string[]): Promise<{ suc
   logger.info('[MELHOR_ENVIO] Pré-visualizando etiqueta para: %o', orderIds);
 
   try {
-    const res = await fetch(`${baseUrl}/api/v2/me/shipment/preview`, {
+    const res = await meeFetch(`${baseUrl}/api/v2/me/shipment/preview`, {
       method: 'POST',
       headers: { ...commonHeaders(), Authorization: `Bearer ${token}` },
       body: JSON.stringify({ orders: orderIds }),
@@ -801,7 +827,7 @@ export async function getMelhorEnvioOrderStatus(orderId: string): Promise<{ succ
   logger.info('[MELHOR_ENVIO] Consultando status do pedido: %s', orderId);
 
   try {
-    const res = await fetch(`${baseUrl}/api/v2/me/orders/${orderId}`, {
+    const res = await meeFetch(`${baseUrl}/api/v2/me/orders/${orderId}`, {
       method: 'GET',
       headers: { ...commonHeaders(), Authorization: `Bearer ${token}` },
     });
@@ -838,7 +864,7 @@ export async function listMelhorEnvioCart(): Promise<{ success: boolean; items?:
   logger.info('[MELHOR_ENVIO] Listando itens do carrinho');
 
   try {
-    const res = await fetch(`${baseUrl}/api/v2/me/cart`, {
+    const res = await meeFetch(`${baseUrl}/api/v2/me/cart`, {
       method: 'GET',
       headers: { ...commonHeaders(), Authorization: `Bearer ${token}` },
     });
@@ -874,7 +900,7 @@ export async function getMelhorEnvioCartItem(itemId: string): Promise<{ success:
   logger.info('[MELHOR_ENVIO] Buscando item do carrinho: %s', itemId);
 
   try {
-    const res = await fetch(`${baseUrl}/api/v2/me/cart/${itemId}`, {
+    const res = await meeFetch(`${baseUrl}/api/v2/me/cart/${itemId}`, {
       method: 'GET',
       headers: { ...commonHeaders(), Authorization: `Bearer ${token}` },
     });
@@ -906,7 +932,7 @@ export async function removeMelhorEnvioCartItem(itemId: string): Promise<{ succe
   logger.info('[MELHOR_ENVIO] Removendo item do carrinho: %s', itemId);
 
   try {
-    const res = await fetch(`${baseUrl}/api/v2/me/cart/${itemId}`, {
+    const res = await meeFetch(`${baseUrl}/api/v2/me/cart/${itemId}`, {
       method: 'DELETE',
       headers: { ...commonHeaders(), Authorization: `Bearer ${token}` },
     });
@@ -1080,11 +1106,13 @@ export async function createShippingLabelForOrder(orderId: string): Promise<Melh
   logger.info('[MELHOR_ENVIO] Volumes: %j', volumes);
 
   // Determinar o serviço de frete
-  const serviceId = order.shippingServiceId || shippingAddr?.serviceId || '1'; // Default: PAC (1)
-  logger.info('[MELHOR_ENVIO] Serviço selecionado: %s', serviceId);
+  let serviceId = order.shippingServiceId || shippingAddr?.serviceId || '1'; // Default: PAC (1)
 
   // Em sandbox, limitar insurance a R$ 1000 (limite sandbox). Em produção, usar valor real.
   const isSandbox = (process.env.MELHOR_ENVIO_SANDBOX || 'true').toLowerCase() !== 'false';
+
+  logger.info('[MELHOR_ENVIO] Serviço selecionado: %s', serviceId);
+
   const insuranceValue = isSandbox ? Math.min(totalInsurance, 1000) : totalInsurance;
   logger.info('[MELHOR_ENVIO] Valor seguro: %d (original: %d, sandbox: %s)', insuranceValue, totalInsurance, isSandbox);
 

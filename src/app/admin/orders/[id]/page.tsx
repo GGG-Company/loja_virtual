@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { statusToPt, statusBadgeClass, paymentToPt } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
-import { Printer, FileText, Truck, RefreshCw, ExternalLink } from "lucide-react";
+import { Printer, FileText, Truck, RefreshCw, ExternalLink, CheckCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
 interface OrderDetail {
@@ -43,6 +43,7 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [generatingLabel, setGeneratingLabel] = useState(false);
+  const [simulatingPayment, setSimulatingPayment] = useState(false);
   const [labelInfo, setLabelInfo] = useState<{
     hasLabel: boolean;
     labelUrl?: string;
@@ -90,8 +91,7 @@ export default function OrderDetailPage() {
       .finally(() => setLoading(false));
   }, [orderId, checkLabelStatus]);
 
-  const handleGenerateLabel = async () => {
-    setGeneratingLabel(true);
+  const handleGenerateLabel = async () => {    setGeneratingLabel(true);
     try {
       const res = await fetch(`/api/admin/orders/${orderId}/label`, {
         method: "POST",
@@ -136,6 +136,43 @@ export default function OrderDetailPage() {
       window.open(labelInfo.labelUrl, "_blank");
     } else if (order?.melhorEnvioLabelUrl) {
       window.open(order.melhorEnvioLabelUrl, "_blank");
+    }
+  };
+
+  const handleSimulatePayment = async (action: "approve" | "reject") => {
+    if (!window.confirm(`Confirmar ${action === "approve" ? "APROVAÇÃO" : "REJEIÇÃO"} do pagamento sandbox?`)) return;
+    setSimulatingPayment(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/simulate-payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(action === "approve" ? "Pagamento aprovado com sucesso!" : "Pagamento rejeitado.");
+        // Recarregar o pedido
+        const orderRes = await fetch(`/api/admin/orders/${orderId}`);
+        const orderData = await orderRes.json();
+        setOrder({
+          ...orderData,
+          total: parseFloat(String(orderData.total ?? 0)) || 0,
+          subtotal: parseFloat(String(orderData.subtotal ?? 0)) || 0,
+          shipping: parseFloat(String(orderData.shipping ?? 0)) || 0,
+          discount: parseFloat(String(orderData.discount ?? 0)) || 0,
+          items: (orderData.items ?? []).map((i: any) => ({
+            ...i,
+            price: parseFloat(String(i.price ?? 0)) || 0,
+            subtotal: parseFloat(String(i.subtotal ?? 0)) || 0,
+          })),
+        });
+      } else {
+        toast.error(data.error || "Erro ao simular pagamento");
+      }
+    } catch {
+      toast.error("Erro ao simular pagamento");
+    } finally {
+      setSimulatingPayment(false);
     }
   };
 
@@ -267,9 +304,39 @@ export default function OrderDetailPage() {
             </div>
           </div>
 
+          {/* Simulação de pagamento sandbox */}
+          {order.paymentId?.startsWith("sandbox-pending-") && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg shadow p-4">
+              <h2 className="text-sm font-semibold text-yellow-800 mb-1">Sandbox — Simular Pagamento</h2>
+              <p className="text-xs text-yellow-700 mb-3">
+                Este pedido aguarda simulação manual. Escolha o resultado:
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => handleSimulatePayment("approve")}
+                  disabled={simulatingPayment}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                  size="sm"
+                >
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  Aprovar
+                </Button>
+                <Button
+                  onClick={() => handleSimulatePayment("reject")}
+                  disabled={simulatingPayment}
+                  variant="destructive"
+                  className="flex-1"
+                  size="sm"
+                >
+                  <XCircle className="h-4 w-4 mr-1" />
+                  Rejeitar
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="bg-white rounded-lg shadow p-4 space-y-2">
-            <h2 className="text-lg font-semibold mb-1">Resumo</h2>
-            <div className="flex justify-between text-sm text-gray-700">
+            <h2 className="text-lg font-semibold mb-1">Resumo</h2>            <div className="flex justify-between text-sm text-gray-700">
               <span>Subtotal</span>
               <span>R$ {order.subtotal.toFixed(2)}</span>
             </div>

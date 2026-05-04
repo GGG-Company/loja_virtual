@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { listProducts } from '@/lib/products-repository';
 import logger from '@/lib/logger';
+import { apiLimiter } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
+  const limited = await apiLimiter.check(request);
+  if (limited) return limited;
+
   const { searchParams } = new URL(request.url);
   const q = searchParams.get('q')?.trim() ?? '';
 

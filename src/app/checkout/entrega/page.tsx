@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import { Loader2, MapPin } from 'lucide-react';
+import { Loader2, MapPin, Home, Truck } from 'lucide-react';
 import { CheckoutProgress } from '@/components/checkout-progress';
 
 // ── Mask ──────────────────────────────────────────────────────────────────
@@ -180,6 +180,13 @@ export default function CheckoutEntregaPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+              {/* Seção: Localização */}
+              <div className="flex items-center gap-2 mb-1">
+                <div className="p-1.5 rounded bg-[#CC1020]/10">
+                  <Home className="h-4 w-4 text-[#CC1020]" />
+                </div>
+                <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Endereço</span>
+              </div>
               {/* CEP */}
               <div>
                 <Label htmlFor="cep">CEP *</Label>
@@ -283,9 +290,12 @@ export default function CheckoutEntregaPage() {
 
               {/* Shipping options */}
               <div className="pt-4 border-t border-gray-100">
-                <Label className="text-base font-semibold text-[#1A1A1A] mb-3 block">
-                  Opção de Frete *
-                </Label>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="p-1.5 rounded bg-[#CC1020]/10">
+                    <Truck className="h-4 w-4 text-[#CC1020]" />
+                  </div>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Opção de Frete *</span>
+                </div>
 
                 {loadingShipping && (
                   <div className="flex items-center gap-3 py-6 text-gray-500">
@@ -321,7 +331,7 @@ export default function CheckoutEntregaPage() {
                         className={`flex items-center gap-4 border rounded-sm p-4 cursor-pointer transition-all ${
                           selectedShipping?.id === option.id
                             ? 'border-[#CC1020] bg-red-50 ring-2 ring-red-100'
-                            : 'border-gray-200 hover:border-[#CC1020]/50'
+                            : 'border-gray-200 hover:border-[#CC1020]/50 hover:bg-gray-50'
                         }`}
                       >
                         <input
@@ -333,11 +343,14 @@ export default function CheckoutEntregaPage() {
                         />
                         <div className="flex-1">
                           <p className="font-semibold text-[#1A1A1A] text-sm">{option.name}</p>
-                          <p className="text-xs text-gray-500">
-                            Entrega em até {option.delivery_time} dias úteis
-                          </p>
+                          <span className="inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[11px]">
+                            <Truck className="h-3 w-3" />
+                            Até {option.delivery_time} dias úteis
+                          </span>
                         </div>
-                        <p className="font-bold text-[#CC1020]">
+                        <p className={`font-bold text-base ${
+                          option.price === 0 ? 'text-green-600' : 'text-[#CC1020]'
+                        }`}>
                           {option.price === 0
                             ? 'Grátis'
                             : `R$ ${option.price.toFixed(2).replace('.', ',')}`}

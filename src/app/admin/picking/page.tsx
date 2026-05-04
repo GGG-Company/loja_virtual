@@ -80,12 +80,14 @@ export default function AdminPickingPage() {
       order.items.forEach((item) => {
         const key = `${item.product.id}-${item.product.stockLocation || 'sem-local'}`;
         const existing = map.get(key);
+        const orderEntry = { orderNumber: order.orderNumber, quantity: item.quantity };
         map.set(key, {
           id: item.product.id,
           name: item.product.name,
           sku: item.product.sku,
           location: item.product.stockLocation || 'Sem localização cadastrada',
           quantity: (existing?.quantity || 0) + item.quantity,
+          orders: [...(existing?.orders || []), orderEntry],
         });
       });
     });
@@ -105,7 +107,7 @@ export default function AdminPickingPage() {
         setOrders(response.data.orders || []);
         setTotalPages(response.data.pagination?.pages || 1);
       } catch (error) {
-        console.error('Erro ao carregar picking:', error);
+        if (process.env.NODE_ENV !== 'production') console.error('Erro ao carregar picking:', error);
         toast.error('Erro ao carregar pedidos para separação');
       } finally {
         setLoading(false);
@@ -151,7 +153,7 @@ export default function AdminPickingPage() {
         setTrackingUrl('');
       }
     } catch (error) {
-      console.error('Erro ao atualizar status:', error);
+      if (process.env.NODE_ENV !== 'production') console.error('Erro ao atualizar status:', error);
       toast.error('Não foi possível atualizar o status');
     } finally {
       setUpdatingId(null);
@@ -182,7 +184,7 @@ export default function AdminPickingPage() {
         toast.error(data.error || 'Erro ao gerar etiqueta');
       }
     } catch (error) {
-      console.error('Erro ao gerar etiqueta:', error);
+      if (process.env.NODE_ENV !== 'production') console.error('Erro ao gerar etiqueta:', error);
       toast.error('Erro ao gerar etiqueta');
     } finally {
       setGeneratingLabelId(null);
@@ -208,7 +210,7 @@ export default function AdminPickingPage() {
         toast.error(data.error || 'Erro ao enviar etiqueta');
       }
     } catch (error) {
-      console.error('Erro ao enviar etiqueta:', error);
+      if (process.env.NODE_ENV !== 'production') console.error('Erro ao enviar etiqueta:', error);
       toast.error('Erro ao enviar etiqueta para o cliente');
     } finally {
       setSendingLabelId(null);
@@ -216,12 +218,23 @@ export default function AdminPickingPage() {
   };
 
   const exportPdf = async () => {
-    if (pickingReport.length === 0) return;
+    if (orders.length === 0) return;
     try {
+      const pdfOrders = orders.map(o => ({
+        orderNumber: o.orderNumber,
+        customerName: o.user?.name || undefined,
+        createdAt: new Date(o.createdAt).toLocaleString('pt-BR'),
+        items: o.items.map(i => ({
+          name: i.product.name,
+          sku: i.product.sku,
+          location: i.product.stockLocation || 'Sem localização cadastrada',
+          quantity: i.quantity,
+        })),
+      }));
       const res = await fetch('/api/admin/picking/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: pickingReport }),
+        body: JSON.stringify({ orders: pdfOrders }),
       });
       if (!res.ok) throw new Error('Servidor retornou erro');
       const blob = await res.blob();
@@ -235,7 +248,7 @@ export default function AdminPickingPage() {
       URL.revokeObjectURL(url);
       toast.success('PDF gerado com sucesso');
     } catch (error) {
-      console.error('Erro ao gerar PDF', error);
+      if (process.env.NODE_ENV !== 'production') console.error('Erro ao gerar PDF', error);
       toast.error('Não foi possível gerar o PDF');
     }
   };

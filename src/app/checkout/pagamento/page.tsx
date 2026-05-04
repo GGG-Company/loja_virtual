@@ -230,7 +230,7 @@ function CheckoutPagamentoContent() {
       <>
         <Header />
         <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#CC1020]"></div>
         </div>
         <Footer />
       </>
@@ -259,43 +259,52 @@ function CheckoutPagamentoContent() {
         <div className="container mx-auto px-4 max-w-3xl">
           <CheckoutProgress currentStep={3} />
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-sm shadow-md border-t-4 border-[#CC1020] p-8 space-y-6">
-            <div className="flex items-center justify-between">
+            {/* Cabeçalho do pedido */}
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
               <div>
-                <p className="text-sm text-gray-500">Pedido</p>
-                <h1 className="text-2xl font-bold">{number || orderId}</h1>
+                <p className="text-xs uppercase tracking-wide text-gray-400 font-semibold">Pedido</p>
+                <h1 className="text-xl font-bold text-[#1A1A1A]">{number || orderId}</h1>
               </div>
-              <span className="px-3 py-1 rounded-full bg-green-100 text-green-800 text-sm font-semibold flex items-center gap-2">
-                <Check className="h-4 w-4" /> Criado
+              <span className="px-3 py-1.5 rounded-full bg-green-100 text-green-800 text-xs font-semibold flex items-center gap-1.5">
+                <Check className="h-3.5 w-3.5" /> Criado com sucesso
               </span>
             </div>
 
-            <div className="bg-gray-50 border border-gray-200 rounded-sm p-4 flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Valor</p>
-                <p className="text-2xl font-bold text-primary-700">R$ {total || "0,00"}</p>
+            {/* Resumo financeiro + timer */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-[#CC1020]/5 border border-[#CC1020]/20 rounded-sm p-4">
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Total a pagar</p>
+                <p className="text-2xl font-bold text-[#CC1020]">R$ {total || "0,00"}</p>
+                <p className="text-xs text-gray-500 mt-1 font-medium uppercase">{method === 'pix' ? 'PIX' : method === 'boleto' ? 'Boleto' : 'Cartão'}</p>
               </div>
-              <div className="text-sm text-gray-600 text-right">
-                <p>Método selecionado</p>
-                <p className="font-semibold uppercase">{method}</p>
-                <div className="mt-2">
-                  <span className="text-xs text-gray-600">Tempo para pagar: </span>
-                  <span className={`text-xs font-semibold px-2 py-1 rounded ${expired ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"}`}>{expired ? "Expirado" : formatMMSS(timeLeft)}</span>
-                  {!expired && <span className="ml-2 text-xs text-gray-600">Expira às {timeLeft ? new Date(Date.now() + timeLeft * 1000).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : ""}</span>}
-                  {!expired && (
-                    <div className="mt-2">
-                      <div className="h-2 w-full bg-gray-100 rounded">
-                        <div className="h-2 bg-yellow-500 rounded" style={{ width: `${Math.max(0, Math.min(100, (timeLeft / TOTAL_SECONDS) * 100))}%` }} />
-                      </div>
+              <div className="bg-gray-50 border border-gray-200 rounded-sm p-4">
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Tempo para pagar</p>
+                <p className={`text-2xl font-bold tabular-nums ${expired ? 'text-red-600' : 'text-[#1A1A1A]'}`}>
+                  {expired ? 'Expirado' : formatMMSS(timeLeft)}
+                </p>
+                {!expired && (
+                  <div className="mt-2">
+                    <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-1.5 rounded-full transition-all"
+                        style={{
+                          width: `${Math.max(0, Math.min(100, (timeLeft / TOTAL_SECONDS) * 100))}%`,
+                          backgroundColor: timeLeft < 120 ? '#CC1020' : timeLeft < 300 ? '#f59e0b' : '#22c55e',
+                        }}
+                      />
                     </div>
-                  )}
-                </div>
+                    <p className="text-[11px] text-gray-400 mt-1">
+                      Expira às {timeLeft ? new Date(Date.now() + timeLeft * 1000).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : ""}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
             {method === "pix" && (
               <div className="space-y-4">
                 <div className="flex items-start gap-4">
-                  <div className="p-3 rounded-full bg-primary-100 text-primary-700">
+                  <div className="p-3 rounded-full bg-[#CC1020]/10 text-[#CC1020]">
                     <Smartphone className="h-5 w-5" />
                   </div>
                   <div className="space-y-2 w-full">
@@ -307,7 +316,7 @@ function CheckoutPagamentoContent() {
                     <p className="text-sm text-gray-600">{loadingPayment ? "Gerando QR Code PIX..." : "Escaneie o QR Code ou copie o código PIX."}</p>
                     {loadingPayment ? (
                       <div className="w-full h-48 bg-metallic-100 border border-metallic-300 rounded-lg flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#CC1020]"></div>
                       </div>
                     ) : qrDataUrl ? (
                       <div className="flex justify-center">
@@ -343,7 +352,7 @@ function CheckoutPagamentoContent() {
             {method === "boleto" && (
               <div className="space-y-4">
                 <div className="flex items-start gap-4">
-                  <div className="p-3 rounded-full bg-primary-100 text-primary-700">
+                  <div className="p-3 rounded-full bg-[#CC1020]/10 text-[#CC1020]">
                     <Barcode className="h-5 w-5" />
                   </div>
                   <div className="space-y-2 w-full">
@@ -355,7 +364,7 @@ function CheckoutPagamentoContent() {
                     <p className="text-sm text-gray-600">{loadingPayment ? "Gerando boleto..." : "Pague até o vencimento (3 dias úteis)."}</p>
                     {loadingPayment ? (
                       <div className="w-full h-32 bg-metallic-100 border border-metallic-300 rounded-lg flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#CC1020]"></div>
                       </div>
                     ) : boletoBarcode ? (
                       <>
@@ -389,7 +398,7 @@ function CheckoutPagamentoContent() {
             {method === "cartao" && (
               <div className="space-y-4">
                 <div className="flex items-start gap-4">
-                  <div className="p-3 rounded-full bg-primary-100 text-primary-700">
+                  <div className="p-3 rounded-full bg-[#CC1020]/10 text-[#CC1020]">
                     <CreditCard className="h-5 w-5" />
                   </div>
                   <div className="space-y-2 w-full">
@@ -417,19 +426,20 @@ function CheckoutPagamentoContent() {
               </div>
             )}
 
-            <div className="flex justify-between pt-4">
+            <div className="flex justify-between pt-4 border-t border-gray-100">
               <Button variant="outline" onClick={() => router.push("/")}>
-                Voltar para a loja
+                ← Voltar à loja
               </Button>
               <div className="flex gap-2">
-                {expired && (
-                  <Button variant="outline" onClick={() => router.push("/produtos")}>
-                    Refazer pedido
+                {expired ? (
+                  <Button onClick={() => router.push("/produtos")}>
+                    Ver produtos
+                  </Button>
+                ) : (
+                  <Button onClick={() => router.push("/minha-conta")}>
+                    Acompanhar pedido
                   </Button>
                 )}
-                <Button onClick={() => router.push("/admin/orders")} disabled={expired}>
-                  Ver no Admin
-                </Button>
               </div>
             </div>
           </motion.div>
@@ -446,7 +456,7 @@ export default function CheckoutPagamentoPage() {
         <>
           <Header />
           <div className="min-h-screen flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#CC1020]"></div>
           </div>
           <Footer />
         </>

@@ -11,7 +11,7 @@ import { Edit, Trash2, Search } from "lucide-react";
 export default function GerenciamentoCategoriesPage() {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
+  const [pagination, setPagination] = useState({ page: 1, limit: 8, total: 0, totalPages: 1 });
   const [search, setSearch] = useState("");
 
   const [form, setForm] = useState({ name: "", slug: "", description: "", image: "" });

@@ -93,7 +93,7 @@ export default function FavoritosPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {items.map(({ product: p }) => (
                 <div key={p.id} className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden group">
-                  <Link href={`/produtos/${p.id}`} className="block relative aspect-square bg-gray-50">
+                  <Link href={`/produtos/${p.slug}`} className="block relative aspect-square bg-gray-50">
                     <Image
                       src={p.imageUrl || '/placeholder.jpg'}
                       alt={p.name}
@@ -110,7 +110,7 @@ export default function FavoritosPage() {
                     ) : null}
                   </Link>
                   <div className="p-3 space-y-2">
-                    <Link href={`/produtos/${p.id}`}>
+                    <Link href={`/produtos/${p.slug}`}>
                       <p className="text-sm font-medium text-gray-800 line-clamp-2 hover:text-primary-600">{p.name}</p>
                     </Link>
                     <div>

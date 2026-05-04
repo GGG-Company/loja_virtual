@@ -69,6 +69,8 @@ export async function GET(req: NextRequest) {
         total,
         pages: Math.max(1, Math.ceil(total / limit)),
       },
+    }, {
+      headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=15' },
     });
   } catch (error) {
     logger.error(error, '[ADMIN_ORDERS_GET]');

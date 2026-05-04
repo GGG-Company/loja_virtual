@@ -8,7 +8,11 @@ export const dynamic = 'force-dynamic';
 // Protegido por CRON_SECRET — chamar com Authorization: Bearer <secret>
 export async function POST(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
-  if (secret && req.headers.get('authorization') !== `Bearer ${secret}`) {
+  if (!secret) {
+    logger.error('[CRON] CRON_SECRET não configurado — rejeitando chamada');
+    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+  }
+  if (req.headers.get('authorization') !== `Bearer ${secret}`) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 

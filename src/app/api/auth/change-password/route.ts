@@ -1,13 +1,18 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { authLimiter } from '@/lib/rate-limit';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
+
+  // Rate limiting por IP + userId para evitar força bruta na senha atual
+  const blocked = await authLimiter.check(request, session.user.id);
+  if (blocked) return blocked;
 
   const body = await request.json();
   const { currentPassword, newPassword } = body;

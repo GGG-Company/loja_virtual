@@ -13,6 +13,7 @@ const cspConnectSrc = [
 ].join(' ');
 
 const nextConfig = {
+  allowedDevOrigins: ['unsoulish-chad-subgular.ngrok-free.dev'],
   output: 'standalone',
   images: {
     remotePatterns: [
@@ -89,7 +90,7 @@ const nextConfig = {
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.s3.amazonaws.com https://*.mlstatic.com https://*.mercadolibre.com https://*.mercadolivre.com",
               `connect-src ${cspConnectSrc}`,
-              "frame-src 'self' https://*.mercadopago.com https://*.mlstatic.com https://*.mercadolibre.com https://*.mercadolivre.com",
+              "frame-src 'self' https://*.mercadopago.com https://*.mlstatic.com https://*.mercadolibre.com https://*.mercadolivre.com https://www.google.com https://maps.google.com",
               "object-src 'none'",
               "base-uri 'self'",
               "form-action 'self'",

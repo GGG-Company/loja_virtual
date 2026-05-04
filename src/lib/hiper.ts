@@ -7,6 +7,11 @@ const BASE_URL = 'https://ms-ecommerce.hiper.com.br/api/v1';
 let _token: string | null = null;
 let _tokenExpiresAt = 0;
 
+export function invalidateHiperToken() {
+  _token = null;
+  _tokenExpiresAt = 0;
+}
+
 async function getToken(): Promise<string | null> {
   if (_token && Date.now() < _tokenExpiresAt) return _token;
 
@@ -97,35 +102,67 @@ export async function getHiperProducts(pontoDeSincronizacao = 0): Promise<any[] 
   const token = await getToken();
   if (!token) return null;
 
-  try {
-    const res = await fetch(
-      `${BASE_URL}/produtos/pontoDeSincronizacao?pontoDeSincronizacao=${pontoDeSincronizacao}`,
-      { headers: authHeaders(token) },
-    );
+  const TIMEOUT_MS = 120_000; // 2 min — a API do Hiper pode ser lenta com 22k produtos
 
-    const text = await res.text();
-    const data = JSON.parse(text);
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-    if (!res.ok) {
-      const erros: string[] = data.errors ?? [];
-      if (erros.some((e: string) => e.toLowerCase().includes('nenhum produto'))) {
-        logger.warn('[HIPER] Nenhum produto configurado para sincronização no Hiper Gestão');
-        return [];
+    try {
+      const res = await fetch(
+        `${BASE_URL}/produtos/pontoDeSincronizacao?pontoDeSincronizacao=${pontoDeSincronizacao}`,
+        { headers: authHeaders(token), signal: controller.signal },
+      );
+      clearTimeout(timer);
+
+      const text = await res.text();
+
+      // A API do Hiper às vezes retorna uma página HTML de erro em vez de JSON
+      if (text.trimStart().startsWith('<')) {
+        logger.error('[HIPER] Resposta HTML inesperada (status %d, tentativa %d/3): %s', res.status, attempt, text.slice(0, 200));
+        if (attempt < 3) {
+          await new Promise(r => setTimeout(r, 5_000 * attempt));
+          continue;
+        }
+        return null;
       }
-      logger.error('[HIPER] Erro ao buscar produtos: %d — %s', res.status, text.slice(0, 300));
+
+      const data = JSON.parse(text);
+
+      if (!res.ok) {
+        const erros: string[] = data.errors ?? [];
+        if (erros.some((e: string) => e.toLowerCase().includes('nenhum produto'))) {
+          logger.warn('[HIPER] Nenhum produto configurado para sincronização no Hiper Gestão');
+          return [];
+        }
+        logger.error('[HIPER] Erro ao buscar produtos: %d — %s', res.status, text.slice(0, 300));
+        return null;
+      }
+
+      const produtos = data.produtos ?? data.data ?? data;
+      const lista = Array.isArray(produtos) ? produtos : [];
+
+      _productsCache = { pds: pontoDeSincronizacao, data: lista, expiresAt: Date.now() + PRODUCTS_CACHE_TTL_MS };
+      logger.info('[HIPER] %d produtos buscados e cacheados por 20 min', lista.length);
+      return lista;
+    } catch (err: any) {
+      clearTimeout(timer);
+      const isTimeout = err.name === 'AbortError';
+      logger.error(
+        '[HIPER] %s ao buscar produtos (tentativa %d/3): %s',
+        isTimeout ? 'Timeout' : 'Exceção',
+        attempt,
+        err.message,
+      );
+      if (attempt < 3) {
+        await new Promise(r => setTimeout(r, 5_000 * attempt));
+        continue;
+      }
       return null;
     }
-
-    const produtos = data.produtos ?? data.data ?? data;
-    const lista = Array.isArray(produtos) ? produtos : [];
-
-    _productsCache = { pds: pontoDeSincronizacao, data: lista, expiresAt: Date.now() + PRODUCTS_CACHE_TTL_MS };
-    logger.info('[HIPER] %d produtos buscados e cacheados por 20 min', lista.length);
-    return lista;
-  } catch (err) {
-    logger.error(err as Error, '[HIPER] Exceção ao buscar produtos');
-    return null;
   }
+
+  return null;
 }
 
 // ── Estoque ───────────────────────────────────────────────────────────────────

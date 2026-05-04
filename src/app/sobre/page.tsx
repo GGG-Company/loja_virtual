@@ -12,7 +12,6 @@ import {
   Target,
   Zap,
   CheckCircle,
-  Wrench,
 } from 'lucide-react';
 
 const stats = [
@@ -187,8 +186,24 @@ export default function AboutPage() {
               viewport={{ once: true }}
               className="relative"
             >
-              <div className="aspect-square bg-gray-100 rounded-sm border border-gray-200 flex items-center justify-center">
-                <Wrench className="h-40 w-40 text-gray-300" />
+              {/* Google Maps embed */}
+              <div className="aspect-square rounded-sm overflow-hidden border border-gray-200 shadow-md">
+                <iframe
+                  title="Localização da loja"
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  loading="lazy"
+                  allowFullScreen
+                  referrerPolicy="no-referrer-when-downgrade"
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3898.913356569554!2d-38.969387624149086!3d-12.254142445798113!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x71437ed352d1427%3A0xe10e234bdce3b270!2sShopping%20das%20Ferramentas!5e0!3m2!1spt-BR!2sbr!4v1777725508868!5m2!1spt-BR!2sbr"
+                />
+              </div>
+              {/* Badge de endereço */}
+              <div className="absolute bottom-4 left-4 right-16 bg-white/95 backdrop-blur-sm rounded-sm shadow-lg px-4 py-3 border-l-4 border-[#CC1020]">
+                <p className="text-xs font-display font-bold text-[#CC1020] uppercase tracking-wider mb-0.5">Nossa Loja Física</p>
+                <p className="text-sm font-body text-[#1A1A1A] font-semibold">Rua Vitórino Gouvêia, 35</p>
+                <p className="text-xs text-gray-500">Centro · Feira de Santana, BA</p>
               </div>
               <motion.div
                 className="absolute -bottom-6 -right-6 w-44 h-44 bg-[#CC1020] flex items-center justify-center text-white text-center p-5 rounded-sm shadow-xl"

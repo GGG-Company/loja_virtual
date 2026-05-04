@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
-import { getHiperProducts, invalidateHiperProductsCache } from '@/lib/hiper';
+import { getHiperProducts, invalidateHiperProductsCache, invalidateHiperToken } from '@/lib/hiper';
 import logger from '@/lib/logger';
 
 export const runtime = 'nodejs';
@@ -117,6 +117,9 @@ export async function POST(req: NextRequest) {
 
   logger.info('[HIPER_SYNC] Iniciando sync (pds=%d, offset=%d, limit=%d)', pontoDeSincronizacao, offset, limit);
 
+  // Sempre gera token novo a cada sync — não depende de HIPER_API_TOKEN no env
+  if (offset === 0) invalidateHiperToken();
+
   const allHiperProducts = await getHiperProducts(pontoDeSincronizacao);
   if (!allHiperProducts) {
     return NextResponse.json({ error: 'Falha ao buscar produtos do Hiper' }, { status: 502 });
@@ -127,10 +130,6 @@ export async function POST(req: NextRequest) {
   const hasMore        = offset + limit < totalFromHiper;
 
   logger.info('[HIPER_SYNC] %d produtos no Hiper, processando %d-%d', totalFromHiper, offset, offset + hiperProducts.length);
-
-  if (pontoDeSincronizacao === 0 && offset === 0) {
-    await prisma.product.updateMany({ data: { externalIdHiper: null } });
-  }
 
   const categoryCache = new Map<string, string>();
   const brandCache    = new Map<string, string>();
@@ -372,7 +371,58 @@ export async function POST(req: NextRequest) {
     await prisma.stockLog.createMany({ data: stockLogQueue, skipDuplicates: true });
   }
 
-  if (!hasMore) invalidateHiperProductsCache();
+  // ── Desativar produtos que sumiram do Hiper ───────────────────────────────
+  // Feito apenas no último batch (hasMore=false) quando temos a visão completa.
+  if (!hasMore) {
+    // Monta o set de todos os IDs ativos no Hiper (inclusive variações)
+    const activeHiperIdSet = new Set<string>();
+    for (const hp of allHiperProducts) {
+      if (hp.removido || hp.ativo === false) continue;
+      const candidates: any[] = hp.grade && hp.variacao?.length ? hp.variacao : [hp];
+      for (const variant of candidates) {
+        if (variant.variacaoAtiva === false) continue;
+        const id = String(variant.id || hp.id || '');
+        if (id) activeHiperIdSet.add(id);
+      }
+    }
+
+    // Busca produtos da loja que estão vinculados ao Hiper e ainda ativos
+    const stillLinked = await prisma.product.findMany({
+      where: { externalIdHiper: { not: null }, isActive: true },
+      select: { id: true, stock: true, externalIdHiper: true },
+    });
+
+    // Os que não aparecem mais no Hiper ativo → desativar
+    const disappeared = stillLinked.filter(p => !activeHiperIdSet.has(p.externalIdHiper!));
+
+    if (disappeared.length > 0) {
+      const disappearedIds = disappeared.map(p => p.id);
+      await prisma.product.updateMany({
+        where: { id: { in: disappearedIds } },
+        data: { isActive: false, stock: 0 },
+      });
+      deactivated += disappeared.length;
+
+      // Loga a zeragem de estoque para histórico
+      const deactLogs = disappeared
+        .filter(p => p.stock > 0)
+        .map(p => ({
+          productId: p.id,
+          previousQty: p.stock,
+          newQty: 0,
+          difference: -p.stock,
+          reason: 'Removido/inativo no Hiper',
+          source: 'HIPER',
+        }));
+      if (deactLogs.length > 0) {
+        await prisma.stockLog.createMany({ data: deactLogs, skipDuplicates: true });
+      }
+
+      logger.info('[HIPER_SYNC] %d produtos desativados (sumiram do Hiper)', disappeared.length);
+    }
+
+    invalidateHiperProductsCache();
+  }
 
   logger.info(
     '[HIPER_SYNC] Concluído — matched:%d created:%d unmatched:%d stockUpdated:%d deactivated:%d errors:%d nextPoint:%d',

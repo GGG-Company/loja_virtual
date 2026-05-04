@@ -38,9 +38,11 @@ export function useFilters() {
   }, []);
 
   // ── Core URL updater — preserves non-filter params (categoria, search) ──
+  // Sempre reseta `page` ao alterar filtros (a nova filtragem começa da pág 1)
   const updateUrl = useCallback(
     (updates: Record<string, string | null>) => {
       const params = new URLSearchParams(searchParams.toString());
+      params.delete('page');
       for (const [key, val] of Object.entries(updates)) {
         if (val === null || val === '') params.delete(key);
         else params.set(key, val);

@@ -68,12 +68,17 @@ export async function POST(
       }, { status: 500 });
     }
 
+    const isSandboxPartial = result.status === 'sandbox_checkout_done';
+
     return NextResponse.json({
       success: true,
-      message: 'Etiqueta gerada com sucesso',
+      message: isSandboxPartial
+        ? 'Checkout realizado no Melhor Envio (sandbox — etiqueta será gerada em produção)'
+        : 'Etiqueta gerada com sucesso',
       labelUrl: result.labelUrl,
       trackingCode: result.trackingCode,
       melhorEnvioOrderId: result.orderId,
+      sandbox: isSandboxPartial,
     });
 
   } catch (error) {

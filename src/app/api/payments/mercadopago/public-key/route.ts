@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getMercadoPagoConfig } from '@/lib/mercadopago-config';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +22,11 @@ export async function GET() {
     if (!publicKey || publicKey.length < 10) {
       return NextResponse.json({ error: 'Configuração não encontrada ou inválida' }, { status: 404 });
     }
+
+    logger.info(
+      { source: config?.publicKey ? 'db' : 'env', key_preview: publicKey.slice(0, 12) + '…' },
+      '[MP] Public key entregue ao brick',
+    );
 
     return NextResponse.json({ publicKey });
   } catch (error) {

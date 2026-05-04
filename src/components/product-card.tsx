@@ -6,9 +6,10 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { usePrice } from '@/hooks/use-price';
 import { Heart, Loader2 } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import { toast } from 'sonner';
 import { useCart } from '@/contexts/cart-context';
+import { useWishlist } from '@/hooks/use-wishlist';
 
 interface ProductCardProps {
   product: {
@@ -26,13 +27,15 @@ interface ProductCardProps {
   priority?: boolean;
 }
 
-export function ProductCard({ product, className, priority = false }: ProductCardProps) {
+export const ProductCard = memo(function ProductCard({ product, className, priority = false }: ProductCardProps) {
   const finalPrice = product.promotionalPrice ?? product.price;
   const { formatPrice, bestInstallmentText } = usePrice(finalPrice);
   const { addItem } = useCart();
-  const [isFavorite, setIsFavorite] = useState(false);
+  const { ids: wishlistIds, toggle: toggleWishlist } = useWishlist();
+  const isFavorite = wishlistIds.has(product.id);
   const [isAdding, setIsAdding] = useState(false);
   const [heartAnimate, setHeartAnimate] = useState(false);
+  const [imgFit, setImgFit] = useState<'contain' | 'cover'>('contain');
   const addingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -75,8 +78,8 @@ export function ProductCard({ product, className, priority = false }: ProductCar
   const handleFavorite = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsFavorite((prev) => !prev);
     setHeartAnimate(true);
+    toggleWishlist(product.id, product.name);
   };
 
   return (
@@ -133,17 +136,33 @@ export function ProductCard({ product, className, priority = false }: ProductCar
           </button>
 
           {/* Product image */}
-          <div className="card-img-zoom relative w-full h-full p-4">
+          <div className="card-img-zoom relative w-full h-full">
             <Image
               src={imageSrc}
               alt={product.images?.[0]?.alt || product.name}
               fill
-              className="object-contain drop-shadow-sm"
+              className={cn(
+                'transition-all duration-300 drop-shadow-sm',
+                imgFit === 'cover' ? 'object-cover' : 'object-contain p-4'
+              )}
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
               priority={priority}
               loading={priority ? 'eager' : 'lazy'}
               placeholder="blur"
               blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PC9zdmc+"
+              onLoad={(e) => {
+                const img = e.currentTarget;
+                const { naturalWidth: w, naturalHeight: h } = img;
+                if (!w || !h) return;
+                const ratio = w / h;
+                // Imagem muito próxima do quadrado ou paisagem levemente esticada → cover
+                // Imagem muito vertical ou muito horizontal extrema → contain
+                if (ratio >= 0.85 && ratio <= 1.6) {
+                  setImgFit('cover');
+                } else {
+                  setImgFit('contain');
+                }
+              }}
             />
           </div>
 
@@ -185,4 +204,4 @@ export function ProductCard({ product, className, priority = false }: ProductCar
       </motion.div>
     </Link>
   );
-}
+});

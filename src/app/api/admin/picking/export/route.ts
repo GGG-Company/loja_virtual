@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import logger from '@/lib/logger';
-import { generatePickingReportPdf, type PickingPdfItem } from '@/lib/export/pdf';
+import { generatePickingReportPdf, type PickingPdfOrder } from '@/lib/export/pdf';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,9 +17,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => null);
-    const items: PickingPdfItem[] = Array.isArray(body?.items) ? body.items : [];
+    const orders: PickingPdfOrder[] = Array.isArray(body?.orders) ? body.orders : [];
 
-    const buffer = await generatePickingReportPdf(items);
+    const buffer = await generatePickingReportPdf(orders);
 
     const now  = new Date();
     const mes  = now.toLocaleDateString('pt-BR', { month: 'long' });

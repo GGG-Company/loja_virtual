@@ -147,7 +147,7 @@ export default function CuponsAdminPage() {
                   <span className="text-sm font-semibold">
                     {coupon.discountType === 'PERCENTAGE' 
                       ? `${coupon.value}%` 
-                      : `R$ ${coupon.value.toFixed(2)}`
+                      : `R$ ${Number(coupon.value).toFixed(2)}`
                     }
                   </span>
                 </td>

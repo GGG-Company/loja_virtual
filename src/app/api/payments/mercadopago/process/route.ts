@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getMercadoPagoKeys } from '@/lib/mercadopago-config';
+import { getMercadoPagoKeys, getMercadoPagoConfig } from '@/lib/mercadopago-config';
 import { prisma } from '@/lib/prisma';
 import { sendOrderStatusUpdate } from '@/lib/webhooks';
 import logger from '@/lib/logger';
@@ -42,9 +42,10 @@ export async function POST(req: NextRequest) {
 
     const serverAmount = toNum(order.total);
 
-    // Buscar credenciais
-    const { accessToken } = getMercadoPagoKeys();
-    
+    // Buscar credenciais — DB tem prioridade sobre env vars (mesma lógica da public-key route)
+    const [dbConfig, envKeys] = await Promise.all([getMercadoPagoConfig(), Promise.resolve(getMercadoPagoKeys())]);
+    const accessToken = dbConfig?.accessToken?.trim() || envKeys.accessToken;
+
     if (!accessToken) {
       return NextResponse.json(
         { error: 'Mercado Pago não configurado' },
@@ -52,24 +53,71 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Configurar o SDK
-    const client = new MercadoPagoConfig({ 
-      accessToken: accessToken 
-    });
+    const publicKey = dbConfig?.publicKey?.trim() || getMercadoPagoKeys().publicKey;
+    logger.info(
+      {
+        source:            dbConfig?.accessToken ? 'db' : 'env',
+        environment:       dbConfig?.environment ?? (envKeys.sandbox ? 'sandbox' : 'production'),
+        token_prefix:      accessToken.slice(0, 8),
+        publicKey_prefix:  publicKey ? publicKey.slice(0, 8) : '(não definida)',
+      },
+      '[MP] Credenciais',
+    );
 
-    // Criar pagamento
-    const payment = new Payment(client);
-    
+    // Verificar se o access token é válido e obter info da conta
+    let ownerEmail: string | null = null;
+    {
+      const meRes = await fetch('https://api.mercadopago.com/users/me', {
+        headers: { 'Authorization': `Bearer ${accessToken}` },
+      });
+      const meData = await meRes.json();
+      ownerEmail = meData.email ?? null;
+      logger.info(
+        {
+          httpStatus: meRes.status,
+          account_id: meData.id,
+          email:      '[REDACTED]',
+          site_id:    meData.site_id,
+          status:     meData.status,
+          error:      meData.error ?? null,
+          message:    meData.message ?? null,
+        },
+        '[MP] Info da conta',
+      );
+    }
+
     // Extrair os dados reais do formData (pode estar aninhado)
     const paymentFormData = formData.formData || formData;
-    
+
+    // Em sandbox, rejeitar se o email do pagador for o mesmo do dono da conta
+    if (accessToken.startsWith('TEST-') && ownerEmail) {
+      const payerEmail = paymentFormData.payer?.email || '';
+      if (payerEmail.toLowerCase() === ownerEmail.toLowerCase()) {
+        return NextResponse.json(
+          {
+            error: 'Email inválido para teste. Use um email diferente do seu cadastro no Mercado Pago.',
+            detail: 'Sandbox: o email do pagador não pode ser o mesmo email do vendedor.',
+          },
+          { status: 422 },
+        );
+      }
+    }
+
+    // Nota: a validação prévia via GET /v1/card_tokens/{token} foi removida.
+    // O endpoint retorna 500 em contas pessoais sandbox e pode invalidar o token
+    // antes do pagamento. Tokens inválidos são rejeitados pela API de pagamento
+    // com causa específica (causa 324 / bad_filled_card_number etc.).
+
     const paymentData = {
       transaction_amount: Number(serverAmount),
       token: paymentFormData.token,
       description: `Pedido #${orderId}`,
       installments: Number(paymentFormData.installments),
       payment_method_id: paymentFormData.payment_method_id,
-      issuer_id: paymentFormData.issuer_id,
+      // issuer_id causa internal_error no sandbox — omitir em ambiente de teste
+      ...(paymentFormData.issuer_id && !accessToken.startsWith('TEST-')
+        ? { issuer_id: Number(paymentFormData.issuer_id) }
+        : {}),
       payer: {
         email: paymentFormData.payer?.email || 'cliente@exemplo.com',
         identification: {
@@ -83,7 +131,103 @@ export async function POST(req: NextRequest) {
         : {}),
     };
 
-    const response = await payment.create({ body: paymentData });
+    logger.info(
+      {
+        transaction_amount: paymentData.transaction_amount,
+        payment_method_id:  paymentData.payment_method_id,
+        installments:       paymentData.installments,
+        payer_email:        paymentData.payer.email,
+        payer_id_type:      paymentData.payer.identification.type,
+        payer_id_number:    paymentData.payer.identification.number,
+        token_preview:      paymentData.token ? `${String(paymentData.token).slice(0, 8)}…` : null,
+        external_reference: paymentData.external_reference,
+        notification_url:   (paymentData as any).notification_url ?? '(omitido — localhost)',
+      },
+      '[MP] Enviando pagamento',
+    );
+
+    const client = new MercadoPagoConfig({ accessToken });
+    const payment = new Payment(client);
+
+    let mpResponse: any;
+    try {
+      mpResponse = await payment.create({
+        body: paymentData,
+        requestOptions: { idempotencyKey: `pay-${orderId}-${Date.now()}` },
+      });
+    } catch (sdkError: any) {
+      // SDK lança erro com cause quando a API retorna 4xx/5xx
+      const cause = sdkError?.cause ?? sdkError?.message ?? String(sdkError);
+      logger.error({ cause, orderId }, '[MP] SDK erro ao criar pagamento');
+
+      const isSandbox = accessToken.startsWith('TEST-');
+      const isInternalError =
+        isSandbox &&
+        (String(cause).includes('internal_error') || sdkError?.status === 500 || sdkError?.statusCode === 500);
+
+      const autoApprove = process.env.SANDBOX_AUTO_APPROVE === 'true';
+
+      if (isInternalError) {
+        const sandboxPaymentId = `sandbox-${autoApprove ? 'approved' : 'pending'}-${orderId}`;
+        const newStatus = autoApprove ? 'CONFIRMED' : 'PENDING';
+        const newPaymentStatus = autoApprove ? 'approved' : 'pending';
+
+        const updated = await prisma.order.update({
+          where: { id: orderId },
+          data: {
+            status: newStatus as any,
+            paymentId: sandboxPaymentId,
+            paymentStatus: newPaymentStatus,
+            ...(autoApprove ? { paidAt: new Date() } : {}),
+          },
+          include: {
+            user: true,
+            items: {
+              include: {
+                product: { select: { id: true, name: true, sku: true, imageUrl: true } },
+              },
+            },
+          },
+        });
+
+        if (autoApprove) {
+          await sendOrderStatusUpdate({
+            orderId: updated.id,
+            orderNumber: updated.orderNumber,
+            status: updated.status as any,
+            total: toNum(updated.total),
+            user: updated.user,
+            paymentMethod: updated.paymentMethod,
+            paidAt: updated.paidAt,
+            items: serializeItems(updated.items),
+          });
+          logger.info({ orderId, sandboxPaymentId }, '[MP] Sandbox auto-aprovado');
+        } else {
+          logger.warn({ orderId, sandboxPaymentId }, '[MP] Sandbox internal_error — pedido salvo como PENDING');
+        }
+
+        return NextResponse.json({
+          status: newPaymentStatus,
+          paymentId: sandboxPaymentId,
+          statusDetail: autoApprove ? 'sandbox_auto_approved' : 'sandbox_pending_simulation',
+        });
+      }
+
+      return NextResponse.json(
+        { error: 'Erro ao processar pagamento. Tente novamente ou contate o suporte.',
+          detail: process.env.NODE_ENV !== 'production' ? String(cause) : undefined },
+        { status: 500 },
+      );
+    }
+
+    logger.info(
+      {
+        mpStatus: mpResponse.status,
+        mpDetail: mpResponse.status_detail,
+        mpId:     mpResponse.id,
+      },
+      '[MP] Resposta da API',
+    );
 
     // 1. Verificar se o webhook já processou este pedido enquanto esperávamos a resposta da API
     const currentOrder = await prisma.order.findUnique({
@@ -91,21 +235,21 @@ export async function POST(req: NextRequest) {
       select: { status: true, paymentStatus: true }
     });
 
-    const newStatus = response.status === 'approved' ? 'CONFIRMED' : 'PENDING';
-    
+    const newStatus = mpResponse.status === 'approved' ? 'CONFIRMED' : 'PENDING';
+
     // Se o status já é o que queremos ou se já foi confirmado por outro meio (webhook),
     // apenas retornamos a resposta sem disparar webhooks duplicados.
-    const statusAlreadyUpdated = currentOrder?.status === newStatus && currentOrder?.paymentStatus === response.status;
+    const statusAlreadyUpdated = currentOrder?.status === newStatus && currentOrder?.paymentStatus === mpResponse.status;
 
     // Atualizar pedido com informações do pagamento
     const updated = await prisma.order.update({
       where: { id: orderId },
       data: {
         status: newStatus as any,
-        paymentId: String(response.id),
-        paymentStatus: response.status,
+        paymentId: String(mpResponse.id),
+        paymentStatus: mpResponse.status,
       },
-      include: { 
+      include: {
         user: true,
         items: {
           include: {
@@ -132,15 +276,19 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({
-      status: response.status,
-      paymentId: response.id,
-      statusDetail: response.status_detail,
+      status: mpResponse.status,
+      paymentId: mpResponse.id,
+      statusDetail: mpResponse.status_detail,
     });
   } catch (error: any) {
-    logger.error({ error: error.message, stack: error.stack }, 'Erro crítico ao processar pagamento no Mercado Pago');
+    logger.error({ message: error?.message ?? String(error) }, 'Erro crítico ao processar pagamento');
+
     return NextResponse.json(
-      { error: 'Erro ao processar pagamento. Tente novamente ou contate o suporte.' },
-      { status: 500 }
+      {
+        error: 'Erro ao processar pagamento. Tente novamente ou contate o suporte.',
+        detail: process.env.NODE_ENV !== 'production' ? String(error?.message ?? error) : undefined,
+      },
+      { status: 500 },
     );
   }
 }

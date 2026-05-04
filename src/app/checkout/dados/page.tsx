@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { CheckoutProgress } from '@/components/checkout-progress';
+import { User, Mail, Phone, FileText, Shield } from 'lucide-react';
 
 // ── Masks ──────────────────────────────────────────────────────────────────
 function maskPhone(value: string) {
@@ -144,19 +145,28 @@ export default function CheckoutDadosPage() {
               </h1>
             </div>
 
+            {/* Segurança */}
+            <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-sm px-4 py-3 mb-6">
+              <Shield className="h-4 w-4 text-green-600 shrink-0" />
+              <p className="text-xs text-green-700">Seus dados são protegidos com criptografia SSL e nunca serão compartilhados.</p>
+            </div>
+
             <form onSubmit={handleSubmit} className="space-y-5" noValidate>
               {/* Nome */}
               <div>
                 <Label htmlFor="nome">Nome Completo *</Label>
-                <Input
-                  id="nome"
-                  autoComplete="name"
-                  placeholder="Seu nome completo"
-                  aria-invalid={!!errors.nome}
-                  aria-describedby={errors.nome ? 'nome-error' : undefined}
-                  className={`h-12 mt-1 ${errors.nome ? 'border-red-500 focus-visible:ring-red-400' : ''}`}
-                  {...field('nome')}
-                />
+                <div className="relative mt-1">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  <Input
+                    id="nome"
+                    autoComplete="name"
+                    placeholder="Seu nome completo"
+                    aria-invalid={!!errors.nome}
+                    aria-describedby={errors.nome ? 'nome-error' : undefined}
+                    className={`h-12 pl-10 ${errors.nome ? 'border-red-500 focus-visible:ring-red-400' : ''}`}
+                    {...field('nome')}
+                  />
+                </div>
                 {errors.nome && (
                   <p id="nome-error" role="alert" className="text-xs text-red-600 mt-1">{errors.nome}</p>
                 )}
@@ -165,16 +175,19 @@ export default function CheckoutDadosPage() {
               {/* Email */}
               <div>
                 <Label htmlFor="email">E-mail *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="seu@email.com"
-                  aria-invalid={!!errors.email}
-                  aria-describedby={errors.email ? 'email-error' : undefined}
-                  className={`h-12 mt-1 ${errors.email ? 'border-red-500 focus-visible:ring-red-400' : ''}`}
-                  {...field('email')}
-                />
+                <div className="relative mt-1">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  <Input
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="seu@email.com"
+                    aria-invalid={!!errors.email}
+                    aria-describedby={errors.email ? 'email-error' : undefined}
+                    className={`h-12 pl-10 ${errors.email ? 'border-red-500 focus-visible:ring-red-400' : ''}`}
+                    {...field('email')}
+                  />
+                </div>
                 {errors.email && (
                   <p id="email-error" role="alert" className="text-xs text-red-600 mt-1">{errors.email}</p>
                 )}
@@ -184,17 +197,20 @@ export default function CheckoutDadosPage() {
                 {/* Telefone */}
                 <div>
                   <Label htmlFor="telefone">Telefone *</Label>
-                  <Input
-                    id="telefone"
-                    type="tel"
-                    inputMode="numeric"
-                    autoComplete="tel"
-                    placeholder="(00) 00000-0000"
-                    aria-invalid={!!errors.telefone}
-                    aria-describedby={errors.telefone ? 'telefone-error' : undefined}
-                    className={`h-12 mt-1 ${errors.telefone ? 'border-red-500 focus-visible:ring-red-400' : ''}`}
-                    {...field('telefone')}
-                  />
+                  <div className="relative mt-1">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                    <Input
+                      id="telefone"
+                      type="tel"
+                      inputMode="numeric"
+                      autoComplete="tel"
+                      placeholder="(00) 00000-0000"
+                      aria-invalid={!!errors.telefone}
+                      aria-describedby={errors.telefone ? 'telefone-error' : undefined}
+                      className={`h-12 pl-10 ${errors.telefone ? 'border-red-500 focus-visible:ring-red-400' : ''}`}
+                      {...field('telefone')}
+                    />
+                  </div>
                   {errors.telefone && (
                     <p id="telefone-error" role="alert" className="text-xs text-red-600 mt-1">{errors.telefone}</p>
                   )}
@@ -203,16 +219,19 @@ export default function CheckoutDadosPage() {
                 {/* CPF */}
                 <div>
                   <Label htmlFor="cpf">CPF *</Label>
-                  <Input
-                    id="cpf"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    placeholder="000.000.000-00"
-                    aria-invalid={!!errors.cpf}
-                    aria-describedby={errors.cpf ? 'cpf-error' : undefined}
-                    className={`h-12 mt-1 ${errors.cpf ? 'border-red-500 focus-visible:ring-red-400' : ''}`}
-                    {...field('cpf')}
-                  />
+                  <div className="relative mt-1">
+                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                    <Input
+                      id="cpf"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      placeholder="000.000.000-00"
+                      aria-invalid={!!errors.cpf}
+                      aria-describedby={errors.cpf ? 'cpf-error' : undefined}
+                      className={`h-12 pl-10 ${errors.cpf ? 'border-red-500 focus-visible:ring-red-400' : ''}`}
+                      {...field('cpf')}
+                    />
+                  </div>
                   {errors.cpf && (
                     <p id="cpf-error" role="alert" className="text-xs text-red-600 mt-1">{errors.cpf}</p>
                   )}

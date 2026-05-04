@@ -36,8 +36,8 @@ export async function GET() {
   const { password, cpf, ...safeUser } = user;
   return NextResponse.json({
     ...safeUser,
-    // CPF mascarado na resposta — apenas os 2 últimos dígitos visíveis (LGPD Art. 46)
-    cpf: cpf ? `***.***.***-${cpf.replace(/\D/g, '').slice(-2)}` : null,
+    // CPF totalmente mascarado na resposta (LGPD Art. 46 — anonimização)
+    cpf: cpf ? '***.***.***-**' : null,
     hasPassword: !!password,
   });
 }

@@ -3,13 +3,13 @@
 import logger from "@/lib/logger";
 import { Payment } from '@mercadopago/sdk-react';
 import { toast } from 'sonner';
-import { memo, useCallback, useMemo } from 'react';
+import { memo, useCallback, useMemo, useRef } from 'react';
 import { useMercadoPago } from './mercadopago-provider';
 
 interface MercadoPagoPaymentBrickProps {
   amount: number;
   orderId: string;
-  onPaymentSuccess: (paymentId: string) => void;
+  onPaymentSuccess: (paymentId: string, statusDetail?: string) => void;
   onPaymentError: (error: any) => void;
   userEmail?: string;
   userFirstName?: string;
@@ -27,17 +27,24 @@ export const MercadoPagoPaymentBrick = memo(function MercadoPagoPaymentBrick({
   userLastName,
   maxInstallments = 12,
 }: MercadoPagoPaymentBrickProps) {
-  const { initialized } = useMercadoPago();
+  const { initialized, publicKey } = useMercadoPago();
+  // Flag para evitar toast duplo: onSubmit já tratou o resultado, ignorar onError do SDK
+  const submittedRef = useRef(false);
 
   // Memoizar initialization para evitar re-criação
+  // Em sandbox não pré-preenchemos o email — o brick exibe o campo e o usuário
+  // pode digitar um test user. Em produção pré-preenchemos para facilitar o fluxo.
+  const isSandbox = publicKey ? publicKey.startsWith('TEST-') : false;
+
   const initialization = useMemo(() => ({
     amount: amount,
-    payer: {
+    payer: isSandbox ? undefined : {
       email: userEmail,
       firstName: userFirstName,
       lastName: userLastName,
     },
-  }), [amount, userEmail, userFirstName, userLastName]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [amount, isSandbox, userEmail, userFirstName, userLastName]);
 
   // Memoizar customization - APENAS CARTÃO (CRÉDITO/DÉBITO)
   const customization = useMemo(() => ({
@@ -54,6 +61,7 @@ export const MercadoPagoPaymentBrick = memo(function MercadoPagoPaymentBrick({
   }), [maxInstallments]);
 
   const onSubmit = useCallback(async (formData: any) => {
+    submittedRef.current = false;
     try {
       // Enviar para sua API processar o pagamento
       const response = await fetch('/api/payments/mercadopago/process', {
@@ -71,15 +79,23 @@ export const MercadoPagoPaymentBrick = memo(function MercadoPagoPaymentBrick({
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Erro ao processar pagamento');
+        const msg = data.error || 'Erro ao processar pagamento';
+        const detail = data.detail ? ` — ${data.detail}` : '';
+        throw new Error(process.env.NODE_ENV !== 'production' ? `${msg}${detail}` : msg);
       }
 
       if (data.status === 'approved') {
+        submittedRef.current = true;
         toast.success('Pagamento aprovado!');
-        onPaymentSuccess(data.paymentId);
+        onPaymentSuccess(data.paymentId, data.statusDetail ?? 'approved');
       } else if (data.status === 'pending') {
-        toast.info('Pagamento pendente de confirmação');
-        onPaymentSuccess(data.paymentId);
+        submittedRef.current = true;
+        if (data.statusDetail === 'sandbox_pending_simulation') {
+          toast.info('Pedido recebido! Aguardando confirmação de pagamento.');
+        } else {
+          toast.info('Pagamento pendente de confirmação');
+        }
+        onPaymentSuccess(data.paymentId, data.statusDetail);
       } else {
         toast.error('Pagamento recusado');
         onPaymentError(data);
@@ -92,8 +108,9 @@ export const MercadoPagoPaymentBrick = memo(function MercadoPagoPaymentBrick({
   }, [orderId, amount, onPaymentSuccess, onPaymentError]);
 
   const onError = useCallback(async (error: any) => {
+    // Se onSubmit já tratou o resultado (aprovado/pendente), ignorar este callback
+    if (submittedRef.current) return;
     logger.error(error, 'Payment Brick Error');
-    // Tenta extrair mensagem amigável
     const msg = error?.message || (typeof error === 'string' ? error : 'Erro desconhecido no Checkout');
     toast.error(`Erro ao carregar checkout: ${msg}`);
     onPaymentError(error);

@@ -10,7 +10,11 @@ export const maxDuration = 300; // 5 min — suficiente para sync de estoque
 // Protegido por CRON_SECRET (igual aos outros crons do projeto).
 export async function POST(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
-  if (secret && req.headers.get('authorization') !== `Bearer ${secret}`) {
+  if (!secret) {
+    logger.error('[CRON] CRON_SECRET não configurado — rejeitando chamada');
+    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+  }
+  if (req.headers.get('authorization') !== `Bearer ${secret}`) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 

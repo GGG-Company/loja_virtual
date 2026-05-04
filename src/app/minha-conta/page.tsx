@@ -10,11 +10,12 @@ import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { User, Package, MapPin, RotateCcw, Loader2, Check, RefreshCw, Lock, Download, Shield, MessageCircle, Trash2 } from 'lucide-react';
+import { User, Package, MapPin, RotateCcw, Loader2, Check, RefreshCw, Lock, Download, Shield, MessageCircle, Trash2, Heart } from 'lucide-react';
 import { SupportChatTab } from '@/components/support-chat-tab';
 import { apiClient } from '@/lib/api-client';
 import { statusToPt, statusBadgeClass } from '@/lib/i18n';
 import { toast } from 'sonner';
+import { useCart } from '@/contexts/cart-context';
 
 type ProfileData = {
   name: string;
@@ -339,6 +340,8 @@ export default function MyAccountPage() {
     if (activeTab === 'pedidos') fetchOrders();
   }, [activeTab, fetchOrders]);
 
+  const { addItem } = useCart();
+
   const handleReorder = useCallback(async (orderId: string) => {
     setReorderingId(orderId);
     try {
@@ -348,32 +351,24 @@ export default function MyAccountPage() {
         toast.error('Não foi possível obter os itens do pedido.');
         return;
       }
-      const cart: unknown[] = JSON.parse(localStorage.getItem('cart') || '[]');
       for (const item of items) {
         const id = item.productId ?? item.product?.id;
         if (!id) continue;
-        const existing = (cart as any[]).find((c) => c.id === id);
-        if (existing) {
-          existing.quantity += item.quantity;
-        } else {
-          (cart as any[]).push({
-            id,
-            name: item.product?.name ?? '',
-            price: item.price,
-            imageUrl: item.product?.imageUrl ?? '/placeholder.jpg',
-            quantity: item.quantity,
-          });
-        }
+        addItem({
+          id,
+          name: item.product?.name ?? '',
+          price: item.price,
+          imageUrl: item.product?.imageUrl ?? '/placeholder.jpg',
+          quantity: item.quantity,
+        });
       }
-      localStorage.setItem('cart', JSON.stringify(cart));
-      window.dispatchEvent(new Event('cartUpdated'));
       toast.success('Itens adicionados ao carrinho!');
     } catch {
       toast.error('Não foi possível adicionar os itens ao carrinho.');
     } finally {
       setReorderingId(null);
     }
-  }, []);
+  }, [addItem]);
 
   if (status === 'loading') {
     return (
@@ -391,6 +386,7 @@ export default function MyAccountPage() {
     { id: 'devolucoes' as const, label: 'Devoluções', icon: RotateCcw },
     { id: 'enderecos' as const, label: 'Endereços', icon: MapPin },
     { id: 'suporte' as const, label: 'Suporte', icon: MessageCircle },
+    { id: 'favoritos' as const, label: 'Favoritos', icon: Heart, href: '/minha-conta/favoritos' },
   ];
 
   return (
@@ -416,6 +412,18 @@ export default function MyAccountPage() {
                 <div className="bg-white rounded-sm shadow-md border-t-4 border-[#CC1020] p-5 space-y-1">
                   {tabs.map((tab) => {
                     const Icon = tab.icon;
+                    if ('href' in tab && tab.href) {
+                      return (
+                        <Link
+                          key={tab.id}
+                          href={tab.href}
+                          className="w-full flex items-center gap-3 px-4 py-3 rounded-sm transition-colors font-body hover:bg-gray-100 text-gray-600"
+                        >
+                          <Icon className="h-5 w-5" />
+                          <span className="font-medium">{tab.label}</span>
+                        </Link>
+                      );
+                    }
                     return (
                       <button
                         key={tab.id}

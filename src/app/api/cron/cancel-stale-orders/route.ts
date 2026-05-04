@@ -11,11 +11,13 @@ import logger from '@/lib/logger';
  */
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get('authorization');
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  if (!secret) {
+    logger.error('[CRON] CRON_SECRET não configurado — rejeitando chamada');
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const auth = req.headers.get('authorization');
+  if (auth !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {

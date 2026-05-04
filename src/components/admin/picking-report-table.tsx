@@ -9,6 +9,7 @@ export interface PickingReportItem {
   sku?: string | null;
   location: string;
   quantity: number;
+  orders?: Array<{ orderNumber: string; quantity: number }>;
 }
 
 interface PickingReportTableProps {

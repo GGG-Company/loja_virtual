@@ -211,10 +211,18 @@ async function quoteWithMelhorEnvio(params: { items: ShippingItem[]; destination
         etaDays: d.custom_delivery_time || d.delivery_time || null,
         notes: errorMsg,
       };
-    }).filter((o: ShippingOption) => o.price > 0 && !(o.notes && typeof o.notes === 'string' && o.notes.toLowerCase().includes('erro')));
+    });
 
-    logger.info({ optionsCount: mapped.length }, '[shipping] Melhor Envio OK. Opções encontradas');
-    return mapped;
+    // Log detalhado antes do filtro para diagnóstico
+    logger.info({ 
+      rawCount: mapped.length,
+      options: mapped.map(o => ({ id: o.id, service: o.service, carrier: o.carrier, price: o.price, error: o.notes }))
+    }, '[shipping] Melhor Envio - opções antes do filtro');
+
+    const filtered = mapped.filter((o: ShippingOption) => o.price > 0 && !(o.notes && typeof o.notes === 'string' && o.notes.toLowerCase().includes('erro')));
+
+    logger.info({ optionsCount: filtered.length }, '[shipping] Melhor Envio OK. Opções encontradas');
+    return filtered;
   } catch (err) {
     logger.error(err, '[shipping] Erro catastrófico na cotação Melhor Envio');
     return null;

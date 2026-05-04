@@ -13,7 +13,7 @@ async function requireAdmin() {
   return { session };
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const { error } = await requireAdmin();
     if (error) return error;
@@ -25,8 +25,30 @@ export async function GET() {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const categories = await prisma.category.findMany({ orderBy: { name: 'asc' } });
-    return NextResponse.json({ categories });
+    const url = new URL(req.url);
+    const page  = Math.max(1, parseInt(url.searchParams.get('page')  || '1', 10));
+    const limit = Math.min(50, Math.max(1, parseInt(url.searchParams.get('limit') || '8', 10)));
+    const search = url.searchParams.get('search')?.trim() || '';
+
+    const where = search
+      ? { OR: [{ name: { contains: search, mode: 'insensitive' as const } }, { slug: { contains: search, mode: 'insensitive' as const } }] }
+      : {};
+
+    const [categories, total] = await Promise.all([
+      prisma.category.findMany({
+        where,
+        orderBy: { name: 'asc' },
+        skip: (page - 1) * limit,
+        take: limit,
+        include: { _count: { select: { products: true } } },
+      }),
+      prisma.category.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      categories,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    });
   } catch (error) {
     logger.error(error as Error, '[API][GET] /api/admin/categories');
     return NextResponse.json({ error: 'Erro ao listar categorias' }, { status: 500 });

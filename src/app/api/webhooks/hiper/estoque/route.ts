@@ -95,20 +95,19 @@ async function updateStock(
 
 function validateSecret(req: NextRequest): boolean {
   const secret = process.env.HIPER_WEBHOOK_SECRET;
+  // Sem secret configurado — rejeita (não aceitar requisições não autenticadas em produção)
   if (!secret) {
-    // Sem secret configurado — aceita qualquer chamada (útil em dev)
-    logger.warn('[HIPER_WEBHOOK] HIPER_WEBHOOK_SECRET não configurado — endpoint sem autenticação');
-    return true;
+    logger.error('[HIPER_WEBHOOK] HIPER_WEBHOOK_SECRET não configurado — rejeitando webhook');
+    return false;
   }
 
-  // Aceita via header x-hiper-secret, x-api-key, Authorization ou query param secret
+  // Aceita apenas via header (query param removido — secrets em URLs ficam expostos em logs)
   const fromHeader =
     req.headers.get('x-hiper-secret') ||
     req.headers.get('x-api-key') ||
     req.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
-  const fromQuery = new URL(req.url).searchParams.get('secret');
 
-  return fromHeader === secret || fromQuery === secret;
+  return fromHeader === secret;
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────

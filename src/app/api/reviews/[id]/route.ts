@@ -207,15 +207,16 @@ export async function PATCH(
     }
 
     // Ação: marcar como útil (não precisa estar logado)
-    if (action === 'helpful') {
+    if (action === 'helpful' || action === 'unhelpful') {
+      const delta = action === 'helpful' ? 1 : -1;
       const updated = await prisma.review.update({
         where: { id },
-        data: { isHelpful: review.isHelpful + 1 },
+        data: { isHelpful: Math.max(0, review.isHelpful + delta) },
       });
 
       return NextResponse.json({
         success: true,
-        message: 'Marcado como útil',
+        message: action === 'helpful' ? 'Marcado como útil' : 'Voto removido',
         isHelpful: updated.isHelpful,
       });
     }

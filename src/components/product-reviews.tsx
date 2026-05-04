@@ -35,6 +35,24 @@ interface ProductReviewsProps {
   productName: string;
 }
 
+const HELPFUL_STORAGE_KEY = 'review_helpful_votes';
+
+function getVotedReviews(): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = localStorage.getItem(HELPFUL_STORAGE_KEY);
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveVotedReviews(set: Set<string>) {
+  try {
+    localStorage.setItem(HELPFUL_STORAGE_KEY, JSON.stringify([...set]));
+  } catch {}
+}
+
 export function ProductReviews({ productId, productName }: ProductReviewsProps) {
   const { data: session } = useSession();
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -46,6 +64,11 @@ export function ProductReviews({ productId, productName }: ProductReviewsProps) 
   const [filterRating, setFilterRating] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [votedReviews, setVotedReviews] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    setVotedReviews(getVotedReviews());
+  }, []);
 
   // Form state
   const [newRating, setNewRating] = useState(5);
@@ -125,20 +148,42 @@ export function ProductReviews({ productId, productName }: ProductReviewsProps) 
   };
 
   const handleHelpful = async (reviewId: string) => {
+    const alreadyVoted = votedReviews.has(reviewId);
+    const action = alreadyVoted ? 'unhelpful' : 'helpful';
+
+    // Atualiza estado local imediatamente (optimistic)
+    const newVoted = new Set(votedReviews);
+    if (alreadyVoted) newVoted.delete(reviewId);
+    else newVoted.add(reviewId);
+    setVotedReviews(newVoted);
+    saveVotedReviews(newVoted);
+
+    setReviews(reviews.map((r) =>
+      r.id === reviewId ? { ...r, isHelpful: r.isHelpful + (alreadyVoted ? -1 : 1) } : r
+    ));
+
     try {
       const res = await fetch(`/api/reviews/${reviewId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "helpful" }),
+        body: JSON.stringify({ action }),
       });
-
       const data = await res.json();
       if (data.success) {
-        setReviews(reviews.map((r) => (r.id === reviewId ? { ...r, isHelpful: data.isHelpful } : r)));
-        toast.success("Obrigado pelo feedback!");
+        // Sincroniza com valor real do servidor
+        setReviews((prev) => prev.map((r) => (r.id === reviewId ? { ...r, isHelpful: data.isHelpful } : r)));
+      } else {
+        // Reverte em caso de erro
+        setVotedReviews(votedReviews);
+        saveVotedReviews(votedReviews);
+        setReviews(reviews);
       }
-    } catch (error) {
-      toast.error("Erro ao marcar como útil");
+    } catch {
+      // Reverte em caso de erro de rede
+      setVotedReviews(votedReviews);
+      saveVotedReviews(votedReviews);
+      setReviews(reviews);
+      toast.error("Erro ao registrar voto");
     }
   };
 
@@ -336,8 +381,15 @@ export function ProductReviews({ productId, productName }: ProductReviewsProps) 
 
                   {/* Ações */}
                   <div className="mt-4 flex items-center gap-4">
-                    <button onClick={() => handleHelpful(review.id)} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors">
-                      <ThumbsUp className="h-4 w-4" />
+                    <button
+                      onClick={() => handleHelpful(review.id)}
+                      className={`inline-flex items-center gap-1 text-sm transition-colors ${
+                        votedReviews.has(review.id)
+                          ? 'text-yellow-500 hover:text-yellow-600'
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      <ThumbsUp className={`h-4 w-4 ${votedReviews.has(review.id) ? 'fill-yellow-400' : ''}`} />
                       Útil ({review.isHelpful})
                     </button>
                   </div>

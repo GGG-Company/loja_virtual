@@ -4,7 +4,7 @@ import { toNum } from '@/lib/parse-decimal';
 
 export const dynamic = 'force-dynamic';
 
-const TOTAL_SLOTS = 4;
+const TOTAL_SLOTS = 12;
 
 const SELECT = {
   id: true,
@@ -17,7 +17,6 @@ const SELECT = {
   compareAtPrice: true,
   imageUrl: true,
   stock: true,
-  viewCount: true,
   isFeatured: true,
   isPromo: true,
   category: { select: { id: true, name: true, slug: true } },
@@ -41,39 +40,87 @@ function serialize(p: any) {
   };
 }
 
+// Retorna o número da semana do ano (0-based) — muda todo domingo
+function getWeekNumber(): number {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 1);
+  return Math.floor((now.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000));
+}
+
+// PRNG determinístico baseado em semente (mulberry32)
+function seededRandom(seed: number): () => number {
+  let s = seed;
+  return () => {
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Fisher-Yates com semente determinística
+function shuffleSeeded<T>(arr: T[], seed: number): T[] {
+  const copy = [...arr];
+  const rand = seededRandom(seed);
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
 // Lógica híbrida:
 // 1. Produtos com isFeatured=true entram sempre (escolha manual do admin)
 // 2. Vagas restantes são preenchidas pelos de maior score (trending automático)
-// Score = viewCount*1 + avaliações_positivas(4-5★)*15 + vezes_comprado*8
+//    com rotação semanal: pega o top 3× de vagas por score e embaralha com
+//    semente da semana — garante variedade visual sem ignorar popularidade.
+// Score = avaliações_positivas(4-5★)*15 + vezes_comprado*8
 export async function GET() {
-  const [pinned, candidates] = await Promise.all([
-    // Fixados manualmente
-    prisma.product.findMany({
-      where: { isActive: true, isFeatured: true },
-      select: SELECT,
-      take: TOTAL_SLOTS,
-    }),
-    // Candidatos automáticos (não fixados, com estoque)
-    prisma.product.findMany({
-      where: { isActive: true, isFeatured: false, stock: { gt: 0 } },
-      select: SELECT,
-    }),
-  ]);
+  try {
+    const [pinned, candidates] = await Promise.all([
+      prisma.product.findMany({
+        where: { isActive: true, isFeatured: true },
+        select: SELECT,
+        take: TOTAL_SLOTS,
+      }),
+      // Limita a 100 candidatos pelos mais comprados — evita carregar 20k+ produtos em memória
+      // Apenas produtos vinculados ao Hiper entram no automático
+      prisma.product.findMany({
+        where: {
+          isActive: true,
+          isFeatured: false,
+          stock: { gt: 0 },
+          externalIdHiper: { not: null },
+        },
+        select: SELECT,
+        orderBy: { orderItems: { _count: 'desc' } },
+        take: 100,
+      }),
+    ]);
 
-  const remaining = TOTAL_SLOTS - pinned.length;
+    const remaining = TOTAL_SLOTS - pinned.length;
 
-  const auto = candidates
-    .map((p) => ({
-      ...p,
-      _score: p.viewCount * 1 + p.reviews.length * 15 + p._count.orderItems * 8,
-    }))
-    .sort((a, b) => b._score - a._score)
-    .slice(0, remaining);
+    // Ordena pelo score e pega os top (remaining * 3) melhores como pool
+    const pool = candidates
+      .map((p) => ({
+        ...p,
+        _score: p.reviews.length * 15 + p._count.orderItems * 8,
+      }))
+      .sort((a, b) => b._score - a._score)
+      .slice(0, remaining * 3);
 
-  const result = [...pinned, ...auto].map(serialize);
+    // Embaralha o pool com semente da semana e pega os primeiros `remaining`
+    const weekSeed = getWeekNumber() * 2654435761; // multiplicador primo para melhor dispersão
+    const auto = shuffleSeeded(pool, weekSeed).slice(0, remaining);
 
-  return NextResponse.json(
-    { products: result },
-    { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60' } },
-  );
+    const result = [...pinned, ...auto].map(serialize);
+
+    return NextResponse.json(
+      { products: result },
+      { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60' } },
+    );
+  } catch (err) {
+    console.error('[trending]', err);
+    return NextResponse.json({ products: [] }, { status: 500 });
+  }
 }
