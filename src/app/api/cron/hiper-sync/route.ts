@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { StockSource } from '@prisma/client';
 import { getHiperProducts } from '@/lib/hiper';
 import logger from '@/lib/logger';
 
@@ -88,7 +89,7 @@ export async function POST(req: NextRequest) {
   // ── Atualiza estoque em lote (apenas produtos já vinculados) ─────────────
   const stockLogQueue: {
     productId: string; previousQty: number; newQty: number;
-    difference: number; reason: string; source: 'HIPER';
+    difference: number; reason: string; source: StockSource;
   }[] = [];
 
   const updated = new Set<string>(); // evita atualizar o mesmo produto 2x
@@ -116,7 +117,7 @@ export async function POST(req: NextRequest) {
           newQty: entry.qty,
           difference: entry.qty - product.stock,
           reason: 'Sync automático Hiper (cron)',
-          source: 'HIPER',
+          source: StockSource.HIPER,
         });
         stockUpdated++;
       } catch (err) {

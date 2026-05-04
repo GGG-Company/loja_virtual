@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { StockSource } from '@prisma/client';
 import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
@@ -86,7 +87,7 @@ async function updateStock(
       newQty,
       difference: newQty - previousQty,
       reason,
-      source: 'HIPER',
+      source: StockSource.HIPER,
     },
   });
 }

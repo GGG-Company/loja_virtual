@@ -3,6 +3,7 @@
 import logger from "@/lib/logger";
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { StockSource } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
@@ -98,7 +99,7 @@ export async function updateProductStock(productId: string, newStock: number) {
     await prisma.stockLog.create({
       data: {
         productId: product.id,
-        source: 'ADMIN',
+        source: StockSource.ADMIN,
         previousQty: product.stock,
         newQty: newStock,
         difference: newStock - product.stock,

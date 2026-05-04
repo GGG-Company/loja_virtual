@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import { Prisma } from '@prisma/client';
+import { Prisma, StockSource } from '@prisma/client';
 import { getHiperProducts, invalidateHiperProductsCache, invalidateHiperToken } from '@/lib/hiper';
 import logger from '@/lib/logger';
 
@@ -265,7 +265,7 @@ export async function POST(req: NextRequest) {
         previousQty: product.stock ?? 0,
         newQty: stockQty,
         difference: stockQty - (product.stock ?? 0),
-        reason: 'Sync Hiper', source: 'HIPER',
+        reason: 'Sync Hiper', source: StockSource.HIPER,
       });
       stockUpdated++;
     }
@@ -356,7 +356,7 @@ export async function POST(req: NextRequest) {
         stockLogQueue.push({
           productId: newProduct.id,
           previousQty: 0, newQty: newProduct.stock, difference: newProduct.stock,
-          reason: 'Criado via Sync Hiper', source: 'HIPER',
+          reason: 'Criado via Sync Hiper', source: StockSource.HIPER,
         });
       }
       created++;
@@ -412,7 +412,7 @@ export async function POST(req: NextRequest) {
           newQty: 0,
           difference: -p.stock,
           reason: 'Removido/inativo no Hiper',
-          source: 'HIPER',
+          source: StockSource.HIPER,
         }));
       if (deactLogs.length > 0) {
         await prisma.stockLog.createMany({ data: deactLogs, skipDuplicates: true });
