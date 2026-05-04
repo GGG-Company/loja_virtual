@@ -56,17 +56,11 @@ const nextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=3600' },
         ],
       }] : []),
-      // ── Páginas HTML — cache curto para não travar clientes após deploy ──
+      // ── Páginas HTML — sem cache para garantir versão fresca após deploy ──
       ...(!isDev ? [{
-        source: '/produtos(.*)',
+        source: '/((?!_next/static|_next/image|favicon.ico).*)',
         headers: [
-          { key: 'Cache-Control', value: 'public, max-age=300, stale-while-revalidate=60' },
-        ],
-      },
-      {
-        source: '/',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=120, stale-while-revalidate=60' },
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
         ],
       }] : []),
       // ── Segurança global ───────────────────────────────────────────────
