@@ -21,32 +21,32 @@ interface Product {
 }
 
 const PAGE_SIZE = 4;
-const MOBILE_PAGE_SIZE = 2;
 
 export function FeaturedProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  // Desktop carousel
+  // Desktop carousel (Embla — 4 por página)
   const [selectedIndex, setSelectedIndex] = useState(0);
   const autoplayPlugin = useRef(Autoplay({ delay: 15000, stopOnInteraction: false }));
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true }, [autoplayPlugin.current]);
 
-  // Mobile carousel
-  const [mobileSelectedIndex, setMobileSelectedIndex] = useState(0);
-  const mobileAutoplayPlugin = useRef(Autoplay({ delay: 15000, stopOnInteraction: false }));
-  const [mobileEmblaRef, mobileEmblaApi] = useEmblaCarousel({ loop: true }, [mobileAutoplayPlugin.current]);
+  // Mobile scroll ref
+  const mobileScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
 
   useEffect(() => {
     async function fetchProducts() {
       try {
         const response = await apiClient.get<{ products: Product[] }>('/api/products/trending');
-        const normalized = response.data.products.map((product) => ({
-          ...product,
-          imageUrl: product.imageUrl || product.images?.[0]?.url || null,
-        }));
-        setProducts(normalized);
+        setProducts(
+          response.data.products.map((p) => ({
+            ...p,
+            imageUrl: p.imageUrl || p.images?.[0]?.url || null,
+          }))
+        );
       } catch {
         setHasError(true);
       } finally {
@@ -56,15 +56,11 @@ export function FeaturedProducts() {
     fetchProducts();
   }, []);
 
+  // Desktop carousel — dots
   const onSelect = useCallback(() => {
     if (!emblaApi) return;
     setSelectedIndex(emblaApi.selectedScrollSnap());
   }, [emblaApi]);
-
-  const onMobileSelect = useCallback(() => {
-    if (!mobileEmblaApi) return;
-    setMobileSelectedIndex(mobileEmblaApi.selectedScrollSnap());
-  }, [mobileEmblaApi]);
 
   useEffect(() => {
     if (!emblaApi) return;
@@ -73,45 +69,42 @@ export function FeaturedProducts() {
     return () => { emblaApi.off('select', onSelect); };
   }, [emblaApi, onSelect]);
 
+  const prev = useCallback(() => { emblaApi?.scrollPrev(); autoplayPlugin.current.reset(); }, [emblaApi]);
+  const next = useCallback(() => { emblaApi?.scrollNext(); autoplayPlugin.current.reset(); }, [emblaApi]);
+
+  // Mobile scroll — botões
+  const updateMobileScroll = () => {
+    const el = mobileScrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 8);
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 8);
+  };
+
   useEffect(() => {
-    if (!mobileEmblaApi) return;
-    onMobileSelect();
-    mobileEmblaApi.on('select', onMobileSelect);
-    return () => { mobileEmblaApi.off('select', onMobileSelect); };
-  }, [mobileEmblaApi, onMobileSelect]);
+    const el = mobileScrollRef.current;
+    if (!el) return;
+    updateMobileScroll();
+    el.addEventListener('scroll', updateMobileScroll, { passive: true });
+    const ro = new ResizeObserver(updateMobileScroll);
+    ro.observe(el);
+    return () => { el.removeEventListener('scroll', updateMobileScroll); ro.disconnect(); };
+  }, [products]);
 
-  const prev = useCallback(() => {
-    emblaApi?.scrollPrev();
-    autoplayPlugin.current.reset();
-  }, [emblaApi]);
-  const next = useCallback(() => {
-    emblaApi?.scrollNext();
-    autoplayPlugin.current.reset();
-  }, [emblaApi]);
+  const mobileScroll = (dir: 'left' | 'right') => {
+    mobileScrollRef.current?.scrollBy({ left: dir === 'left' ? -200 : 200, behavior: 'smooth' });
+  };
 
-  const mobilePrev = useCallback(() => {
-    mobileEmblaApi?.scrollPrev();
-    mobileAutoplayPlugin.current.reset();
-  }, [mobileEmblaApi]);
-  const mobileNext = useCallback(() => {
-    mobileEmblaApi?.scrollNext();
-    mobileAutoplayPlugin.current.reset();
-  }, [mobileEmblaApi]);
-
-  // Divide os produtos em grupos de PAGE_SIZE (desktop=4, mobile=2)
+  // Desktop — páginas de 4
   const pages: Product[][] = [];
   for (let i = 0; i < products.length; i += PAGE_SIZE) {
     pages.push(products.slice(i, i + PAGE_SIZE));
-  }
-  const mobilePages: Product[][] = [];
-  for (let i = 0; i < products.length; i += MOBILE_PAGE_SIZE) {
-    mobilePages.push(products.slice(i, i + MOBILE_PAGE_SIZE));
   }
 
   return (
     <section className="py-6 sm:py-10 lg:py-16 bg-white">
       <div className="container mx-auto px-3 sm:px-4">
-        {/* Header */}
+
+        {/* Cabeçalho */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -133,21 +126,36 @@ export function FeaturedProducts() {
             </p>
           </div>
 
+          {/* Setas desktop */}
           {!isLoading && !hasError && pages.length > 1 && (
             <div className="hidden lg:flex items-center gap-2 shrink-0 ml-4">
-              <button
-                onClick={prev}
-                aria-label="Página anterior"
-                className="w-10 h-10 flex items-center justify-center border border-gray-200 hover:border-[#CC1020] hover:text-[#CC1020] transition-colors rounded-sm"
-              >
+              <button onClick={prev} aria-label="Página anterior" className="w-10 h-10 flex items-center justify-center border border-gray-200 hover:border-[#CC1020] hover:text-[#CC1020] transition-colors rounded-sm">
                 <ChevronLeft className="h-5 w-5" />
               </button>
-              <button
-                onClick={next}
-                aria-label="Próxima página"
-                className="w-10 h-10 flex items-center justify-center border border-gray-200 hover:border-[#CC1020] hover:text-[#CC1020] transition-colors rounded-sm"
-              >
+              <button onClick={next} aria-label="Próxima página" className="w-10 h-10 flex items-center justify-center border border-gray-200 hover:border-[#CC1020] hover:text-[#CC1020] transition-colors rounded-sm">
                 <ChevronRight className="h-5 w-5" />
+              </button>
+            </div>
+          )}
+
+          {/* Setas mobile */}
+          {!isLoading && !hasError && products.length > 2 && (
+            <div className="lg:hidden flex items-center gap-1 shrink-0 ml-2">
+              <button
+                onClick={() => mobileScroll('left')}
+                disabled={!canScrollLeft}
+                aria-label="Anterior"
+                className="p-1.5 rounded-full border border-gray-200 text-gray-400 hover:border-[#CC1020] hover:text-[#CC1020] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => mobileScroll('right')}
+                disabled={!canScrollRight}
+                aria-label="Próximo"
+                className="p-1.5 rounded-full border border-gray-200 text-gray-400 hover:border-[#CC1020] hover:text-[#CC1020] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronRight className="h-4 w-4" />
               </button>
             </div>
           )}
@@ -155,62 +163,62 @@ export function FeaturedProducts() {
 
         {/* Conteúdo */}
         {isLoading ? (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-            {[...Array(PAGE_SIZE)].map((_, i) => <SkeletonCard key={i} />)}
-          </div>
+          <>
+            {/* Skeleton mobile */}
+            <div className="lg:hidden flex gap-3 overflow-hidden">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="shrink-0 w-[calc(50%-6px)]">
+                  <SkeletonCard />
+                </div>
+              ))}
+            </div>
+            {/* Skeleton desktop */}
+            <div className="hidden lg:grid grid-cols-4 gap-6">
+              {[...Array(PAGE_SIZE)].map((_, i) => <SkeletonCard key={i} />)}
+            </div>
+          </>
         ) : hasError ? (
           <div className="text-center py-10">
             <p className="text-gray-500 font-body">
-              Não foi possível carregar os produtos em destaque. Tente recarregar a página.
+              Não foi possível carregar os produtos. Tente recarregar a página.
             </p>
           </div>
         ) : (
           <>
-            {/* Mobile — 2 por slide, setas próprias (< lg) */}
-            <div className="lg:hidden">
-              <div ref={mobileEmblaRef} className="overflow-hidden">
-                <div className="flex">
-                  {mobilePages.map((group, pageIdx) => (
-                    <div key={pageIdx} className="flex-none w-full">
-                      <div className="grid grid-cols-2 gap-3">
-                        {group.map((product, idx) => (
-                          <ProductCard
-                            key={product.id}
-                            product={product}
-                            priority={pageIdx === 0 && idx < 2}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              {/* Controles mobile */}
-              {mobilePages.length > 1 && (
-                <div className="flex justify-center items-center gap-3 mt-5">
-                  <button onClick={mobilePrev} aria-label="Anterior" className="w-8 h-8 flex items-center justify-center border border-gray-200 hover:border-[#CC1020] hover:text-[#CC1020] transition-colors rounded-sm">
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-                  <div className="flex items-center gap-1.5">
-                    {mobilePages.map((_, i) => (
-                      <button
-                        key={i}
-                        onClick={() => mobileEmblaApi?.scrollTo(i)}
-                        aria-label={`Página ${i + 1}`}
-                        className={`h-2 rounded-full transition-all duration-300 ${
-                          i === mobileSelectedIndex ? 'w-6 bg-[#CC1020]' : 'w-2 bg-gray-300 hover:bg-gray-400'
-                        }`}
-                      />
-                    ))}
+            {/* ── Mobile — scroll individual card a card ─────────────────── */}
+            <div className="lg:hidden relative">
+              <div
+                ref={mobileScrollRef}
+                className="flex gap-3 overflow-x-auto pb-2 scroll-smooth snap-x snap-mandatory
+                  [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              >
+                {products.map((product, idx) => (
+                  <div
+                    key={product.id}
+                    className="snap-start shrink-0 w-[calc(50%-6px)] sm:w-[calc(33.333%-8px)]"
+                  >
+                    <ProductCard product={product} priority={idx < 2} />
                   </div>
-                  <button onClick={mobileNext} aria-label="Próxima" className="w-8 h-8 flex items-center justify-center border border-gray-200 hover:border-[#CC1020] hover:text-[#CC1020] transition-colors rounded-sm">
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
+                ))}
+              </div>
+
+              {/* Fade nas bordas */}
+              {canScrollLeft && (
+                <div className="absolute left-0 top-0 bottom-2 w-6 bg-gradient-to-r from-white to-transparent pointer-events-none" />
+              )}
+              {canScrollRight && (
+                <div className="absolute right-0 top-0 bottom-2 w-10 bg-gradient-to-l from-white to-transparent pointer-events-none" />
               )}
             </div>
 
-            {/* Desktop — 4 por slide (≥ lg) */}
+            {/* Indicador deslize */}
+            {products.length > 2 && (
+              <p className="lg:hidden text-center text-xs text-gray-400 mt-3">
+                Deslize para ver mais →
+              </p>
+            )}
+
+            {/* ── Desktop — Embla, 4 por página ──────────────────────────── */}
             <div className="hidden lg:block">
               <div ref={emblaRef} className="overflow-hidden">
                 <div className="flex">
