@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import Image from 'next/image';
 import { isAxiosError } from 'axios';
 import { apiClient } from '@/lib/api-client';
 import logger from '@/lib/logger';
@@ -256,16 +257,27 @@ function AuthContent() {
 
         {/* Logo */}
         <div className="relative z-10">
-          <Link href="/">
-            <div className="font-display text-4xl font-bold leading-tight">
-              <span className="text-[#CC1020]">Feira</span>{' '}
-              <span className="text-white">das</span>
+          <Link href="/" className="flex items-center gap-4">
+            <div className="relative w-16 h-16 shrink-0 rounded-sm overflow-hidden">
+              <Image
+                src="/logo_shopping_das_ferramentas.jpg"
+                alt="Feira das Ferramentas"
+                fill
+                className="object-contain"
+                priority
+              />
             </div>
-            <div className="font-display text-4xl font-bold text-white leading-tight">
-              Ferramentas
+            <div>
+              <div className="font-display text-3xl font-bold leading-tight">
+                <span className="text-[#CC1020]">Feira</span>{' '}
+                <span className="text-white">das</span>
+              </div>
+              <div className="font-display text-3xl font-bold text-white leading-tight">
+                Ferramentas
+              </div>
             </div>
           </Link>
-          <p className="text-gray-400 text-sm mt-3 leading-relaxed max-w-xs">
+          <p className="text-gray-400 text-sm mt-4 leading-relaxed max-w-xs">
             A maior loja de ferramentas do Brasil. Tudo que você precisa para trabalhar com qualidade.
           </p>
         </div>
@@ -307,7 +319,16 @@ function AuthContent() {
         >
           {/* Logo mobile */}
           <div className="lg:hidden text-center mb-6">
-            <Link href="/">
+            <Link href="/" className="inline-flex flex-col items-center gap-2">
+              <div className="relative w-16 h-16">
+                <Image
+                  src="/logo_shopping_das_ferramentas.jpg"
+                  alt="Feira das Ferramentas"
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              </div>
               <div className="font-display text-2xl font-bold leading-tight">
                 <span className="text-[#CC1020]">Feira</span>{' '}
                 <span className="text-[#1A1A1A]">das Ferramentas</span>

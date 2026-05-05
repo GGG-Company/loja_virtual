@@ -23,6 +23,7 @@ export const metadata: Metadata = {
   title: "Feira das Ferramentas — Onde Você Encontra Tudo!",
   description: "Loja especializada em ferramentas profissionais desde 2004. Bosch, Makita, DeWalt e muito mais.",
   keywords: "ferramentas, feira das ferramentas, furadeira, parafusadeira, makita, bosch, dewalt, ferramentas profissionais",
+  icons: { icon: "/favicon.ico", shortcut: "/favicon.ico" },
   robots: { index: true, follow: true },
   openGraph: {
     type: "website",
