@@ -143,34 +143,31 @@ function buildResumoSheet(wb: ExcelJS.Workbook, summary: FinancialReportSummary)
   const mergeRange = (r1: number, c1: number, r2: number, c2: number) =>
     ws.mergeCells(r1, c1, r2, c2);
 
-  // ── Cabeçalho com Logo ──────────────────────────────────────────────────
-  const logo = loadLogoBase64();
-  if (logo) {
-    try {
-      const imgId = wb.addImage({ base64: logo.base64, extension: logo.ext });
-      ws.addImage(imgId, {
-        tl: { col: 0.1, row: 0.5 } as any,
-        br: { col: 0.9, row: 3.5 } as any,
-        editAs: 'oneCell',
-      });
-    } catch { /* logo opcional */ }
+  // ── Cabeçalho ─────────────────────────────────────────────────────────
+  // Linha 1: fundo escuro com logo + título (altura grande para a logo)
+  // Linha 2: fundo cinza claro com info de período
+  // Linha 3: barra vermelha fina
+
+  ws.getRow(1).height = 72; // altura suficiente para logo de ~55px
+  ws.getRow(2).height = 22;
+  ws.getRow(3).height =  7;
+
+  // Fundo escuro em toda a linha 1 (A até F)
+  for (let c = 1; c <= COLS; c++) {
+    ws.getCell(1, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.dark } };
   }
 
-  // Linha 1-4: bloco de título
-  ws.getRow(1).height = 14;
-  ws.getRow(2).height = 28;
-  ws.getRow(3).height = 18;
-  ws.getRow(4).height = 14;
-
-  mergeRange(2, 2, 2, COLS);
-  const titleCell = ws.getCell(2, 2);
+  // Título (B1:F1) — ao lado da logo
+  mergeRange(1, 2, 1, COLS);
+  const titleCell = ws.getCell(1, 2);
   titleCell.value     = 'RELATÓRIO FINANCEIRO — FEIRA DAS FERRAMENTAS';
-  titleCell.font      = { bold: true, size: 16, color: { argb: C.white }, name: 'Calibri' };
+  titleCell.font      = { bold: true, size: 18, color: { argb: C.white }, name: 'Calibri' };
   titleCell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.dark } };
   titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-  mergeRange(3, 2, 3, COLS);
-  const subCell = ws.getCell(3, 2);
+  // Info (A2:F2)
+  mergeRange(2, 1, 2, COLS);
+  const subCell = ws.getCell(2, 1);
   subCell.value = [
     `Período: ${fmtDate(summary.filters?.startDate)} a ${fmtDate(summary.filters?.endDate)}`,
     `Filtro: ${filterStatusPt(summary.filters?.status)}`,
@@ -180,14 +177,25 @@ function buildResumoSheet(wb: ExcelJS.Workbook, summary: FinancialReportSummary)
   subCell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.infoBg } };
   subCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-  // Linha vermelha decorativa
+  // Barra vermelha (linha 3)
   for (let c = 1; c <= COLS; c++) {
-    const cell = ws.getCell(4, c);
-    cell.fill   = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.red } };
-    cell.border = {} as ExcelJS.Borders;
+    ws.getCell(3, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.red } };
   }
 
-  ws.addRow([]); // espaço
+  // Logo: posição fixa em pixels (col A, linha 1) — sobreposta ao fundo escuro
+  const logo = loadLogoBase64();
+  if (logo) {
+    try {
+      const imgId = wb.addImage({ base64: logo.base64, extension: logo.ext });
+      // tl = canto superior esquerdo da célula A1 com pequeno padding
+      ws.addImage(imgId, {
+        tl: { col: 0.08, row: 0.12 } as any,
+        ext: { width: 58, height: 58 },     // tamanho fixo em pixels
+      });
+    } catch { /* logo opcional */ }
+  }
+
+  ws.addRow([]); // espaço entre cabeçalho e conteúdo
 
   // ── KPIs ────────────────────────────────────────────────────────────────
   if (summary.totalRevenue !== null) {
@@ -341,10 +349,10 @@ function buildResumoSheet(wb: ExcelJS.Workbook, summary: FinancialReportSummary)
   footCell.alignment = { horizontal: 'center', vertical: 'middle' };
   footCell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.infoBg } };
 
-  // Definir larguras fixas das 6 colunas do Resumo
+  // Larguras: col A estreita (logo), B-F mais largas
   ws.columns = [
-    { key: 'a', width: 26 },
-    { key: 'b', width: 20 },
+    { key: 'a', width: 10 },
+    { key: 'b', width: 24 },
     { key: 'c', width: 20 },
     { key: 'd', width: 20 },
     { key: 'e', width: 20 },
