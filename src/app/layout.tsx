@@ -4,6 +4,7 @@ import './globals.css';
 import { Toaster } from 'sonner';
 import { Providers } from '@/components/providers';
 import { CookieConsent } from '@/components/cookie-consent';
+import { ConsentScripts } from '@/components/consent-scripts';
 
 const barlow = Barlow({
   subsets: ["latin"],
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>
           {children}
           <CookieConsent />
+          <ConsentScripts />
           <Toaster position="top-right" richColors />
         </Providers>
       </body>

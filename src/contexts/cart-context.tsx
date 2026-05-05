@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
+import { trackAddToCart } from '@/lib/analytics';
 
 const CART_KEY = 'cart';
 
@@ -81,6 +82,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
       return [...prev, { ...item, quantity: qty }];
     });
+    trackAddToCart({ id: item.id, name: item.name, price: item.price, quantity: qty });
   }, []);
 
   const removeItem = useCallback((id: string) => {

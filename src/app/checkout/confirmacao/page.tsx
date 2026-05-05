@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import Link from 'next/link';
 import Confetti from 'react-confetti';
 import { CheckoutProgress } from '@/components/checkout-progress';
+import { trackPurchase } from '@/lib/analytics';
 
 function ConfirmacaoContent() {
   const router = useRouter();
