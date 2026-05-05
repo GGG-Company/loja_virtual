@@ -211,11 +211,27 @@ export function FeaturedProducts() {
               )}
             </div>
 
-            {/* Indicador deslize */}
+            {/* Setas + indicador — mobile */}
             {products.length > 2 && (
-              <p className="lg:hidden text-center text-xs text-gray-400 mt-3">
-                Deslize para ver mais →
-              </p>
+              <div className="lg:hidden flex items-center justify-center gap-3 mt-4">
+                <button
+                  onClick={() => mobileScroll('left')}
+                  disabled={!canScrollLeft}
+                  aria-label="Anterior"
+                  className="w-8 h-8 flex items-center justify-center border border-gray-200 hover:border-[#CC1020] hover:text-[#CC1020] transition-colors rounded-sm disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <p className="text-xs text-gray-400">Deslize para ver mais</p>
+                <button
+                  onClick={() => mobileScroll('right')}
+                  disabled={!canScrollRight}
+                  aria-label="Próximo"
+                  className="w-8 h-8 flex items-center justify-center border border-gray-200 hover:border-[#CC1020] hover:text-[#CC1020] transition-colors rounded-sm disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
             )}
 
             {/* ── Desktop — Embla, 4 por página ──────────────────────────── */}
