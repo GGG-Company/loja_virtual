@@ -248,6 +248,8 @@ export type PaginatedListParams = {
   minPrice?: number | null;
   maxPrice?: number | null;
   sortBy?: string | null;
+  onSale?: boolean | null;
+  inStock?: boolean | null;
 };
 
 const INCLUDE_LIST = {
@@ -261,6 +263,7 @@ export async function listProductsPaginated(params: PaginatedListParams) {
     categorySlug, grupoSlug, search,
     page = 1, pageSize = 24,
     brands, minPrice, maxPrice, sortBy,
+    onSale, inStock,
   } = params;
 
   const skip = (Math.max(1, page) - 1) * pageSize;
@@ -285,6 +288,14 @@ export async function listProductsPaginated(params: PaginatedListParams) {
         ],
       },
     ];
+  }
+
+  if (onSale) {
+    where.AND = [...(where.AND ?? []), { promotionalPrice: { not: null } }];
+  }
+
+  if (inStock) {
+    where.AND = [...(where.AND ?? []), { stock: { gt: 0 } }];
   }
 
   if (search) {

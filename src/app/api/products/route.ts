@@ -54,12 +54,14 @@ export async function GET(request: NextRequest) {
     const minPrice  = searchParams.get('minPrice') ? Number(searchParams.get('minPrice')) : null;
     const maxPrice  = searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) : null;
     const sortBy    = searchParams.get('sort') ?? null;
+    const onSale    = searchParams.get('onSale') === 'true' ? true : null;
+    const inStock   = searchParams.get('inStock') === 'true' ? true : null;
 
     const result = await listProductsPaginated({
       categorySlug: category,
       grupoSlug: grupo,
       search: search || null,
-      page, pageSize, brands, minPrice, maxPrice, sortBy,
+      page, pageSize, brands, minPrice, maxPrice, sortBy, onSale, inStock,
     });
 
     return NextResponse.json(

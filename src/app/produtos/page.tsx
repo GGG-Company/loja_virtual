@@ -67,6 +67,8 @@ function ProductsContent() {
   const minPrice    = parseIntSafe(searchParams?.get('minPrice'), PRICE_MIN);
   const maxPrice    = parseIntSafe(searchParams?.get('maxPrice'), PRICE_MAX);
   const currentSort = searchParams?.get('sort') ?? 'recent';
+  const onSale      = searchParams?.get('onSale') === 'true';
+  const inStock     = searchParams?.get('inStock') === 'true';
 
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
@@ -80,6 +82,8 @@ function ProductsContent() {
       if (minPrice > PRICE_MIN) params.set('minPrice', String(minPrice));
       if (maxPrice < PRICE_MAX) params.set('maxPrice', String(maxPrice));
       if (currentSort !== 'recent') params.set('sort', currentSort);
+      if (onSale)   params.set('onSale', 'true');
+      if (inStock)  params.set('inStock', 'true');
 
       const res = await apiClient.get<{ products: ProductListItem[]; pagination: Pagination }>(
         `/api/products?${params}`,
@@ -93,7 +97,7 @@ function ProductsContent() {
       setIsLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoria, grupo, search, currentPage, brands.join(','), minPrice, maxPrice, currentSort]);
+  }, [categoria, grupo, search, currentPage, brands.join(','), minPrice, maxPrice, currentSort, onSale, inStock]);
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 

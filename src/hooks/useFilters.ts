@@ -23,6 +23,8 @@ export function useFilters() {
   const brands   = (searchParams.get('brands')   ?? '').split(',').filter(Boolean);
   const voltages = (searchParams.get('voltages') ?? '').split(',').filter(Boolean);
   const sort     = searchParams.get('sort') ?? 'recent';
+  const onSale   = searchParams.get('onSale') === 'true';
+  const inStock  = searchParams.get('inStock') === 'true';
 
   // ── Local price — updates instantly for smooth slider UX, then debounces ─
   const [localPrice, setLocalPrice] = useState<[number, number]>([urlMin, urlMax]);
@@ -96,6 +98,17 @@ export function useFilters() {
     [updateUrl],
   );
 
+  // ── onSale / inStock toggles ──────────────────────────────────────────────
+  const toggleOnSale = useCallback(
+    () => updateUrl({ onSale: onSale ? null : 'true' }),
+    [onSale, updateUrl],
+  );
+
+  const toggleInStock = useCallback(
+    () => updateUrl({ inStock: inStock ? null : 'true' }),
+    [inStock, updateUrl],
+  );
+
   // ── Clear all filters — preserves categoria + search ────────────────────
   const clearFilters = useCallback(() => {
     const params = new URLSearchParams();
@@ -111,7 +124,9 @@ export function useFilters() {
     brands.length > 0   ||
     voltages.length > 0 ||
     urlMin !== PRICE_MIN ||
-    urlMax !== PRICE_MAX;
+    urlMax !== PRICE_MAX ||
+    onSale ||
+    inStock;
 
   return {
     // Price — localPrice drives slider UI; urlMin/urlMax drive filtering
@@ -123,6 +138,11 @@ export function useFilters() {
     toggleBrand,
     voltages,
     toggleVoltage,
+    // Toggles
+    onSale,
+    toggleOnSale,
+    inStock,
+    toggleInStock,
     // Sort
     sort,
     setSort,

@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { ChevronDown, X, SlidersHorizontal } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { ChevronDown, X, SlidersHorizontal, Tag, PackageCheck, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { useFilters, PRICE_MIN, PRICE_MAX } from '@/hooks/useFilters';
 import { cn } from '@/lib/utils';
+
+const BRANDS_VISIBLE = 6;
 
 // ── Collapsible accordion section ────────────────────────────────────────────
 function FilterSection({
@@ -68,7 +70,43 @@ function FilterSection({
   );
 }
 
-// ── Checkbox row with optional badge count ────────────────────────────────────
+// ── Toggle pill ───────────────────────────────────────────────────────────────
+function ToggleFilter({
+  icon: Icon,
+  label,
+  checked,
+  onChange,
+  color = '#CC1020',
+}: {
+  icon: React.ElementType;
+  label: string;
+  checked: boolean;
+  onChange: () => void;
+  color?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onChange}
+      className={cn(
+        'w-full flex items-center gap-2.5 px-3 py-2.5 rounded-sm border text-sm font-semibold transition-all',
+        checked
+          ? 'bg-red-50 border-[#CC1020] text-[#CC1020]'
+          : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50',
+      )}
+    >
+      <Icon className={cn('h-4 w-4 shrink-0', checked ? 'text-[#CC1020]' : 'text-gray-400')} aria-hidden />
+      {label}
+      {checked && (
+        <span className="ml-auto w-4 h-4 rounded-full bg-[#CC1020] flex items-center justify-center shrink-0">
+          <X className="h-2.5 w-2.5 text-white" />
+        </span>
+      )}
+    </button>
+  );
+}
+
+// ── Checkbox row ──────────────────────────────────────────────────────────────
 function FilterItem({
   id,
   label,
@@ -98,14 +136,14 @@ function FilterItem({
       />
       <span
         className={cn(
-          'flex-1 text-sm transition-colors',
+          'flex-1 text-sm transition-colors truncate',
           checked ? 'text-[#CC1020] font-semibold' : 'text-gray-700',
         )}
       >
         {label}
       </span>
       {count !== undefined && (
-        <span className="text-xs text-gray-400 tabular-nums font-medium">
+        <span className="text-xs text-gray-400 tabular-nums font-medium shrink-0">
           {count}
         </span>
       )}
@@ -113,7 +151,7 @@ function FilterItem({
   );
 }
 
-// ── Price input with R$ prefix ────────────────────────────────────────────────
+// ── Price input ───────────────────────────────────────────────────────────────
 function PriceInput({
   label,
   value,
@@ -129,25 +167,16 @@ function PriceInput({
 }) {
   const [raw, setRaw] = useState(String(value));
 
-  // Keep raw in sync when the slider moves
-  useEffect(() => {
-    setRaw(String(value));
-  }, [value]);
-
   const commit = () => {
     const n = parseInt(raw, 10);
-    const clamped = Number.isFinite(n)
-      ? Math.max(min, Math.min(max, n))
-      : value;
+    const clamped = Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : value;
     setRaw(String(clamped));
     onChange(clamped);
   };
 
   return (
     <div className="flex-1">
-      <span className="text-[10px] text-gray-400 uppercase tracking-wider block mb-1">
-        {label}
-      </span>
+      <span className="text-[10px] text-gray-400 uppercase tracking-wider block mb-1">{label}</span>
       <div className="relative">
         <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">
           R$
@@ -168,37 +197,83 @@ function PriceInput({
   );
 }
 
+// ── Active filter tags ────────────────────────────────────────────────────────
+function ActiveTags({
+  brands,
+  voltages,
+  onRemoveBrand,
+  onRemoveVoltage,
+}: {
+  brands: string[];
+  voltages: string[];
+  onRemoveBrand: (b: string) => void;
+  onRemoveVoltage: (v: string) => void;
+}) {
+  const all = [
+    ...brands.map((b) => ({ label: b, onRemove: () => onRemoveBrand(b) })),
+    ...voltages.map((v) => ({ label: v, onRemove: () => onRemoveVoltage(v) })),
+  ];
+  if (all.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-1.5 pb-3 border-b border-gray-100">
+      {all.map(({ label, onRemove }) => (
+        <button
+          key={label}
+          type="button"
+          onClick={onRemove}
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 border border-[#CC1020]/30 text-[#CC1020] text-xs font-semibold hover:bg-red-100 transition-colors"
+        >
+          {label}
+          <X className="h-3 w-3" />
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export type FilterCounts = Record<string, number>;
 
 export type ProductFiltersProps = {
-  /** brand → count derived from loaded products */
   brandCounts: FilterCounts;
-  /** voltage → count derived from loaded products */
   voltageCounts: FilterCounts;
-  /** called when the mobile close button is pressed */
   onClose?: () => void;
 };
 
-export function ProductFilters({
-  brandCounts,
-  voltageCounts,
-  onClose,
-}: ProductFiltersProps) {
+export function ProductFilters({ brandCounts, voltageCounts, onClose }: ProductFiltersProps) {
   const {
-    priceRange,
-    setPriceRange,
-    brands,
-    toggleBrand,
-    voltages,
-    toggleVoltage,
-    clearFilters,
-    hasActiveFilters,
+    priceRange, setPriceRange,
+    brands, toggleBrand,
+    voltages, toggleVoltage,
+    onSale, toggleOnSale,
+    inStock, toggleInStock,
+    clearFilters, hasActiveFilters,
   } = useFilters();
 
-  // Sorted lists: most-stocked first
-  const brandList   = Object.entries(brandCounts).sort((a, b) => b[1] - a[1]);
-  const voltageList = Object.entries(voltageCounts).sort((a, b) => b[1] - a[1]);
+  const [brandSearch, setBrandSearch] = useState('');
+  const [brandsExpanded, setBrandsExpanded] = useState(false);
+
+  const brandList = useMemo(
+    () => Object.entries(brandCounts).sort((a, b) => b[1] - a[1]),
+    [brandCounts],
+  );
+  const voltageList = useMemo(
+    () => Object.entries(voltageCounts).sort((a, b) => b[1] - a[1]),
+    [voltageCounts],
+  );
+
+  const filteredBrands = useMemo(() => {
+    const q = brandSearch.trim().toLowerCase();
+    if (!q) return brandList;
+    return brandList.filter(([name]) => name.toLowerCase().includes(q));
+  }, [brandList, brandSearch]);
+
+  const visibleBrands = brandsExpanded || brandSearch
+    ? filteredBrands
+    : filteredBrands.slice(0, BRANDS_VISIBLE);
+
+  const hiddenCount = filteredBrands.length - BRANDS_VISIBLE;
 
   return (
     <div className="bg-white rounded-sm shadow-md border-t-4 border-[#CC1020] p-3 sm:p-4 lg:sticky lg:top-24 max-h-[80vh] lg:max-h-[calc(100vh-7rem)] overflow-y-auto">
@@ -210,7 +285,6 @@ export function ProductFilters({
             Filtros
           </h2>
         </div>
-
         <div className="flex items-center gap-2">
           <AnimatePresence>
             {hasActiveFilters && (
@@ -222,14 +296,12 @@ export function ProductFilters({
                 type="button"
                 onClick={clearFilters}
                 className="inline-flex items-center gap-1 text-xs text-[#CC1020] hover:underline font-semibold"
-                aria-label="Limpar todos os filtros"
               >
-                <X className="h-3 w-3" aria-hidden />
-                Limpar filtros
+                <X className="h-3 w-3" />
+                Limpar
               </motion.button>
             )}
           </AnimatePresence>
-
           {onClose && (
             <button
               type="button"
@@ -237,15 +309,41 @@ export function ProductFilters({
               className="lg:hidden text-gray-400 hover:text-gray-600 ml-1"
               aria-label="Fechar filtros"
             >
-              <X className="h-4 w-4" aria-hidden />
+              <X className="h-4 w-4" />
             </button>
           )}
         </div>
       </div>
 
-      {/* ── Sections ── */}
-      <div>
-        {/* Price range */}
+      <div className="space-y-0">
+        {/* Tags de filtros ativos */}
+        <ActiveTags
+          brands={brands}
+          voltages={voltages}
+          onRemoveBrand={toggleBrand}
+          onRemoveVoltage={toggleVoltage}
+        />
+
+        {/* Filtros rápidos */}
+        <div className="py-3 border-b border-gray-100 space-y-2">
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
+            Filtros rápidos
+          </p>
+          <ToggleFilter
+            icon={Tag}
+            label="Somente em oferta"
+            checked={onSale}
+            onChange={toggleOnSale}
+          />
+          <ToggleFilter
+            icon={PackageCheck}
+            label="Somente em estoque"
+            checked={inStock}
+            onChange={toggleInStock}
+          />
+        </div>
+
+        {/* Faixa de preço */}
         <FilterSection title="Faixa de Preço">
           <Slider
             value={priceRange}
@@ -274,10 +372,21 @@ export function ProductFilters({
           </div>
         </FilterSection>
 
-        {/* Brands */}
+        {/* Marcas */}
         {brandList.length > 0 && (
           <FilterSection title="Marcas" activeCount={brands.length}>
-            {brandList.map(([brand, count]) => (
+            {brandList.length > BRANDS_VISIBLE && (
+              <div className="relative mb-2">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+                <Input
+                  placeholder="Buscar marca..."
+                  value={brandSearch}
+                  onChange={(e) => setBrandSearch(e.target.value)}
+                  className="h-8 pl-8 text-xs"
+                />
+              </div>
+            )}
+            {visibleBrands.map(([brand, count]) => (
               <FilterItem
                 key={brand}
                 id={`brand-${brand}`}
@@ -287,10 +396,22 @@ export function ProductFilters({
                 count={count > 0 ? count : undefined}
               />
             ))}
+            {!brandSearch && hiddenCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setBrandsExpanded((v) => !v)}
+                className="mt-1 text-xs font-semibold text-[#CC1020] hover:underline"
+              >
+                {brandsExpanded ? 'Ver menos' : `Ver mais ${hiddenCount} marca${hiddenCount > 1 ? 's' : ''}`}
+              </button>
+            )}
+            {brandSearch && filteredBrands.length === 0 && (
+              <p className="text-xs text-gray-400 py-1">Nenhuma marca encontrada.</p>
+            )}
           </FilterSection>
         )}
 
-        {/* Voltages */}
+        {/* Voltagem */}
         {voltageList.length > 0 && (
           <FilterSection title="Voltagem" activeCount={voltages.length}>
             {voltageList.map(([voltage, count]) => (
