@@ -240,6 +240,7 @@ export async function listProducts(params: ListProductsParams) {
 // ── Listagem paginada com filtros server-side ─────────────────────────────────
 export type PaginatedListParams = {
   categorySlug?: string | null;
+  categorySlugs?: string[];
   grupoSlug?: string | null;
   search?: string | null;
   page?: number;
@@ -260,7 +261,7 @@ const INCLUDE_LIST = {
 
 export async function listProductsPaginated(params: PaginatedListParams) {
   const {
-    categorySlug, grupoSlug, search,
+    categorySlug, categorySlugs, grupoSlug, search,
     page = 1, pageSize = 24,
     brands, minPrice, maxPrice, sortBy,
     onSale, inStock,
@@ -269,9 +270,16 @@ export async function listProductsPaginated(params: PaginatedListParams) {
   const skip = (Math.max(1, page) - 1) * pageSize;
 
   const where: any = { isActive: true };
-  if (categorySlug) where.category = { slug: categorySlug };
-  if (grupoSlug)    where.grupo     = grupoSlug;
-  if (brands?.length) where.brand   = { name: { in: brands } };
+
+  // Categoria: multi-select tem prioridade sobre single
+  if (categorySlugs?.length) {
+    where.category = { slug: { in: categorySlugs } };
+  } else if (categorySlug) {
+    where.category = { slug: categorySlug };
+  }
+
+  if (grupoSlug)      where.grupo = grupoSlug;
+  if (brands?.length) where.brand = { name: { in: brands } };
 
   // Filtro de preço sobre o preço efetivo (promocional > normal)
   const hasPriceFilter = minPrice != null || maxPrice != null;

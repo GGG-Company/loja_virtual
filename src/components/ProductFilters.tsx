@@ -9,9 +9,9 @@ import { Input } from '@/components/ui/input';
 import { useFilters, PRICE_MIN, PRICE_MAX } from '@/hooks/useFilters';
 import { cn } from '@/lib/utils';
 
-const BRANDS_VISIBLE = 6;
+const LIST_VISIBLE = 6;
 
-// ── Collapsible accordion section ────────────────────────────────────────────
+// ── Collapsible section ───────────────────────────────────────────────────────
 function FilterSection({
   title,
   activeCount = 0,
@@ -24,7 +24,6 @@ function FilterSection({
   children: React.ReactNode;
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
-
   return (
     <div className="border-b border-gray-100 last:border-0">
       <button
@@ -51,7 +50,6 @@ function FilterSection({
           aria-hidden
         />
       </button>
-
       <AnimatePresence initial={false}>
         {isOpen && (
           <motion.div
@@ -76,13 +74,11 @@ function ToggleFilter({
   label,
   checked,
   onChange,
-  color = '#CC1020',
 }: {
   icon: React.ElementType;
   label: string;
   checked: boolean;
   onChange: () => void;
-  color?: string;
 }) {
   return (
     <button
@@ -134,18 +130,11 @@ function FilterItem({
         onCheckedChange={onCheckedChange}
         className="data-[state=checked]:bg-[#CC1020] data-[state=checked]:border-[#CC1020] shrink-0"
       />
-      <span
-        className={cn(
-          'flex-1 text-sm transition-colors truncate',
-          checked ? 'text-[#CC1020] font-semibold' : 'text-gray-700',
-        )}
-      >
+      <span className={cn('flex-1 text-sm transition-colors truncate', checked ? 'text-[#CC1020] font-semibold' : 'text-gray-700')}>
         {label}
       </span>
       {count !== undefined && (
-        <span className="text-xs text-gray-400 tabular-nums font-medium shrink-0">
-          {count}
-        </span>
+        <span className="text-xs text-gray-400 tabular-nums font-medium shrink-0">{count}</span>
       )}
     </label>
   );
@@ -153,34 +142,22 @@ function FilterItem({
 
 // ── Price input ───────────────────────────────────────────────────────────────
 function PriceInput({
-  label,
-  value,
-  min,
-  max,
-  onChange,
+  label, value, min, max, onChange,
 }: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  onChange: (v: number) => void;
+  label: string; value: number; min: number; max: number; onChange: (v: number) => void;
 }) {
   const [raw, setRaw] = useState(String(value));
-
   const commit = () => {
     const n = parseInt(raw, 10);
     const clamped = Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : value;
     setRaw(String(clamped));
     onChange(clamped);
   };
-
   return (
     <div className="flex-1">
       <span className="text-[10px] text-gray-400 uppercase tracking-wider block mb-1">{label}</span>
       <div className="relative">
-        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">
-          R$
-        </span>
+        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">R$</span>
         <Input
           type="number"
           inputMode="numeric"
@@ -199,27 +176,29 @@ function PriceInput({
 
 // ── Active filter tags ────────────────────────────────────────────────────────
 function ActiveTags({
-  brands,
-  voltages,
-  onRemoveBrand,
-  onRemoveVoltage,
+  brands, voltages, categories, categoryOptions,
+  onRemoveBrand, onRemoveVoltage, onRemoveCategory,
 }: {
   brands: string[];
   voltages: string[];
+  categories: string[];
+  categoryOptions: CategoryOption[];
   onRemoveBrand: (b: string) => void;
   onRemoveVoltage: (v: string) => void;
+  onRemoveCategory: (slug: string) => void;
 }) {
+  const slugToName = Object.fromEntries(categoryOptions.map((c) => [c.slug, c.name]));
   const all = [
-    ...brands.map((b) => ({ label: b, onRemove: () => onRemoveBrand(b) })),
-    ...voltages.map((v) => ({ label: v, onRemove: () => onRemoveVoltage(v) })),
+    ...categories.map((slug) => ({ key: slug, label: slugToName[slug] ?? slug, onRemove: () => onRemoveCategory(slug) })),
+    ...brands.map((b) => ({ key: `b-${b}`, label: b, onRemove: () => onRemoveBrand(b) })),
+    ...voltages.map((v) => ({ key: `v-${v}`, label: v, onRemove: () => onRemoveVoltage(v) })),
   ];
   if (all.length === 0) return null;
-
   return (
     <div className="flex flex-wrap gap-1.5 pb-3 border-b border-gray-100">
-      {all.map(({ label, onRemove }) => (
+      {all.map(({ key, label, onRemove }) => (
         <button
-          key={label}
+          key={key}
           type="button"
           onClick={onRemove}
           className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 border border-[#CC1020]/30 text-[#CC1020] text-xs font-semibold hover:bg-red-100 transition-colors"
@@ -232,58 +211,128 @@ function ActiveTags({
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// ── Expandable list section ───────────────────────────────────────────────────
+function ExpandableList({
+  title,
+  activeCount,
+  items,
+  checkedKeys,
+  onToggle,
+  idPrefix,
+  searchPlaceholder,
+}: {
+  title: string;
+  activeCount: number;
+  items: Array<{ key: string; label: string; count?: number }>;
+  checkedKeys: string[];
+  onToggle: (key: string) => void;
+  idPrefix: string;
+  searchPlaceholder: string;
+}) {
+  const [search, setSearch] = useState('');
+  const [expanded, setExpanded] = useState(false);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((i) => i.label.toLowerCase().includes(q));
+  }, [items, search]);
+
+  const visible = expanded || search ? filtered : filtered.slice(0, LIST_VISIBLE);
+  const hiddenCount = filtered.length - LIST_VISIBLE;
+
+  if (items.length === 0) return null;
+
+  return (
+    <FilterSection title={title} activeCount={activeCount}>
+      {items.length > LIST_VISIBLE && (
+        <div className="relative mb-2">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+          <Input
+            placeholder={searchPlaceholder}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-8 pl-8 text-xs"
+          />
+        </div>
+      )}
+      {visible.map(({ key, label, count }) => (
+        <FilterItem
+          key={key}
+          id={`${idPrefix}-${key}`}
+          label={label}
+          checked={checkedKeys.includes(key)}
+          onCheckedChange={() => onToggle(key)}
+          count={count && count > 0 ? count : undefined}
+        />
+      ))}
+      {!search && hiddenCount > 0 && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="mt-1 text-xs font-semibold text-[#CC1020] hover:underline"
+        >
+          {expanded ? 'Ver menos' : `Ver mais ${hiddenCount} ${hiddenCount === 1 ? 'item' : 'itens'}`}
+        </button>
+      )}
+      {search && filtered.length === 0 && (
+        <p className="text-xs text-gray-400 py-1">Nenhum resultado.</p>
+      )}
+    </FilterSection>
+  );
+}
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 export type FilterCounts = Record<string, number>;
+export type CategoryOption = { slug: string; name: string; count: number };
 
 export type ProductFiltersProps = {
   brandCounts: FilterCounts;
   voltageCounts: FilterCounts;
+  categoryOptions: CategoryOption[];
   onClose?: () => void;
 };
 
-export function ProductFilters({ brandCounts, voltageCounts, onClose }: ProductFiltersProps) {
+// ── Main component ────────────────────────────────────────────────────────────
+export function ProductFilters({ brandCounts, voltageCounts, categoryOptions, onClose }: ProductFiltersProps) {
   const {
     priceRange, setPriceRange,
     brands, toggleBrand,
     voltages, toggleVoltage,
+    categories, toggleCategory,
     onSale, toggleOnSale,
     inStock, toggleInStock,
     clearFilters, hasActiveFilters,
   } = useFilters();
 
-  const [brandSearch, setBrandSearch] = useState('');
-  const [brandsExpanded, setBrandsExpanded] = useState(false);
-
-  const brandList = useMemo(
-    () => Object.entries(brandCounts).sort((a, b) => b[1] - a[1]),
+  const brandItems = useMemo(
+    () => Object.entries(brandCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, count]) => ({ key: name, label: name, count })),
     [brandCounts],
   );
-  const voltageList = useMemo(
-    () => Object.entries(voltageCounts).sort((a, b) => b[1] - a[1]),
+
+  const voltageItems = useMemo(
+    () => Object.entries(voltageCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, count]) => ({ key: name, label: name, count })),
     [voltageCounts],
   );
 
-  const filteredBrands = useMemo(() => {
-    const q = brandSearch.trim().toLowerCase();
-    if (!q) return brandList;
-    return brandList.filter(([name]) => name.toLowerCase().includes(q));
-  }, [brandList, brandSearch]);
-
-  const visibleBrands = brandsExpanded || brandSearch
-    ? filteredBrands
-    : filteredBrands.slice(0, BRANDS_VISIBLE);
-
-  const hiddenCount = filteredBrands.length - BRANDS_VISIBLE;
+  const categoryItems = useMemo(
+    () => [...categoryOptions]
+      .sort((a, b) => b.count - a.count)
+      .map((c) => ({ key: c.slug, label: c.name, count: c.count })),
+    [categoryOptions],
+  );
 
   return (
     <div className="bg-white rounded-sm shadow-md border-t-4 border-[#CC1020] p-3 sm:p-4 lg:sticky lg:top-24 max-h-[80vh] lg:max-h-[calc(100vh-7rem)] overflow-y-auto">
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-1">
         <div className="flex items-center gap-2">
           <SlidersHorizontal className="h-3.5 w-3.5 text-[#CC1020]" aria-hidden />
-          <h2 className="font-display text-sm font-bold text-[#1A1A1A] uppercase tracking-widest">
-            Filtros
-          </h2>
+          <h2 className="font-display text-sm font-bold text-[#1A1A1A] uppercase tracking-widest">Filtros</h2>
         </div>
         <div className="flex items-center gap-2">
           <AnimatePresence>
@@ -303,12 +352,7 @@ export function ProductFilters({ brandCounts, voltageCounts, onClose }: ProductF
             )}
           </AnimatePresence>
           {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="lg:hidden text-gray-400 hover:text-gray-600 ml-1"
-              aria-label="Fechar filtros"
-            >
+            <button type="button" onClick={onClose} className="lg:hidden text-gray-400 hover:text-gray-600 ml-1" aria-label="Fechar filtros">
               <X className="h-4 w-4" />
             </button>
           )}
@@ -320,27 +364,18 @@ export function ProductFilters({ brandCounts, voltageCounts, onClose }: ProductF
         <ActiveTags
           brands={brands}
           voltages={voltages}
+          categories={categories}
+          categoryOptions={categoryOptions}
           onRemoveBrand={toggleBrand}
           onRemoveVoltage={toggleVoltage}
+          onRemoveCategory={toggleCategory}
         />
 
         {/* Filtros rápidos */}
         <div className="py-3 border-b border-gray-100 space-y-2">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
-            Filtros rápidos
-          </p>
-          <ToggleFilter
-            icon={Tag}
-            label="Somente em oferta"
-            checked={onSale}
-            onChange={toggleOnSale}
-          />
-          <ToggleFilter
-            icon={PackageCheck}
-            label="Somente em estoque"
-            checked={inStock}
-            onChange={toggleInStock}
-          />
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Filtros rápidos</p>
+          <ToggleFilter icon={Tag} label="Somente em oferta" checked={onSale} onChange={toggleOnSale} />
+          <ToggleFilter icon={PackageCheck} label="Somente em estoque" checked={inStock} onChange={toggleInStock} />
         </div>
 
         {/* Faixa de preço */}
@@ -354,78 +389,44 @@ export function ProductFilters({ brandCounts, voltageCounts, onClose }: ProductF
             className="mb-4 mt-1"
           />
           <div className="flex items-end gap-2">
-            <PriceInput
-              label="Mínimo"
-              value={priceRange[0]}
-              min={PRICE_MIN}
-              max={priceRange[1]}
-              onChange={(v) => setPriceRange([v, priceRange[1]])}
-            />
+            <PriceInput label="Mínimo" value={priceRange[0]} min={PRICE_MIN} max={priceRange[1]} onChange={(v) => setPriceRange([v, priceRange[1]])} />
             <span className="pb-2 text-gray-300">—</span>
-            <PriceInput
-              label="Máximo"
-              value={priceRange[1]}
-              min={priceRange[0]}
-              max={PRICE_MAX}
-              onChange={(v) => setPriceRange([priceRange[0], v])}
-            />
+            <PriceInput label="Máximo" value={priceRange[1]} min={priceRange[0]} max={PRICE_MAX} onChange={(v) => setPriceRange([priceRange[0], v])} />
           </div>
         </FilterSection>
 
+        {/* Categorias */}
+        <ExpandableList
+          title="Categorias"
+          activeCount={categories.length}
+          items={categoryItems}
+          checkedKeys={categories}
+          onToggle={toggleCategory}
+          idPrefix="cat"
+          searchPlaceholder="Buscar categoria..."
+        />
+
         {/* Marcas */}
-        {brandList.length > 0 && (
-          <FilterSection title="Marcas" activeCount={brands.length}>
-            {brandList.length > BRANDS_VISIBLE && (
-              <div className="relative mb-2">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
-                <Input
-                  placeholder="Buscar marca..."
-                  value={brandSearch}
-                  onChange={(e) => setBrandSearch(e.target.value)}
-                  className="h-8 pl-8 text-xs"
-                />
-              </div>
-            )}
-            {visibleBrands.map(([brand, count]) => (
-              <FilterItem
-                key={brand}
-                id={`brand-${brand}`}
-                label={brand}
-                checked={brands.includes(brand)}
-                onCheckedChange={() => toggleBrand(brand)}
-                count={count > 0 ? count : undefined}
-              />
-            ))}
-            {!brandSearch && hiddenCount > 0 && (
-              <button
-                type="button"
-                onClick={() => setBrandsExpanded((v) => !v)}
-                className="mt-1 text-xs font-semibold text-[#CC1020] hover:underline"
-              >
-                {brandsExpanded ? 'Ver menos' : `Ver mais ${hiddenCount} marca${hiddenCount > 1 ? 's' : ''}`}
-              </button>
-            )}
-            {brandSearch && filteredBrands.length === 0 && (
-              <p className="text-xs text-gray-400 py-1">Nenhuma marca encontrada.</p>
-            )}
-          </FilterSection>
-        )}
+        <ExpandableList
+          title="Marcas"
+          activeCount={brands.length}
+          items={brandItems}
+          checkedKeys={brands}
+          onToggle={toggleBrand}
+          idPrefix="brand"
+          searchPlaceholder="Buscar marca..."
+        />
 
         {/* Voltagem */}
-        {voltageList.length > 0 && (
-          <FilterSection title="Voltagem" activeCount={voltages.length}>
-            {voltageList.map(([voltage, count]) => (
-              <FilterItem
-                key={voltage}
-                id={`voltage-${voltage}`}
-                label={voltage}
-                checked={voltages.includes(voltage)}
-                onCheckedChange={() => toggleVoltage(voltage)}
-                count={count}
-              />
-            ))}
-          </FilterSection>
-        )}
+        <ExpandableList
+          title="Voltagem"
+          activeCount={voltages.length}
+          items={voltageItems}
+          checkedKeys={voltages}
+          onToggle={toggleVoltage}
+          idPrefix="volt"
+          searchPlaceholder="Buscar voltagem..."
+        />
       </div>
     </div>
   );

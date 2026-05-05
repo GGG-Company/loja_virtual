@@ -50,7 +50,8 @@ export async function GET(request: NextRequest) {
     // Listagem principal paginada com filtros server-side
     const page      = Math.max(1, parseInt(searchParams.get('page') ?? '1') || 1);
     const pageSize  = Math.min(48, Math.max(1, parseInt(searchParams.get('pageSize') ?? String(PAGE_SIZE)) || PAGE_SIZE));
-    const brands    = (searchParams.get('brands') ?? '').split(',').filter(Boolean);
+    const brands         = (searchParams.get('brands')     ?? '').split(',').filter(Boolean);
+    const categorySlugs  = (searchParams.get('categories') ?? '').split(',').filter(Boolean);
     const minPrice  = searchParams.get('minPrice') ? Number(searchParams.get('minPrice')) : null;
     const maxPrice  = searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) : null;
     const sortBy    = searchParams.get('sort') ?? null;
@@ -59,6 +60,7 @@ export async function GET(request: NextRequest) {
 
     const result = await listProductsPaginated({
       categorySlug: category,
+      categorySlugs,
       grupoSlug: grupo,
       search: search || null,
       page, pageSize, brands, minPrice, maxPrice, sortBy, onSale, inStock,
