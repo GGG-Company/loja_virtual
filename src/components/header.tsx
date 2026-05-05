@@ -159,6 +159,15 @@ export function Header() {
                       </Button>
                     </Link>
                   )}
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => signOut()}
+                    className="hidden lg:inline-flex text-metallic-500 hover:text-[#CC1020] text-xs"
+                  >
+                    Sair
+                  </Button>
                 </>
               ) : (
                 <Link href="/auth/login" className="hidden sm:block">
