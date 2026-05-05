@@ -56,8 +56,8 @@ export default function ContactPage() {
           </div>
         </div>
 
-        <div className="container mx-auto px-4 py-16">
-          <div className="grid lg:grid-cols-2 gap-12">
+        <div className="container mx-auto px-4 py-8 sm:py-16">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             {/* Contact Info */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -140,7 +140,7 @@ export default function ContactPage() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <div className="bg-white rounded-sm shadow-lg border-t-4 border-[#CC1020] p-8">
+              <div className="bg-white rounded-sm shadow-lg border-t-4 border-[#CC1020] p-4 sm:p-8">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-1 h-7 bg-[#CC1020] rounded-full" />
                   <h2 className="font-display text-2xl font-bold text-[#1A1A1A] uppercase">
@@ -149,7 +149,7 @@ export default function ContactPage() {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-5">
-                  <div className="grid md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">Nome Completo *</Label>
                       <Input

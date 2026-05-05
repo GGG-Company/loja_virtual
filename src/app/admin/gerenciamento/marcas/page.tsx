@@ -122,7 +122,7 @@ export default function MarcasPage() {
         <p className="text-sm text-gray-500">Marcas dos produtos (incluindo as importadas do Hiper)</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Formulário */}
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <h2 className="text-lg font-semibold mb-4">{editingId ? "Editar Marca" : "Nova Marca"}</h2>
