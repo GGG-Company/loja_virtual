@@ -16,6 +16,7 @@ import { useSession } from 'next-auth/react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { CheckoutProgress } from '@/components/checkout-progress';
 import { useCart } from '@/contexts/cart-context';
+import { usePrice } from '@/hooks/use-price';
 
 
 interface CartItem {
@@ -107,6 +108,7 @@ export default function CartPage() {
   };
   const shippingValue = selectedShipping?.price ?? 0;
   const total = subtotal + shippingValue;
+  const { bestInstallment } = usePrice(total);
 
   const calculateShipping = async () => {
     if (!shippingZip || shippingZip.replace(/\D/g, '').length < 8) {
@@ -404,10 +406,22 @@ export default function CartPage() {
                     )}
                   </div>
 
-                  <div className="flex justify-between text-xl font-bold mb-6">
+                  <div className="flex justify-between text-xl font-bold mb-1">
                     <span>Total</span>
                     <span className="text-primary-600">R$ {total.toFixed(2)}</span>
                   </div>
+                  {bestInstallment && bestInstallment.installments > 1 && (
+                    <p className="text-sm text-gray-500 text-right mb-6">
+                      ou{' '}
+                      <span className="font-semibold text-gray-700">
+                        {bestInstallment.installments}x de R$ {bestInstallment.installmentValue.toFixed(2).replace('.', ',')}
+                      </span>
+                      {bestInstallment.interestFree && (
+                        <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-bold bg-green-100 text-green-700">sem juros</span>
+                      )}
+                    </p>
+                  )}
+                  {(!bestInstallment || bestInstallment.installments <= 1) && <div className="mb-6" />}
 
                   <Button
                     className="w-full"

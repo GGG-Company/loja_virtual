@@ -35,16 +35,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  // Upsert itens válidos
+  const candidateIds = items.filter(i => i.id && i.quantity > 0).map(i => i.id);
+
+  // Validar quais IDs realmente existem no DB antes de criar FK
+  const existingProducts = await prisma.product.findMany({
+    where: { id: { in: candidateIds } },
+    select: { id: true },
+  });
+  const validIds = new Set(existingProducts.map(p => p.id));
+
+  const validItems = items.filter(i => i.id && i.quantity > 0 && validIds.has(i.id));
+
   await prisma.$transaction([
     prisma.cartItem.deleteMany({ where: { cartId: cart.id } }),
-    ...items
-      .filter(i => i.id && i.quantity > 0)
-      .map(i =>
-        prisma.cartItem.create({
-          data: { cartId: cart.id, productId: i.id, quantity: i.quantity },
-        }),
-      ),
+    ...validItems.map(i =>
+      prisma.cartItem.create({
+        data: { cartId: cart.id, productId: i.id, quantity: i.quantity },
+      }),
+    ),
   ]);
 
   return NextResponse.json({ ok: true });

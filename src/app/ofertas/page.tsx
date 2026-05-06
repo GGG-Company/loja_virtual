@@ -81,7 +81,7 @@ export default function OffersPage() {
                 🔥 OFERTAS IMPERDÍVEIS
               </motion.div>
 
-              <h1 className="font-display text-6xl font-bold uppercase mb-3">Grandes Descontos</h1>
+              <h1 className="font-display text-3xl sm:text-5xl lg:text-6xl font-bold uppercase mb-3">Grandes Descontos</h1>
               <p className="text-gray-300 text-xl mb-1 font-body">Promoções por tempo limitado</p>
               <p className="text-gray-400 font-body">Aproveite as melhores ofertas em ferramentas profissionais</p>
             </motion.div>

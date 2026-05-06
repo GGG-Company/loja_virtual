@@ -81,6 +81,7 @@ export async function proxy(request: NextRequest) {
       '/api/auth',
       '/api/payments/mercadopago/webhook',
       '/api/payments/mercadopago/installments',
+      '/api/cart',
       '/api/integrations/melhor-envio/authorize',
       '/api/integrations/melhor-envio/callback',
       '/api/integrations/melhor-envio/webhook',

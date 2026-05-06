@@ -7,7 +7,7 @@ import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { ProductCard } from '@/components/product-card';
 import { SkeletonCard } from '@/components/skeleton-card';
-import { ProductFilters, type FilterCounts } from '@/components/ProductFilters';
+import { ProductFilters, type FilterCounts, type CategoryOption } from '@/components/ProductFilters';
 import { Button } from '@/components/ui/button';
 import { SlidersHorizontal, PackageSearch, ChevronLeft, ChevronRight } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
@@ -45,28 +45,33 @@ function parseIntSafe(v: string | null, fallback: number) {
   return Number.isFinite(n) ? n : fallback;
 }
 
-type DbBrand = { id: string; name: string; slug: string; _count: { products: number } };
+type DbBrand    = { id: string; name: string; slug: string; _count: { products: number } };
+type DbCategory = { id: string; name: string; slug: string; _count: { products: number } };
 
 function ProductsContent() {
   const searchParams = useSearchParams();
   const router       = useRouter();
 
-  const [products,    setProducts]    = useState<ProductListItem[]>([]);
-  const [pagination,  setPagination]  = useState<Pagination>({ page: 1, pages: 1, total: 0, pageSize: 24 });
-  const [dbBrands,    setDbBrands]    = useState<DbBrand[]>([]);
-  const [isLoading,   setIsLoading]   = useState(true);
-  const [showFilters, setShowFilters] = useState(false);
+  const [products,     setProducts]     = useState<ProductListItem[]>([]);
+  const [pagination,   setPagination]   = useState<Pagination>({ page: 1, pages: 1, total: 0, pageSize: 24 });
+  const [dbBrands,     setDbBrands]     = useState<DbBrand[]>([]);
+  const [dbCategories, setDbCategories] = useState<DbCategory[]>([]);
+  const [isLoading,    setIsLoading]    = useState(true);
+  const [showFilters,  setShowFilters]  = useState(false);
 
   // Parâmetros da URL — fonte única de verdade
   const categoria   = searchParams?.get('categoria')  ?? null;
   const grupo       = searchParams?.get('grupo')       ?? null;
   const search      = searchParams?.get('search')      ?? null;
   const currentPage = parseIntSafe(searchParams?.get('page'), 1);
-  const brands      = useMemo(() => (searchParams?.get('brands') ?? '').split(',').filter(Boolean), [searchParams]);
-  const voltages    = useMemo(() => (searchParams?.get('voltages') ?? '').split(',').filter(Boolean), [searchParams]);
+  const brands      = useMemo(() => (searchParams?.get('brands')     ?? '').split(',').filter(Boolean), [searchParams]);
+  const voltages    = useMemo(() => (searchParams?.get('voltages')   ?? '').split(',').filter(Boolean), [searchParams]);
+  const filterCats  = useMemo(() => (searchParams?.get('categories') ?? '').split(',').filter(Boolean), [searchParams]);
   const minPrice    = parseIntSafe(searchParams?.get('minPrice'), PRICE_MIN);
   const maxPrice    = parseIntSafe(searchParams?.get('maxPrice'), PRICE_MAX);
   const currentSort = searchParams?.get('sort') ?? 'recent';
+  const onSale      = searchParams?.get('onSale') === 'true';
+  const inStock     = searchParams?.get('inStock') === 'true';
 
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
@@ -76,10 +81,13 @@ function ProductsContent() {
       if (grupo)           params.set('grupo', grupo);
       if (search)          params.set('search', search);
       if (currentPage > 1) params.set('page', String(currentPage));
-      if (brands.length)   params.set('brands', brands.join(','));
+      if (brands.length)      params.set('brands', brands.join(','));
+      if (filterCats.length)  params.set('categories', filterCats.join(','));
       if (minPrice > PRICE_MIN) params.set('minPrice', String(minPrice));
       if (maxPrice < PRICE_MAX) params.set('maxPrice', String(maxPrice));
       if (currentSort !== 'recent') params.set('sort', currentSort);
+      if (onSale)   params.set('onSale', 'true');
+      if (inStock)  params.set('inStock', 'true');
 
       const res = await apiClient.get<{ products: ProductListItem[]; pagination: Pagination }>(
         `/api/products?${params}`,
@@ -93,7 +101,7 @@ function ProductsContent() {
       setIsLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoria, grupo, search, currentPage, brands.join(','), minPrice, maxPrice, currentSort]);
+  }, [categoria, grupo, search, currentPage, brands.join(','), filterCats.join(','), minPrice, maxPrice, currentSort, onSale, inStock]);
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
@@ -101,6 +109,10 @@ function ProductsContent() {
     fetch('/api/brands?limit=200')
       .then((r) => r.json())
       .then((d) => setDbBrands(d.brands ?? []))
+      .catch(() => {});
+    fetch('/api/categories')
+      .then((r) => r.json())
+      .then((d) => setDbCategories(d.categories ?? []))
       .catch(() => {});
   }, []);
 
@@ -123,6 +135,11 @@ function ProductsContent() {
     for (const b of dbBrands) counts[b.name] = b._count.products;
     return counts;
   }, [dbBrands]);
+
+  const categoryOptions = useMemo<CategoryOption[]>(
+    () => dbCategories.map((c) => ({ slug: c.slug, name: c.name, count: c._count.products })),
+    [dbCategories],
+  );
 
   const voltageCounts = useMemo<FilterCounts>(() => {
     const counts: FilterCounts = {};
@@ -190,6 +207,7 @@ function ProductsContent() {
               <ProductFilters
                 brandCounts={brandCounts}
                 voltageCounts={voltageCounts}
+                categoryOptions={categoryOptions}
                 onClose={() => setShowFilters(false)}
               />
             </div>

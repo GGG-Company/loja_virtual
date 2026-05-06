@@ -77,7 +77,7 @@ export default function GerenciamentoCategoriesPage() {
         <h1 className="text-2xl font-bold">Categorias</h1>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <h2 className="text-lg font-semibold mb-4">Nova Categoria</h2>
           <form onSubmit={handleCreate} className="space-y-4">

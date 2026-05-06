@@ -21,6 +21,7 @@ import { getRedisPublisher } from '@/lib/redis';
 import { toNum, serializeItems } from '@/lib/decimal-helpers';
 import { OrderStatus } from '@prisma/client';
 import type { OrderStatus as OrderStatusType } from '@/lib/i18n';
+import { createHiperOrder } from '@/lib/hiper';
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   PENDING:    ['CONFIRMED', 'CANCELLED'],
@@ -105,7 +106,7 @@ export async function processWebhookPayment(
     include: {
       user: true,
       items: {
-        include: { product: { select: { id: true, name: true, sku: true, imageUrl: true } } },
+        include: { product: { select: { id: true, name: true, sku: true, imageUrl: true, externalIdHiper: true } } },
       },
     },
   });
@@ -156,6 +157,57 @@ export async function processWebhookPayment(
     logger.info({ orderId, orderStatus, previousStatus: currentOrder.status },
       `[WEBHOOK_PROC] Pedido ${orderId} → ${orderStatus}`);
   });
+
+  // ── Enviar pedido ao Hiper quando confirmado ──────────────────────────
+  if (orderStatus === OrderStatus.CONFIRMED && process.env.HIPER_API_SECRET_KEY) {
+    const itemsWithHiper = updated.items.filter((i) => (i.product as any).externalIdHiper);
+
+    if (itemsWithHiper.length > 0) {
+      const addr = updated.shippingAddress as any;
+
+      createHiperOrder({
+        orderNumber: updated.orderNumber,
+        total: toNum(updated.total),
+        shipping: toNum(updated.shipping),
+        installments: updated.installments,
+        paymentMethod: updated.paymentMethod,
+        customer: {
+          name: updated.user?.name || addr?.name || 'Cliente',
+          email: updated.user?.email || addr?.email || '',
+          cpf: addr?.cpf || '',
+        },
+        address: {
+          street: addr?.street || '',
+          number: addr?.number || 'S/N',
+          complement: addr?.complement,
+          neighborhood: addr?.neighborhood || '',
+          city: addr?.city || '',
+          state: addr?.state || '',
+          zip: addr?.zip || '',
+        },
+        items: itemsWithHiper.map((item) => ({
+          hiperProductId: (item.product as any).externalIdHiper!,
+          quantity: item.quantity,
+          unitPrice: toNum(item.price),
+          netPrice: toNum(item.subtotal) / item.quantity,
+        })),
+      }).then(async (hiperResult) => {
+        if (hiperResult.success && hiperResult.hiperOrderId) {
+          await prisma.order.update({
+            where: { id: orderId },
+            data: { hiperOrderId: hiperResult.hiperOrderId },
+          });
+          logger.info('[WEBHOOK_PROC] Pedido enviado ao Hiper: %s', hiperResult.hiperOrderId);
+        } else {
+          logger.warn('[WEBHOOK_PROC] Falha ao enviar pedido ao Hiper: %s', hiperResult.error);
+        }
+      }).catch((err) => {
+        logger.error(err as Error, '[WEBHOOK_PROC] Exceção ao enviar pedido ao Hiper');
+      });
+    } else {
+      logger.info('[WEBHOOK_PROC] Pedido %s sem itens vinculados ao Hiper — ignorado', orderId);
+    }
+  }
 
   return { status: 'processed', orderId, orderStatus };
 }

@@ -4,6 +4,7 @@ import './globals.css';
 import { Toaster } from 'sonner';
 import { Providers } from '@/components/providers';
 import { CookieConsent } from '@/components/cookie-consent';
+import { ConsentScripts } from '@/components/consent-scripts';
 
 const barlow = Barlow({
   subsets: ["latin"],
@@ -23,6 +24,7 @@ export const metadata: Metadata = {
   title: "Feira das Ferramentas — Onde Você Encontra Tudo!",
   description: "Loja especializada em ferramentas profissionais desde 2004. Bosch, Makita, DeWalt e muito mais.",
   keywords: "ferramentas, feira das ferramentas, furadeira, parafusadeira, makita, bosch, dewalt, ferramentas profissionais",
+  icons: { icon: "/favicon.ico", shortcut: "/favicon.ico" },
   robots: { index: true, follow: true },
   openGraph: {
     type: "website",
@@ -46,6 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>
           {children}
           <CookieConsent />
+          <ConsentScripts />
           <Toaster position="top-right" richColors />
         </Providers>
       </body>

@@ -204,7 +204,7 @@ export default function ShippedOrdersPage() {
                   </div>
                 </div>
 
-                <div className="mt-4 grid md:grid-cols-3 gap-3">
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                   <div className="bg-gray-50 rounded-lg p-3 border border-metallic-100">
                     <p className="text-sm text-metallic-600">Pagamento</p>
                     <p className="font-semibold text-metallic-900">{paymentToPt(order.paymentMethod)}</p>

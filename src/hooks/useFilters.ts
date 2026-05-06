@@ -20,9 +20,12 @@ export function useFilters() {
   // ── Read committed values from URL (single source of truth) ────────────
   const urlMin = parseIntSafe(searchParams.get('minPrice'), PRICE_MIN);
   const urlMax = parseIntSafe(searchParams.get('maxPrice'), PRICE_MAX);
-  const brands   = (searchParams.get('brands')   ?? '').split(',').filter(Boolean);
-  const voltages = (searchParams.get('voltages') ?? '').split(',').filter(Boolean);
-  const sort     = searchParams.get('sort') ?? 'recent';
+  const brands     = (searchParams.get('brands')     ?? '').split(',').filter(Boolean);
+  const voltages   = (searchParams.get('voltages')   ?? '').split(',').filter(Boolean);
+  const categories = (searchParams.get('categories') ?? '').split(',').filter(Boolean);
+  const sort       = searchParams.get('sort') ?? 'recent';
+  const onSale     = searchParams.get('onSale') === 'true';
+  const inStock    = searchParams.get('inStock') === 'true';
 
   // ── Local price — updates instantly for smooth slider UX, then debounces ─
   const [localPrice, setLocalPrice] = useState<[number, number]>([urlMin, urlMax]);
@@ -90,10 +93,32 @@ export function useFilters() {
     [voltages, updateUrl],
   );
 
+  // ── Categories (immediate) ───────────────────────────────────────────────
+  const toggleCategory = useCallback(
+    (slug: string) => {
+      const next = categories.includes(slug)
+        ? categories.filter((c) => c !== slug)
+        : [...categories, slug];
+      updateUrl({ categories: next.length ? next.join(',') : null });
+    },
+    [categories, updateUrl],
+  );
+
   // ── Sort (immediate) ─────────────────────────────────────────────────────
   const setSort = useCallback(
     (value: string) => updateUrl({ sort: value !== 'recent' ? value : null }),
     [updateUrl],
+  );
+
+  // ── onSale / inStock toggles ──────────────────────────────────────────────
+  const toggleOnSale = useCallback(
+    () => updateUrl({ onSale: onSale ? null : 'true' }),
+    [onSale, updateUrl],
+  );
+
+  const toggleInStock = useCallback(
+    () => updateUrl({ inStock: inStock ? null : 'true' }),
+    [inStock, updateUrl],
   );
 
   // ── Clear all filters — preserves categoria + search ────────────────────
@@ -108,10 +133,13 @@ export function useFilters() {
   }, [router, searchParams]);
 
   const hasActiveFilters =
-    brands.length > 0   ||
-    voltages.length > 0 ||
-    urlMin !== PRICE_MIN ||
-    urlMax !== PRICE_MAX;
+    brands.length > 0     ||
+    voltages.length > 0   ||
+    categories.length > 0 ||
+    urlMin !== PRICE_MIN  ||
+    urlMax !== PRICE_MAX  ||
+    onSale ||
+    inStock;
 
   return {
     // Price — localPrice drives slider UI; urlMin/urlMax drive filtering
@@ -123,6 +151,13 @@ export function useFilters() {
     toggleBrand,
     voltages,
     toggleVoltage,
+    categories,
+    toggleCategory,
+    // Toggles
+    onSale,
+    toggleOnSale,
+    inStock,
+    toggleInStock,
     // Sort
     sort,
     setSort,

@@ -190,7 +190,7 @@ function ProductDetailContent() {
               ]}
             />
           )}
-          <div className="grid lg:grid-cols-2 gap-6 lg:gap-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
             {/* Image Gallery */}
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
               <div className="aspect-square bg-gray-100 rounded-sm border border-gray-200 flex items-center justify-center overflow-hidden relative">{product.imageUrl || product.images?.[0]?.url ? <Image src={product.imageUrl || product.images?.[0]?.url || ""} alt={product.name} fill className="object-contain" sizes="(min-width: 1024px) 50vw, 100vw" priority /> : <p className="text-6xl">🔨</p>}</div>
@@ -267,6 +267,7 @@ function ProductDetailContent() {
                           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Parcelas no cartão</span>
                           <span className="text-xs font-bold text-[#009EE3]">Mercado Pago</span>
                         </div>
+                        <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                           <tbody>
                             {installmentOptions.map((opt) => (
@@ -295,6 +296,7 @@ function ProductDetailContent() {
                             ))}
                           </tbody>
                         </table>
+                        </div>
                       </div>
                     )}
                   </div>
