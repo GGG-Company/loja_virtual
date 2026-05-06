@@ -114,7 +114,7 @@ export default function AdminSettingsPage() {
         body: JSON.stringify({
           publicKey: mpForm.publicKey,
           accessToken: mpForm.accessToken,
-          environment: "sandbox",
+          environment: mpForm.publicKey.startsWith('TEST-') ? 'sandbox' : 'production',
         }),
       });
 
