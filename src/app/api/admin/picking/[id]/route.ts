@@ -59,13 +59,16 @@ export async function PATCH(
       return NextResponse.json({ error: 'Só pedidos confirmados ou em separação podem ser enviados' }, { status: 400 });
     }
 
-    // Se não foi informado código de rastreio, usar o existente do pedido (gerado pelo Melhor Envio)
+    // Resolver código e URL finais (aceita valor explícito ou fallback para o que já estava no pedido)
     const finalTrackingCode = trackingCode || order.trackingCode || undefined;
-    
-    // Gerar URL de rastreio se tiver código mas não tiver URL
     let finalTrackingUrl = trackingUrl || order.trackingUrl || undefined;
-    if (finalTrackingCode && !finalTrackingUrl) {
-      finalTrackingUrl = `https://www.melhorrastreio.com.br/rastreio/${finalTrackingCode}`;
+
+    // Código e URL são obrigatórios para marcar como enviado
+    if (status === 'SHIPPED' && !finalTrackingCode) {
+      return NextResponse.json({ error: 'Código de rastreio é obrigatório para marcar o pedido como enviado' }, { status: 400 });
+    }
+    if (status === 'SHIPPED' && !finalTrackingUrl) {
+      return NextResponse.json({ error: 'URL de rastreio é obrigatória para marcar o pedido como enviado' }, { status: 400 });
     }
 
     const updated = await prisma.order.update({

@@ -38,6 +38,7 @@ type PickingOrder = {
   melhorEnvioLabelUrl?: string | null;
   melhorEnvioStatus?: string | null;
   trackingCode?: string | null;
+  trackingUrl?: string | null;
   user?: {
     name?: string | null;
     email?: string | null;
@@ -160,10 +161,10 @@ export default function AdminPickingPage() {
     }
   };
 
-  const openTrackingModal = (orderId: string, orderNumber: string) => {
-    setTrackingModal({ open: true, orderId, orderNumber });
-    setTrackingCode('');
-    setTrackingUrl('');
+  const openTrackingModal = (order: PickingOrder) => {
+    setTrackingModal({ open: true, orderId: order.id, orderNumber: order.orderNumber });
+    setTrackingCode(order.trackingCode || '');
+    setTrackingUrl(order.trackingUrl || '');
   };
 
   const generateLabel = async (orderId: string) => {
@@ -547,7 +548,7 @@ export default function AdminPickingPage() {
                         )}
                         <Button
                           variant="outline"
-                          onClick={() => openTrackingModal(order.id, order.orderNumber)}
+                          onClick={() => openTrackingModal(order)}
                           disabled={isUpdating}
                           className="flex-1 gap-2"
                         >

@@ -46,7 +46,7 @@ export function PickingTrackingModal({
         <div className="p-4 space-y-4">
           <div>
             <label className="block text-sm font-medium text-metallic-700 mb-1">
-              Código de Rastreio (opcional)
+              Código de Rastreio <span className="text-red-500">*</span>
             </label>
             <Input
               value={trackingCode}
@@ -54,12 +54,12 @@ export function PickingTrackingModal({
               placeholder="Ex: BR123456789BR"
             />
             <p className="text-xs text-metallic-500 mt-1">
-              Se já gerou etiqueta pelo Melhor Envio, o código será preenchido automaticamente.
+              Se gerou etiqueta pelo Melhor Envio, o código estará pré-preenchido acima.
             </p>
           </div>
           <div>
             <label className="block text-sm font-medium text-metallic-700 mb-1">
-              URL de Rastreio (opcional)
+              URL de Rastreio <span className="text-red-500">*</span>
             </label>
             <Input
               value={trackingUrl}
@@ -72,7 +72,10 @@ export function PickingTrackingModal({
           <Button variant="outline" onClick={onClose}>
             Cancelar
           </Button>
-          <Button onClick={onConfirm} disabled={isUpdating}>
+          <Button
+            onClick={onConfirm}
+            disabled={isUpdating || !trackingCode.trim() || !trackingUrl.trim()}
+          >
             {isUpdating ? 'Enviando...' : 'Confirmar Envio'}
           </Button>
         </div>
